@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens (§3). Brand colors + confidence system exposed as CSS
+ * variables so white-label theming [P3] can override at runtime and dark
+ * mode is a token swap.
+ */
+:root {
+  /* Brand & neutrals */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  /* Confidence system (§3.2) — used platform-wide */
+  --c-verified: #16a34a;
+  --c-verified-bg: #f0fdf4;
+  --c-verified-text: #15803d;
+  --c-probable: #d97706;
+  --c-probable-bg: #fffbeb;
+  --c-probable-text: #b45309;
+  --c-unverified: #dc2626;
+  --c-unverified-bg: #fef2f2;
+  --c-unverified-text: #b91c1c;
+  --c-missing: #94a3b8;
+  --c-missing-bg: #f1f5f9;
+  --c-missing-text: #64748b;
+
+  /* Admin accent */
+  --color-admin: #7c3aed;
+}
+
+.dark {
+  --color-bg: #0b1220;
+  --color-surface: #111a2e;
+  --color-border: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #64748b;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-c-verified: var(--c-verified);
+  --color-c-probable: var(--c-probable);
+  --color-c-unverified: var(--c-unverified);
+  --color-c-missing: var(--c-missing);
+  --color-admin: var(--color-admin);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-modal: 16px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  /* Tabular numerals for all data/numeric columns (§3.3) */
+  .tabular,
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Thin scrollbars for dense data areas */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-border);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
