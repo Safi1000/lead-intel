@@ -382,15 +382,16 @@ export const p2p3Handlers = [
   }),
 
   // Campaigns / templates / inbox
+  // NOTE: static `/templates` routes MUST be registered before `/:id` so MSW
+  // doesn't match "templates" as an :id (first matching handler wins).
   http.get('/api/campaigns', () => ok(campaigns)),
-  http.get('/api/campaigns/:id', ({ params }) => ok(campaigns.find((c) => c.id === params.id) ?? {})),
+  http.get('/api/campaigns/templates', () => ok(templates)),
   http.post('/api/campaigns', async ({ request }) => {
     const b = (await request.json()) as { name: string; template: string }
     const c: Campaign = { id: nid('camp'), name: b.name, template: b.template, audience_size: 0, status: 'draft', delivered: 0, read: 0, replied: 0, created_at: new Date().toISOString() }
     campaigns.unshift(c)
     return ok(c)
   }),
-  http.get('/api/campaigns/templates', () => ok(templates)),
   http.post('/api/campaigns/templates', async ({ request }) => {
     const b = (await request.json()) as { name: string; category: string; body: string }
     const t: WaTemplate = { id: nid('tpl'), name: b.name, category: b.category, language: 'en_US', body: b.body, status: 'pending' }
@@ -402,6 +403,8 @@ export const p2p3Handlers = [
     if (t) t.status = 'pending'
     return ok(t ?? {})
   }),
+  // Dynamic :id last so it doesn't shadow /templates
+  http.get('/api/campaigns/:id', ({ params }) => ok(campaigns.find((c) => c.id === params.id) ?? {})),
   http.get('/api/inbox', () => ok(conversations)),
   http.get('/api/inbox/:id', ({ params }) =>
     ok({ conversation: conversations.find((c) => c.id === params.id), messages: messages[params.id as string] ?? [] }),
