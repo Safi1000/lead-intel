@@ -3,22 +3,27 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens (§3). Brand colors + confidence system exposed as CSS
- * variables so white-label theming [P3] can override at runtime and dark
- * mode is a token swap.
+ * Design system — "Signal Intelligence".
+ * Display: Space Grotesk · Data/mono: JetBrains Mono · Body: Inter.
+ * Brand: electric cobalt + mint-cyan "live" signal. Confidence palette is
+ * semantic and untouched. All brand usage is via CSS vars so white-label
+ * theming [P3] can override at runtime (§I-5) and dark mode is a token swap.
  */
 :root {
   /* Brand & neutrals */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-bg: #f8fafc;
+  --color-primary: #1466ff;
+  --color-primary-hover: #0b4fd9;
+  --color-signal: #00c2a8; /* mint-cyan — live/real-time */
+  --color-signal-glow: rgba(0, 229, 199, 0.55);
+  --color-bg: #f6f8fc;
   --color-surface: #ffffff;
-  --color-border: #e2e8f0;
-  --color-text: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-surface-2: #f1f5fb;
+  --color-border: #e3e9f2;
+  --color-text: #0a1124;
+  --color-text-secondary: #47536b;
+  --color-text-muted: #8a97ad;
 
-  /* Confidence system (§3.2) — used platform-wide */
+  /* Confidence system (semantic — do not theme) */
   --c-verified: #16a34a;
   --c-verified-bg: #f0fdf4;
   --c-verified-text: #15803d;
@@ -32,24 +37,39 @@
   --c-missing-bg: #f1f5f9;
   --c-missing-text: #64748b;
 
-  /* Admin accent */
-  --color-admin: #7c3aed;
+  /* Score bands (P2-5) */
+  --score-hot: #e11d48;
+  --score-warm: #f59e0b;
+  --score-cold: #64748b;
+
+  --color-admin: #1466ff;
+
+  /* Fonts */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark {
-  --color-bg: #0b1220;
-  --color-surface: #111a2e;
-  --color-border: #1e293b;
-  --color-text: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #64748b;
+  --color-bg: #060912;
+  --color-surface: #0d1426;
+  --color-surface-2: #111a30;
+  --color-border: #1d2942;
+  --color-text: #eef3fb;
+  --color-text-secondary: #aebbd2;
+  --color-text-muted: #5d6c87;
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
+  --color-signal: var(--color-signal);
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
   --color-border: var(--color-border);
   --color-text: var(--color-text);
   --color-text-secondary: var(--color-text-secondary);
@@ -60,7 +80,9 @@
   --color-c-missing: var(--c-missing);
   --color-admin: var(--color-admin);
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 
   --radius-input: 8px;
   --radius-card: 12px;
@@ -72,15 +94,20 @@
     border-color: var(--color-border);
   }
   html {
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
   }
   body {
     background-color: var(--color-bg);
     color: var(--color-text);
     -webkit-font-smoothing: antialiased;
-    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: 0.005em;
   }
-  /* Tabular numerals for all data/numeric columns (§3.3) */
+  /* Display font for headings — distinctive, tight tracking */
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  /* Tabular, mono-flavored numerics for data density */
   .tabular,
   td,
   th {
@@ -92,36 +119,73 @@
   }
 }
 
-/* Thin scrollbars for dense data areas */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 8px;
+/* Monospace data utility (IDs, metrics, code) */
+.font-data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+/* ---- Motion: orchestrated page-load reveals ---- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: var(--color-border);
+.reveal {
+  opacity: 0;
+  animation: fadeInUp 0.55s var(--ease-out) forwards;
 }
+.stagger-1 { animation-delay: 0.04s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.16s; }
+.stagger-4 { animation-delay: 0.22s; }
+.stagger-5 { animation-delay: 0.28s; }
+
+@keyframes pulseSignal {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-signal-glow); }
+  50% { box-shadow: 0 0 0 4px transparent; }
+}
+.pulse-signal { animation: pulseSignal 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .pulse-signal { animation: none; opacity: 1; }
+}
+
+/* ---- Backgrounds: atmospheric depth ---- */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(20, 102, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 102, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.mesh-bg {
+  background:
+    radial-gradient(at 12% 18%, rgba(20, 102, 255, 0.28) 0, transparent 45%),
+    radial-gradient(at 88% 12%, rgba(0, 229, 199, 0.22) 0, transparent 42%),
+    radial-gradient(at 75% 88%, rgba(99, 102, 241, 0.20) 0, transparent 45%),
+    #060912;
+}
+.noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+}
+
+/* Thin scrollbars for dense data areas */
+.scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton { position: relative; overflow: hidden; background: var(--color-border); }
 .skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.45),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
   animation: shimmer 1.4s infinite;
 }

@@ -13,11 +13,11 @@ export interface TradeDef {
 
 export const TRADES: TradeDef[] = [
   { id: 'roofing', label: 'Roofing', enabled: true, icon: 'Home' },
-  { id: 'hvac', label: 'HVAC', enabled: false, icon: 'Wind' },
-  { id: 'plumbing', label: 'Plumbing', enabled: false, icon: 'Wrench' },
-  { id: 'electrical', label: 'Electrical', enabled: false, icon: 'Zap' },
-  { id: 'landscaping', label: 'Landscaping', enabled: false, icon: 'Trees' },
-  { id: 'painting', label: 'Painting', enabled: false, icon: 'Paintbrush' },
+  { id: 'hvac', label: 'HVAC', enabled: true, icon: 'Wind' },
+  { id: 'plumbing', label: 'Plumbing', enabled: true, icon: 'Wrench' },
+  { id: 'electrical', label: 'Electrical', enabled: true, icon: 'Zap' },
+  { id: 'landscaping', label: 'Landscaping', enabled: true, icon: 'Trees' },
+  { id: 'painting', label: 'Painting', enabled: true, icon: 'Paintbrush' },
 ]
 
 export const RUN_STAGES = [

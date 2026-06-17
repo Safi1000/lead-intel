@@ -155,6 +155,16 @@ function makeLead(runId: string, idx: number): LeadDetail {
   const socials = ['facebook', 'instagram', 'linkedin'].filter(() => chance(0.5))
   const websiteLive = chance(0.7) ? true : chance(0.5) ? false : null
   const row_confidence = worst(ownerPhoneConf, emailConf, bizPhoneConf)
+  // Score: poor online presence (no live site, no ads) = higher value (hotter)
+  const score = Math.min(
+    100,
+    Math.round(
+      (websiteLive ? 18 : 60) +
+        (socials.length ? 0 : 20) +
+        (ownerPhoneConf === 'verified' ? 15 : 0) +
+        rng() * 15,
+    ),
+  )
 
   return {
     id: `${runId}_lead_${idx}`,
@@ -199,9 +209,22 @@ function makeLead(runId: string, idx: number): LeadDetail {
     ad_activity: chance(0.45) ? 'active' : 'none',
     ad_link: 'https://www.facebook.com/ads/library/',
     socials,
-    score: null,
-    tags: [],
+    score,
+    hot: score >= 70,
+    tags: idx % 5 === 0 ? ['priority'] : [],
     row_confidence,
+    linkedin: field(
+      chance(0.45) && ownerName ? `linkedin.com/in/${ownerName.split(' ')[0].toLowerCase()}` : null,
+      randConf(),
+      'LinkedIn match',
+      'https://linkedin.com',
+    ),
+    tech_stack: ['WordPress', 'Calendly', 'HubSpot', 'Wix', 'Squarespace'].filter(() => chance(0.3)),
+    sentiment: chance(0.7) ? { score: Math.round(rng() * 100), themes: ['responsive', 'pricing', 'quality'].filter(() => chance(0.5)) } : null,
+    business_age: field(`${2 + Math.floor(rng() * 20)} years`, 'probable', 'Domain registration'),
+    property: { roof_age: `${5 + Math.floor(rng() * 18)} yrs`, last_permit: '2023', storm_activity: pick(['Low', 'Moderate', 'High']) },
+    competitors: BUSINESS_NAMES.slice(0, 3).map((n) => ({ name: n, rating: 3.5 + rng() * 1.5 })),
+    domain_signals: { expiry: '2027-04', ssl: 'Valid', last_update: '2024-11' },
     marketing_signals: {
       posting_frequency: pick(['Weekly', 'Monthly', 'Rarely']),
       last_post_at: ago(Math.floor(rng() * 60) * 24 * 60),
@@ -372,6 +395,7 @@ export function toLeadRow(l: LeadDetail): LeadRow {
     ad_activity: l.ad_activity,
     socials: l.socials,
     score: l.score,
+    hot: l.hot,
     tags: l.tags,
     row_confidence: l.row_confidence,
   }

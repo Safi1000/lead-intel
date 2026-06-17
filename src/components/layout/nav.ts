@@ -17,7 +17,10 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Market Map', to: '/market-map', icon: 'Map', flag: 'marketMap' },
   { label: 'Usage', to: '/usage', icon: 'Gauge', flag: 'usage' },
   { label: 'Assistant', to: '/assistant', icon: 'Bot', flag: 'assistant' },
+  { label: 'Outreach', to: '/outreach', icon: 'PenLine', flag: 'outreach' },
   { label: 'Campaigns', to: '/campaigns', icon: 'MessageSquare', flag: 'campaigns' },
+  { label: 'Inbox', to: '/inbox', icon: 'Inbox', flag: 'inbox' },
+  { label: 'Reseller', to: '/reseller', icon: 'Network', flag: 'resellers' },
 ]
 
 export const CLIENT_NAV_BOTTOM: NavItem[] = [
@@ -28,7 +31,8 @@ export const ADMIN_NAV: NavItem[] = [
   { label: 'Run Monitoring', to: '/admin/runs', icon: 'Activity' },
   { label: 'Cost Tracking', to: '/admin/costs', icon: 'DollarSign' },
   { label: 'Error Log', to: '/admin/errors', icon: 'AlertTriangle' },
-  { label: 'Clients', to: '/admin/clients', icon: 'Building2', flag: 'billing' },
-  { label: 'Market Locks', to: '/admin/market-locks', icon: 'Lock', flag: 'marketMap' },
-  { label: 'Resellers', to: '/admin/resellers', icon: 'Network', flag: 'resellers' },
+  { label: 'Clients', to: '/admin/clients', icon: 'Building2' },
+  { label: 'Audit Log', to: '/admin/audit', icon: 'FileClock' },
+  { label: 'Market Locks', to: '/admin/market-locks', icon: 'Lock' },
+  { label: 'Resellers', to: '/admin/resellers', icon: 'Network' },
 ]

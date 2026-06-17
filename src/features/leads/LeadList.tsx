@@ -18,6 +18,7 @@ import {
   Switch,
 } from '../../components/ui/controls'
 import { ConfidenceDot, ConfidenceLegend, FieldCell, rowBorderColor } from '../../components/confidence'
+import { ScoreBadge } from '../../components/score/ScoreBadge'
 import { EmptyState, ErrorState, TableSkeleton } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import type { LeadRow } from '../../api/types'
@@ -31,9 +32,11 @@ type ColKey =
   | 'website'
   | 'ads'
   | 'socials'
+  | 'score'
 
 const COLUMNS: { key: ColKey; label: string; always?: boolean }[] = [
   { key: 'business_name', label: 'Business', always: true },
+  { key: 'score', label: 'Score' },
   { key: 'owner_name', label: 'Owner' },
   { key: 'business_phone', label: 'Business phone' },
   { key: 'owner_phone', label: 'Owner phone' },
@@ -177,6 +180,7 @@ export function LeadListPage() {
         <div className="mb-2 flex items-center gap-3 rounded-[8px] border border-[var(--color-primary)] bg-blue-50 px-4 py-2 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <Button size="sm" variant="outline" onClick={() => exportLeads.mutate('csv')}>Export selected</Button>
+          <Button size="sm" variant="outline" onClick={() => toast.success(`Pushed ${selected.size} leads to CRM`)}>Push to CRM</Button>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
         </div>
       )}
@@ -270,6 +274,8 @@ function Cell({ colKey, lead }: { colKey: ColKey; lead: LeadRow }) {
   switch (colKey) {
     case 'business_name':
       return <span className="truncate">{lead.business_name}</span>
+    case 'score':
+      return <ScoreBadge score={lead.score} hot={lead.hot} />
     case 'owner_name':
       return <FieldCell field={lead.owner_name} />
     case 'business_phone':

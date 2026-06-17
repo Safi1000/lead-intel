@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import { authApi } from '../api/endpoints'
 import { useAuthStore } from '../stores/authStore'
 import { useUIStore } from '../stores/uiStore'
+import { RealtimeProvider } from '../realtime/realtime'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,7 +58,9 @@ function SessionBootstrap({ children }: { children: React.ReactNode }) {
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionBootstrap>{children}</SessionBootstrap>
+      <RealtimeProvider>
+        <SessionBootstrap>{children}</SessionBootstrap>
+      </RealtimeProvider>
       <Toaster richColors position="top-right" closeButton />
     </QueryClientProvider>
   )

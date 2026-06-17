@@ -5,6 +5,7 @@ import { authApi } from '../../api/endpoints'
 import { useAuthStore } from '../../stores/authStore'
 import { useUIStore } from '../../stores/uiStore'
 import { NotificationBell } from './NotificationBell'
+import { ConnectionChip } from '../../realtime/realtime'
 import {
   DropdownMenu,
   DropdownTrigger,
@@ -47,9 +48,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] sm:inline">
-          Demo · MSW mock API
-        </span>
+        <ConnectionChip />
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"

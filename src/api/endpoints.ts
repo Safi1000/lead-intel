@@ -1,22 +1,47 @@
 /** Typed endpoint modules (§2 api/). Components never call axios directly. */
 import { api } from './client'
 import type {
+  AdminClient,
+  AIProviderConfig,
+  ApiKey,
+  ApiKeyUsage,
+  AssistantResult,
+  AuditEntry,
   AuthResponse,
   Batch,
   BatchReport,
+  BillingState,
+  Campaign,
+  Conversation,
   CostSummary,
+  ChatMessage,
   ErrorLogItem,
   EstimateResponse,
   ExportJob,
+  Integration,
   LeadDetail,
   LeadRow,
+  MarketLock,
+  MarketLockAvailability,
+  MarketSummary,
   MeResponse,
   NotificationItem,
   NotificationPrefs,
+  OutreachResult,
   Paginated,
+  PredictiveSignals,
   ProfileSettings,
+  RevenueSummary,
   Run,
+  RunBuilderDraft,
   RunConfig,
+  SubClient,
+  TeamMember,
+  Trade,
+  UsageSummary,
+  WaTemplate,
+  Webhook,
+  WebhookDelivery,
 } from './types'
 
 // ---- Auth ----
@@ -131,4 +156,140 @@ export const adminApi = {
     api.get<CostSummary>('/admin/costs', { params: { group_by: groupBy } }).then((r) => r.data),
   errors: () =>
     api.get<Paginated<ErrorLogItem>>('/admin/errors').then((r) => r.data),
+  clients: () => api.get<Paginated<AdminClient>>('/admin/clients').then((r) => r.data),
+  client: (id: string) => api.get<AdminClient>(`/admin/clients/${id}`).then((r) => r.data),
+  suspendClient: (id: string, reason: string) =>
+    api.post(`/admin/clients/${id}/suspend`, { reason }).then((r) => r.data),
+  audit: () => api.get<Paginated<AuditEntry>>('/admin/audit').then((r) => r.data),
+  marketLocks: () => api.get<Paginated<MarketLock>>('/admin/market-locks').then((r) => r.data),
+  releaseLock: (id: string, reason: string) =>
+    api.post(`/admin/market-locks/${id}/release`, { reason }).then((r) => r.data),
+}
+
+// ============== Phase 2 / Phase 3 ==============
+
+export const tradesApi = {
+  list: (country = 'US') =>
+    api.get<Trade[]>('/trades', { params: { country } }).then((r) => r.data),
+}
+
+export const teamApi = {
+  list: () => api.get<TeamMember[]>('/team').then((r) => r.data),
+  invite: (body: { email: string; role: string }) =>
+    api.post<TeamMember>('/team/invites', body).then((r) => r.data),
+  resend: (id: string) => api.post(`/team/invites/${id}/resend`).then((r) => r.data),
+  setRole: (id: string, role: string) =>
+    api.patch(`/team/${id}/role`, { role }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/team/${id}`).then((r) => r.data),
+}
+
+export const billingApi = {
+  get: () => api.get<BillingState>('/billing').then((r) => r.data),
+  buyCredits: (amount: number) =>
+    api.post<BillingState>('/billing/credits', { amount }).then((r) => r.data),
+  changeTier: (tier: string) =>
+    api.post<BillingState>('/billing/subscription', { tier }).then((r) => r.data),
+}
+
+export const marketLocksApi = {
+  list: () => api.get<MarketLock[]>('/market-locks').then((r) => r.data),
+  availability: (trade: string, area: string) =>
+    api.get<MarketLockAvailability>('/market-locks/availability', { params: { trade, area } }).then((r) => r.data),
+  buy: (body: { trade: string; area: string }) =>
+    api.post<MarketLock>('/market-locks', body).then((r) => r.data),
+  cancel: (id: string) => api.delete(`/market-locks/${id}`).then((r) => r.data),
+}
+
+export const usageApi = {
+  get: (params?: { trade?: string }) =>
+    api.get<UsageSummary>('/usage', { params }).then((r) => r.data),
+}
+
+export const marketMapApi = {
+  get: (params: { trade?: string; city?: string }) =>
+    api.get<{ zips: { zip: string; covered: boolean; leads: number; fill: number; locked?: boolean }[] }>('/market-map', { params }).then((r) => r.data),
+}
+
+export const integrationsApi = {
+  list: () => api.get<Integration[]>('/integrations').then((r) => r.data),
+  connect: (provider: string) =>
+    api.post<Integration>(`/integrations/${provider}/connect`).then((r) => r.data),
+  disconnect: (provider: string) =>
+    api.delete(`/integrations/${provider}`).then((r) => r.data),
+  setMapping: (provider: string, field_map: Record<string, string>) =>
+    api.put(`/integrations/${provider}/mapping`, { field_map }).then((r) => r.data),
+  test: (provider: string) =>
+    api.post<{ created: number; updated: number; skipped: number }>(`/integrations/${provider}/test`).then((r) => r.data),
+}
+
+export const webhooksApi = {
+  list: () => api.get<Webhook[]>('/webhooks').then((r) => r.data),
+  create: (body: { url: string; events: string[] }) =>
+    api.post<Webhook>('/webhooks', body).then((r) => r.data),
+  update: (id: string, body: Partial<Webhook>) =>
+    api.put<Webhook>(`/webhooks/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/webhooks/${id}`).then((r) => r.data),
+  test: (id: string) =>
+    api.post<{ status: number; body: string }>(`/webhooks/${id}/test`).then((r) => r.data),
+  deliveries: (id: string) =>
+    api.get<WebhookDelivery[]>(`/webhooks/${id}/deliveries`).then((r) => r.data),
+}
+
+export const apiKeysApi = {
+  list: () => api.get<ApiKey[]>('/settings/api-keys').then((r) => r.data),
+  create: (body: { name: string; scopes: string[]; rate_limit: number }) =>
+    api.post<{ key: ApiKey; secret: string }>('/settings/api-keys', body).then((r) => r.data),
+  revoke: (id: string) => api.delete(`/settings/api-keys/${id}`).then((r) => r.data),
+  usage: (id: string) => api.get<ApiKeyUsage>(`/settings/api-keys/${id}/usage`).then((r) => r.data),
+}
+
+export const aiProvidersApi = {
+  get: () => api.get<AIProviderConfig>('/settings/ai-providers').then((r) => r.data),
+  update: (body: AIProviderConfig) =>
+    api.put<AIProviderConfig>('/settings/ai-providers', body).then((r) => r.data),
+}
+
+export const aiApi = {
+  outreachAngle: (leadId: string) =>
+    api.post<OutreachResult>(`/ai/outreach-angle/${leadId}`).then((r) => r.data),
+  outreach: (leadId: string, channel: string, tone: string) =>
+    api.post<OutreachResult>(`/ai/outreach/${leadId}`, { channel, tone }).then((r) => r.data),
+  sequence: (leadId: string) =>
+    api.post<{ steps: { channel: string; delay: string; text: string }[] }>(`/ai/sequence/${leadId}`).then((r) => r.data),
+  marketSummary: (runId: string) =>
+    api.get<MarketSummary>(`/runs/${runId}/market-summary`).then((r) => r.data),
+  predictive: (leadId: string) =>
+    api.get<PredictiveSignals>(`/leads/${leadId}/predictive`).then((r) => r.data),
+  assistant: (message: string) =>
+    api.post<AssistantResult>('/ai/assistant/query', { message }).then((r) => r.data),
+  runBuilder: (text: string) =>
+    api.post<RunBuilderDraft>('/ai/run-builder/parse', { text }).then((r) => r.data),
+}
+
+export const campaignsApi = {
+  list: () => api.get<Campaign[]>('/campaigns').then((r) => r.data),
+  get: (id: string) => api.get<Campaign>(`/campaigns/${id}`).then((r) => r.data),
+  create: (body: { name: string; template: string }) =>
+    api.post<Campaign>('/campaigns', body).then((r) => r.data),
+  templates: () => api.get<WaTemplate[]>('/campaigns/templates').then((r) => r.data),
+  createTemplate: (body: { name: string; category: string; body: string }) =>
+    api.post<WaTemplate>('/campaigns/templates', body).then((r) => r.data),
+  submitTemplate: (id: string) =>
+    api.post<WaTemplate>(`/campaigns/templates/${id}/submit`).then((r) => r.data),
+}
+
+export const inboxApi = {
+  list: () => api.get<Conversation[]>('/inbox').then((r) => r.data),
+  conversation: (id: string) =>
+    api.get<{ conversation: Conversation; messages: ChatMessage[] }>(`/inbox/${id}`).then((r) => r.data),
+  reply: (id: string, text: string) =>
+    api.post<ChatMessage>(`/inbox/${id}/reply`, { text }).then((r) => r.data),
+  suggest: (id: string) =>
+    api.post<{ suggestions: string[] }>(`/inbox/${id}/suggest-replies`).then((r) => r.data),
+}
+
+export const resellerApi = {
+  subClients: () => api.get<SubClient[]>('/reseller/sub-clients').then((r) => r.data),
+  create: (name: string) => api.post<SubClient>('/reseller/sub-clients', { name }).then((r) => r.data),
+  revenue: () => api.get<RevenueSummary>('/reseller/revenue').then((r) => r.data),
 }

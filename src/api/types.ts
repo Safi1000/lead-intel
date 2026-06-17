@@ -135,6 +135,7 @@ export interface LeadRow {
   ad_activity: 'active' | 'none' | null
   socials: string[]
   score: number | null // [P2]
+  hot: boolean // [P2] high-value (poor online presence)
   tags: string[] // [P2]
   /** Worst confidence among critical fields — drives row left-border. */
   row_confidence: ConfidenceStatus
@@ -160,6 +161,15 @@ export interface LeadDetail extends LeadRow {
   } | null
   notes?: string | null
   sources: { field: string; source: string; source_url?: string | null; confidence: ConfidenceStatus }[]
+  // P2-4 enhanced enrichment
+  linkedin?: LeadField
+  tech_stack?: string[]
+  sentiment?: { score: number; themes: string[] } | null
+  business_age?: LeadField
+  // P3-6 add-ons (gated by entitlement)
+  property?: { roof_age?: string; last_permit?: string; storm_activity?: string } | null
+  competitors?: { name: string; rating: number }[]
+  domain_signals?: { expiry?: string; ssl?: string; last_update?: string } | null
 }
 
 export interface Batch {
@@ -251,4 +261,240 @@ export interface ErrorLogItem {
   message: string
   severity: 'info' | 'warning' | 'critical'
   resolved: boolean
+}
+
+// ============== Phase 2 / Phase 3 DTOs ==============
+
+export interface Trade {
+  id: string
+  label: string
+  enabled: boolean
+  icon: string
+  signal_hint: string
+  expected_fill: number
+}
+
+// --- Team / RBAC ---
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: Role
+  status: 'active' | 'invited'
+  last_active?: string | null
+}
+
+// --- Billing / market locks ---
+export interface PlanTier {
+  id: string
+  name: string
+  price_cents: number
+  included_credits: number
+  features: string[]
+  current?: boolean
+}
+export interface Invoice {
+  id: string
+  number: string
+  date: string
+  amount_cents: number
+  status: 'paid' | 'open' | 'void'
+}
+export interface PaymentMethod {
+  id: string
+  brand: string
+  last4: string
+  exp: string
+  default: boolean
+}
+export interface BillingState {
+  plan: string
+  tier: string
+  currency: 'USD' | 'CAD' | 'GBP'
+  balance_credits: number
+  included_credits: number
+  used_credits: number
+  payment_methods: PaymentMethod[]
+  invoices: Invoice[]
+  tiers: PlanTier[]
+}
+export interface MarketLock {
+  id: string
+  trade: string
+  area: string
+  expires_at: string
+  auto_renew: boolean
+  client_name?: string
+}
+export interface MarketLockAvailability {
+  available: boolean
+  price_cents: number
+  locked_until?: string | null
+  locked_by?: string | null
+}
+
+// --- Usage ---
+export interface UsagePoint {
+  date: string
+  credits: number
+  leads: number
+  fill: number
+}
+export interface UsageSummary {
+  series: UsagePoint[]
+  total_credits: number
+  total_leads: number
+  by_trade: { trade: string; leads: number; credits: number }[]
+}
+
+// --- Integrations / webhooks ---
+export interface Integration {
+  provider: string
+  status: 'connected' | 'disconnected' | 'expired'
+  account_name?: string | null
+  connected_at?: string | null
+  mapping?: Record<string, string>
+}
+export interface Webhook {
+  id: string
+  url: string
+  events: string[]
+  enabled: boolean
+  secret: string
+  last_delivery?: { status: number; at: string } | null
+}
+export interface WebhookDelivery {
+  id: string
+  event: string
+  status: number
+  at: string
+  duration_ms: number
+}
+
+// --- API keys ---
+export interface ApiKey {
+  id: string
+  name: string
+  masked: string
+  scopes: string[]
+  rate_limit: number
+  created_at: string
+  last_used?: string | null
+}
+export interface ApiKeyUsage {
+  series: { date: string; calls: number; errors: number }[]
+  total_calls: number
+  total_429: number
+}
+
+// --- AI providers ---
+export type AITask = 'scoring' | 'copy' | 'summary'
+export interface AIProviderConfig {
+  assignments: Record<AITask, string>
+  byo_keys: Record<string, { present: boolean; valid: boolean }>
+  batch_open_source: boolean
+}
+
+// --- AI generation ---
+export interface OutreachResult {
+  channel: string
+  tone: string
+  text: string
+  provider: string
+}
+export interface MarketSummary {
+  run_id: string
+  narrative: string
+  stats: { label: string; value: number }[]
+  provider: string
+}
+export interface PredictiveSignals {
+  best_windows: { day: string; window: string; confidence: number }[]
+  seasonal: string
+}
+export interface AssistantResult {
+  answer: string
+  provider: string
+  table?: LeadRow[]
+}
+export interface RunBuilderDraft {
+  trade: string
+  city: string
+  include_owner_phone: boolean
+  confidence: number
+}
+
+// --- Campaigns / WhatsApp / inbox ---
+export interface WaTemplate {
+  id: string
+  name: string
+  category: string
+  language: string
+  body: string
+  status: 'approved' | 'pending' | 'rejected'
+  reject_reason?: string | null
+}
+export interface Campaign {
+  id: string
+  name: string
+  template: string
+  audience_size: number
+  status: 'draft' | 'scheduled' | 'sending' | 'sent'
+  delivered: number
+  read: number
+  replied: number
+  created_at: string
+}
+export interface Conversation {
+  id: string
+  lead_id: string
+  business_name: string
+  last_message: string
+  unread: number
+  updated_at: string
+  assignee?: string | null
+  resolved: boolean
+}
+export interface ChatMessage {
+  id: string
+  direction: 'in' | 'out'
+  text: string
+  at: string
+  status?: 'sent' | 'delivered' | 'read'
+}
+
+// --- Reseller / white-label ---
+export interface SubClient {
+  id: string
+  name: string
+  plan: string
+  leads_delivered: number
+  fill: number
+  status: 'active' | 'suspended'
+}
+export interface RevenueSummary {
+  commission_cents: number
+  pending_cents: number
+  statements: { period: string; amount_cents: number; status: string }[]
+}
+
+// --- Admin ---
+export interface AdminClient {
+  id: string
+  name: string
+  plan: string
+  status: 'active' | 'suspended' | 'deleting'
+  leads_delivered: number
+  spend_cents: number
+  created_at: string
+  retention_days?: number | null
+}
+export interface AuditEntry {
+  id: string
+  at: string
+  actor: string
+  action: string
+  resource: string
+  client: string
+  reason?: string | null
 }

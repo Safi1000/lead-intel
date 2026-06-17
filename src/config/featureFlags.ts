@@ -1,4 +1,4 @@
-/** Feature flags (§18-7). Read from /auth/me, with MVP defaults below. */
+/** Feature flags (§18-7). Read from /auth/me. Phase 2 & 3 are now ON. */
 
 export interface FeatureFlags {
   // P2
@@ -15,6 +15,8 @@ export interface FeatureFlags {
   crmPush: boolean
   whatsapp: boolean
   globalSearch: boolean
+  marketLocks: boolean
+  notesTags: boolean
   // P3
   assistant: boolean
   outreach: boolean
@@ -22,29 +24,41 @@ export interface FeatureFlags {
   inbox: boolean
   branding: boolean
   resellers: boolean
+  predictive: boolean
+  apiDocs: boolean
+  addons: boolean
+  countryCA: boolean
+  countryUK: boolean
 }
 
-/** MVP defaults: every P2/P3 flag OFF so routes render Coming-Soon shells. */
+/** Phase 2 & 3 delivered → all flags ON. */
 export const DEFAULT_FLAGS: FeatureFlags = {
-  signup: false,
-  marketMap: false,
-  usage: false,
-  apiKeys: false,
-  webhooks: false,
-  team: false,
-  billing: false,
-  integrations: false,
-  aiProviders: false,
-  scoring: false,
-  crmPush: false,
-  whatsapp: false,
-  globalSearch: false,
-  assistant: false,
-  outreach: false,
-  campaigns: false,
-  inbox: false,
-  branding: false,
-  resellers: false,
+  signup: true,
+  marketMap: true,
+  usage: true,
+  apiKeys: true,
+  webhooks: true,
+  team: true,
+  billing: true,
+  integrations: true,
+  aiProviders: true,
+  scoring: true,
+  crmPush: true,
+  whatsapp: true,
+  globalSearch: true,
+  marketLocks: true,
+  notesTags: true,
+  assistant: true,
+  outreach: true,
+  campaigns: true,
+  inbox: true,
+  branding: true,
+  resellers: true,
+  predictive: true,
+  apiDocs: true,
+  addons: true,
+  countryCA: true,
+  countryUK: true,
 }
 
 export type FeatureFlagKey = keyof FeatureFlags
