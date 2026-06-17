@@ -8,7 +8,27 @@ Two role-separated frontends live in one codebase:
 - **Client Dashboard** — agencies/trades launch enrichment runs and consume leads.
 - **Admin Panel** — internal staff monitor runs, costs, and errors across all clients.
 
-The full MVP runs entirely against an in-browser **mock API (MSW)** — no backend required to demo it.
+The full platform (**MVP + Phase 2 + Phase 3**) runs entirely against an in-browser **mock API
+(MSW)** — no backend required to demo it. Every reserved route renders a real, working screen
+through all four states; there are no Coming-Soon shells.
+
+**Design:** "Signal Intelligence" system — Space Grotesk (display) + JetBrains Mono (data) +
+Inter (body), electric-cobalt / mint-cyan identity, orchestrated page-load motion, atmospheric
+auth backgrounds.
+
+**Phase 2:** multi-trade, signup + team/RBAC, billing + market locks, usage, enhanced enrichment
+(LinkedIn / tech-stack / sentiment / business-age), AI scoring + hot flags + outreach angle +
+market summary, pluggable AI providers, WhatsApp notifications, CRM/Sheets/webhook integrations,
+market map, notes & tags.
+
+**Phase 3:** generative outreach + sequence builder, conversational assistant + NL run builder,
+predictive signals, API marketplace + docs portal, WhatsApp campaigns + templates + response
+inbox, enrichment add-ons, multi-country (US/CA/UK), white-label + reseller. Admin gains client
+management, audit log, market-lock management, and reseller oversight.
+
+**Shared infrastructure:** real-time transport (WebSocket-style + polling fallback), RBAC
+permission matrix (`useCan`/`<Can>`), billing layer, reusable OAuth connector framework, AI
+streaming UI kit, white-label theming engine, i18n (currency + postal validation).
 
 ## Demo
 
