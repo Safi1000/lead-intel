@@ -119,6 +119,8 @@ export const orgsApi = {
   list: () => api.get<Org[]>('/orgs').then((r) => r.data),
   create: (name: string) => api.post<Org>('/orgs', { name }).then((r) => r.data),
   remove: (id: string) => api.delete(`/orgs/${id}`).then((r) => r.data),
+  enter: (id: string) => api.post(`/orgs/${id}/enter`).then((r) => r.data),
+  exit: () => api.post('/orgs/exit').then((r) => r.data),
 }
 
 // ---- User management (SSA / manager) ----

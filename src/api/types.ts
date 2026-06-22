@@ -42,6 +42,8 @@ export interface MeResponse {
   role: Role
   feature_flags: FeatureFlags
   permissions: PermissionOverrides
+  /** Org the user is operating in: their own org, or the org an SA has entered. null = SA on the org list. */
+  acting_org_id: string | null
   tos_accepted_at: string | null
 }
 

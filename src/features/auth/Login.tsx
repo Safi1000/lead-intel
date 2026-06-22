@@ -43,10 +43,13 @@ export function LoginPage() {
         role: me.role,
         flags: me.feature_flags,
         permissions: me.permissions,
+        actingOrgId: me.acting_org_id,
         tosAcceptedAt: me.tos_accepted_at,
       })
       await queryClient.invalidateQueries()
-      navigate(returnTo || '/home', { replace: true })
+      // SA lands on the organizations list; everyone else on their workspace.
+      const isSA = me.role === 'superadmin' || me.role === 'admin'
+      navigate(returnTo || (isSA ? '/organizations' : '/home'), { replace: true })
     },
   })
 

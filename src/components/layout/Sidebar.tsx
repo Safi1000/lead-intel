@@ -43,6 +43,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const toggle = useUIStore((s) => s.toggleSidebar)
   const role = useAuthStore((s) => s.role)
+  const inOrg = useAuthStore((s) => s.actingOrgId) != null
+
+  const visible = CLIENT_NAV.filter((item) => {
+    if (item.roles && !(role !== null && item.roles.includes(role))) return false
+    if (item.orgContext && !inOrg) return false
+    return true
+  })
 
   return (
     <aside
@@ -59,7 +66,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {CLIENT_NAV.filter((item) => !item.roles || (role !== null && item.roles.includes(role))).map((item) => (
+        {visible.map((item) => (
           <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </nav>

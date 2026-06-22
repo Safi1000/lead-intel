@@ -5,6 +5,8 @@ import {
   createUser,
   deleteOrg,
   deleteUser,
+  enterOrg,
+  exitOrg,
   getCurrentUser,
   listOrgs,
   listUsers,
@@ -52,12 +54,20 @@ export const accountsHandlers = [
     deleteOrg(params.id as string)
     return ok({})
   }),
+  // SA enters / exits an org context.
+  http.post('/api/orgs/:id/enter', ({ params }) => {
+    const res = enterOrg(params.id as string)
+    return 'error' in res ? fail(403, 'forbidden', res.error) : ok({})
+  }),
+  http.post('/api/orgs/exit', () => {
+    exitOrg()
+    return ok({})
+  }),
 
-  // ---- Users (SSA: all orgs · manager: own org) ----
-  http.get('/api/users', ({ request }) => {
+  // ---- Users (scoped to the actor's effective org) ----
+  http.get('/api/users', () => {
     const actor = getCurrentUser()
-    const orgFilter = new URL(request.url).searchParams.get('org_id') ?? undefined
-    return ok(listUsers(actor, orgFilter).map(toManagedUser))
+    return ok(listUsers(actor).map(toManagedUser))
   }),
   http.post('/api/users', async ({ request }) => {
     await delay(300)

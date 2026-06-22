@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { AdminShell } from '../components/layout/AdminShell'
-import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole } from './guards'
+import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext } from './guards'
 import { RouteErrorBoundary, NotFoundPage, ForbiddenPage, MaintenancePage } from '../features/misc/ErrorPages'
 import { LegalPage } from '../features/misc/Legal'
 import { LoginPage } from '../features/auth/Login'
@@ -77,23 +77,27 @@ export const router = createBrowserRouter([
             element: <AppShell />,
             children: [
               { index: true, element: <Navigate to="/home" replace /> },
-              { path: 'home', element: <WorkHomePage /> },
-              // Shared lead queue + detail (all tenant roles can view):
-              { path: 'leads', element: L(<LeadQueuePage />) },
-              { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
-              // Manual lead workflow (generators + managers):
+              // Org workspace — requires being inside an org (SA enters via the org list).
               {
-                element: <RequireRole roles={['manager', 'lead_generator']} />,
+                element: <RequireOrgContext />,
                 children: [
-                  { path: 'templates', element: L(<LeadTemplatesPage />) },
-                  { path: 'upload', element: L(<UploadPage />) },
+                  { path: 'home', element: <WorkHomePage /> },
+                  { path: 'leads', element: L(<LeadQueuePage />) },
+                  { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
+                  {
+                    element: <RequireRole roles={['superadmin', 'admin', 'manager', 'lead_generator']} />,
+                    children: [
+                      { path: 'templates', element: L(<LeadTemplatesPage />) },
+                      { path: 'upload', element: L(<UploadPage />) },
+                    ],
+                  },
+                  {
+                    element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
+                    children: [{ path: 'users', element: L(<UsersPage />) }],
+                  },
                 ],
               },
-              // User management (SSA + managers) and org management (SSA only):
-              {
-                element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
-                children: [{ path: 'users', element: L(<UsersPage />) }],
-              },
+              // Organizations list (SA only) — the SA's home base.
               {
                 element: <RequireRole roles={['superadmin', 'admin']} />,
                 children: [{ path: 'organizations', element: L(<OrganizationsPage />) }],

@@ -30,6 +30,8 @@ interface DB {
   orgs: Org[]
   users: StoredUser[]
   sessionUserId: string | null
+  /** Org the SA is currently "inside" (via View). null = on the org list. */
+  actingOrgId: string | null
 }
 
 const LS_KEY = 'leadintel.accounts.v1'
@@ -59,6 +61,7 @@ function seed(): DB {
       },
     ],
     sessionUserId: null,
+    actingOrgId: null,
   }
 }
 
@@ -127,12 +130,25 @@ export function login(email: string, password: string): { user: StoredUser } | {
   const u = db.users.find((x) => x.email.toLowerCase() === email.trim().toLowerCase())
   if (!u || u.password !== password) return { error: 'Invalid email or password.' }
   if (u.status === 'disabled') return { error: 'This account has been disabled. Contact your administrator.' }
-  persist({ ...db, sessionUserId: u.id })
+  persist({ ...db, sessionUserId: u.id, actingOrgId: null })
   return { user: u }
 }
 
 export function logout() {
-  persist({ ...db, sessionUserId: null })
+  persist({ ...db, sessionUserId: null, actingOrgId: null })
+}
+
+/** SA enters an org (works inside it like a manager). Other roles: no-op. */
+export function enterOrg(id: string): { error: string } | { ok: true } {
+  const actor = getCurrentUser()
+  if (!isSSA(actor)) return { error: 'Only the super admin can switch organizations.' }
+  if (!db.orgs.some((o) => o.id === id)) return { error: 'Organization not found.' }
+  persist({ ...db, actingOrgId: id })
+  return { ok: true }
+}
+
+export function exitOrg() {
+  persist({ ...db, actingOrgId: null })
 }
 
 export function acceptTosForCurrent(): string | null {
@@ -186,12 +202,10 @@ export interface CreateUserInput {
   permissions?: PermissionOverrides
 }
 
-/** Users visible to the actor (SSA → all; manager → own org). */
-export function listUsers(actor: StoredUser | null, orgFilter?: string): StoredUser[] {
-  let rows = db.users.filter((u) => u.id !== 'usr_ssa' || isSSA(actor)) // hide SSA from non-SSA
-  if (isManager(actor)) rows = rows.filter((u) => u.org_id === actor!.org_id)
-  if (orgFilter) rows = rows.filter((u) => u.org_id === orgFilter)
-  return rows
+/** Users in the actor's effective org (manager → own org; SA → the org they've entered). */
+export function listUsers(actor: StoredUser | null): StoredUser[] {
+  const org = effectiveOrgId(actor)
+  return db.users.filter((u) => u.id !== 'usr_ssa' && u.org_id === org)
 }
 
 export function findUser(id: string): StoredUser | undefined {
@@ -202,8 +216,9 @@ export function createUser(actor: StoredUser | null, input: CreateUserInput): { 
   if (!actor || (!isSSA(actor) && !isManager(actor))) return { error: 'Not authorized to create users.' }
   if (!assignableRoles(actor).includes(input.role)) return { error: `You cannot assign the "${input.role}" role.` }
 
-  // Manager can only create users inside their own org.
-  const org_id = isManager(actor) ? actor.org_id : input.org_id
+  // Manager → own org. SA → the org they're inside (View), else the org passed
+  // explicitly (e.g. "Add Manager" from the organizations list).
+  const org_id = isManager(actor) ? actor.org_id : db.actingOrgId ?? input.org_id
   if (!org_id) return { error: 'Select an organization for this user.' }
 
   const email = input.email.trim().toLowerCase()
@@ -279,16 +294,24 @@ export function deleteUser(actor: StoredUser | null, id: string): { ok: true } |
   return { ok: true }
 }
 
-/** Org id used to scope data created by this user (null for SSA = global). */
-export function currentOrgId(): string | null {
-  return getCurrentUser()?.org_id ?? null
+/** The org a user effectively operates in: SA → the org they've entered; others → their own org. */
+export function effectiveOrgId(u: StoredUser | null): string | null {
+  if (!u) return null
+  if (u.role === 'superadmin' || u.role === 'admin') return db.actingOrgId
+  return u.org_id
 }
 
-/** The org shown to a user (synthetic "All organizations" for the SSA). */
+/** Org id used to scope data for the signed-in user. */
+export function currentOrgId(): string | null {
+  return effectiveOrgId(getCurrentUser())
+}
+
+/** The org shown in the UI (null/"All organizations" when the SA hasn't entered one). */
 export function clientForUser(u: StoredUser): Client {
-  if (!u.org_id) return { id: '*', name: 'All organizations', plan: 'scale', credits_remaining: null }
-  const o = db.orgs.find((x) => x.id === u.org_id)
-  return { id: u.org_id, name: o?.name ?? 'Organization', plan: 'growth', credits_remaining: null }
+  const orgId = effectiveOrgId(u)
+  if (!orgId) return { id: '*', name: 'All organizations', plan: 'scale', credits_remaining: null }
+  const o = db.orgs.find((x) => x.id === orgId)
+  return { id: orgId, name: o?.name ?? 'Organization', plan: 'growth', credits_remaining: null }
 }
 
 /** Self-service profile update for the signed-in user. */

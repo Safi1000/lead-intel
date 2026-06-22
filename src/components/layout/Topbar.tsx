@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { ChevronDown, LogOut, Menu, Moon, Settings, Sun, User as UserIcon } from 'lucide-react'
-import { authApi } from '../../api/endpoints'
+import { Building2, ChevronDown, LogOut, Menu, Moon, Settings, Sun, User as UserIcon } from 'lucide-react'
+import { authApi, orgsApi } from '../../api/endpoints'
 import { useAuthStore } from '../../stores/authStore'
 import { useUIStore } from '../../stores/uiStore'
+import { queryClient } from '../../app/providers'
 import { NotificationBell } from './NotificationBell'
 import { ConnectionChip } from '../../realtime/realtime'
 import {
@@ -15,16 +16,26 @@ import {
 } from '../ui/controls'
 
 export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
-  const { user, client } = useAuthStore()
+  const { user, client, role, actingOrgId, setSession } = useAuthStore()
   const theme = useUIStore((s) => s.theme)
   const toggleTheme = useUIStore((s) => s.toggleTheme)
   const clear = useAuthStore((s) => s.clear)
   const navigate = useNavigate()
+  const isSA = role === 'superadmin' || role === 'admin'
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSettled: () => {
       clear()
       navigate('/login')
+    },
+  })
+  const exitOrg = useMutation({
+    mutationFn: orgsApi.exit,
+    onSuccess: async () => {
+      const me = await authApi.me()
+      setSession({ user: me.user, client: me.client, role: me.role, flags: me.feature_flags, permissions: me.permissions, actingOrgId: me.acting_org_id, tosAcceptedAt: me.tos_accepted_at })
+      await queryClient.invalidateQueries()
+      navigate('/organizations')
     },
   })
 
@@ -45,6 +56,18 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
           <Menu className="h-5 w-5" />
         </button>
         <span className="text-[15px] font-semibold lg:hidden">LeadIntel</span>
+        {isSA && actingOrgId && (
+          <div className="flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] py-1 pl-3 pr-1 text-[13px]">
+            <Building2 className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            <span className="font-medium">{client?.name}</span>
+            <button
+              onClick={() => exitOrg.mutate()}
+              className="rounded-full px-2 py-0.5 text-[12px] font-medium text-[var(--color-text-secondary)] hover:bg-slate-200"
+            >
+              Exit
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5">

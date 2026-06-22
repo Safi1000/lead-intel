@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { KeyRound, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-react'
-import { orgsApi, usersApi, type CreateUserBody } from '../../api/endpoints'
+import { usersApi, type CreateUserBody } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS, PERMISSION_CATALOG, permKey, roleGrants } from '../../config/permissions'
-import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import { DropdownMenu, DropdownTrigger, DropdownContent, DropdownItem } from '../../components/ui/controls'
@@ -41,12 +40,7 @@ function toOverrides(role: Role, state: Record<string, boolean>): PermissionOver
 
 export function UsersPage() {
   const qc = useQueryClient()
-  const { role: myRole } = useAuth()
-  const isSSA = myRole === 'superadmin' || myRole === 'admin'
-
-  const [orgFilter, setOrgFilter] = useState<string>('')
-  const orgsQ = useQuery({ queryKey: ['orgs'], queryFn: orgsApi.list, enabled: isSSA })
-  const usersQ = useQuery({ queryKey: ['users', orgFilter], queryFn: () => usersApi.list(orgFilter || undefined) })
+  const usersQ = useQuery({ queryKey: ['users'], queryFn: () => usersApi.list() })
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedUser | null>(null)
@@ -65,25 +59,14 @@ export function UsersPage() {
   })
 
   const users = usersQ.data ?? []
-  const orgs = orgsQ.data ?? []
 
   return (
     <div className="reveal">
       <PageHeader
         title="Users"
-        subtitle={isSSA ? 'Create and manage users across all organizations.' : 'Create and manage users in your organization.'}
+        subtitle="Create and manage the users in this organization."
         actions={<Button onClick={() => { setEditing(null); setFormOpen(true) }}><UserPlus className="h-4 w-4" /> Add user</Button>}
       />
-
-      {isSSA && (
-        <div className="mb-4 flex items-center gap-2">
-          <Label htmlFor="orgf" className="mb-0 text-[13px]">Organization</Label>
-          <select id="orgf" value={orgFilter} onChange={(e) => setOrgFilter(e.target.value)} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">All organizations</option>
-            {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-        </div>
-      )}
 
       <Card>
         {usersQ.isLoading ? (
@@ -99,7 +82,6 @@ export function UsersPage() {
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
                   <th className="px-5 py-2.5 font-medium">User</th>
                   <th className="px-3 py-2.5 font-medium">Role</th>
-                  {isSSA && <th className="px-3 py-2.5 font-medium">Organization</th>}
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5" />
                 </tr>
@@ -112,7 +94,6 @@ export function UsersPage() {
                       <p className="text-[12px] text-[var(--color-text-muted)]">{u.email}</p>
                     </td>
                     <td className="px-3 py-3"><span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[12px] font-medium">{ROLE_LABELS[u.role]}</span></td>
-                    {isSSA && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{u.org_name ?? '—'}</td>}
                     <td className="px-3 py-3">
                       <span className={cn('inline-flex items-center gap-1 text-[12px] font-medium', u.status === 'active' ? 'text-[var(--c-verified)]' : 'text-[var(--color-text-muted)]')}>
                         <span className={cn('h-1.5 w-1.5 rounded-full', u.status === 'active' ? 'bg-[var(--c-verified)]' : 'bg-slate-300')} />
@@ -143,16 +124,12 @@ export function UsersPage() {
       {formOpen && (
         <UserFormDialog
           user={editing}
-          isSSA={isSSA}
-          orgs={orgs.map((o) => ({ id: o.id, name: o.name }))}
           onClose={() => setFormOpen(false)}
           onSaved={() => { setFormOpen(false); qc.invalidateQueries({ queryKey: ['users'] }) }}
         />
       )}
 
-      {resetTarget && (
-        <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />
-      )}
+      {resetTarget && <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />}
 
       <ConfirmDialog
         open={!!deleteTarget}
@@ -168,19 +145,12 @@ export function UsersPage() {
   )
 }
 
-function UserFormDialog({ user, isSSA, orgs, onClose, onSaved }: {
-  user: ManagedUser | null
-  isSSA: boolean
-  orgs: { id: string; name: string }[]
-  onClose: () => void
-  onSaved: () => void
-}) {
+function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; onClose: () => void; onSaved: () => void }) {
   const editMode = !!user
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<Role>(user?.role ?? 'setter')
-  const [orgId, setOrgId] = useState<string>(user?.org_id ?? (orgs[0]?.id ?? ''))
   const [perms, setPerms] = useState<Record<string, boolean>>(() => buildPermState(user?.role ?? 'setter', user?.permissions))
 
   // Reset toggles to the role's defaults when the role changes.
@@ -190,15 +160,14 @@ function UserFormDialog({ user, isSSA, orgs, onClose, onSaved }: {
     mutationFn: () => {
       const permissions = toOverrides(role, perms)
       if (editMode) return usersApi.update(user!.id, { name: name.trim(), role, permissions })
-      const body: CreateUserBody = { name: name.trim(), email: email.trim(), password, role, org_id: isSSA ? (orgId || null) : null, permissions }
+      const body: CreateUserBody = { name: name.trim(), email: email.trim(), password, role, org_id: null, permissions }
       return usersApi.create(body)
     },
     onSuccess: () => { toast.success(editMode ? 'User updated' : 'User created'); onSaved() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
-  const needsOrg = isSSA && !editMode
-  const valid = name.trim() && (editMode || (/^\S+@\S+\.\S+$/.test(email) && password.length >= 6)) && (!needsOrg || orgId)
+  const valid = name.trim() && (editMode || (/^\S+@\S+\.\S+$/.test(email) && password.length >= 6))
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} title={editMode ? `Edit ${user?.name}` : 'Add user'} description={editMode ? 'Update role and permissions.' : 'Create a user with a login, role, and permissions.'}>
@@ -217,15 +186,6 @@ function UserFormDialog({ user, isSSA, orgs, onClose, onSaved }: {
               <Label htmlFor="u-pass">Temporary password</Label>
               <Input id="u-pass" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" />
             </div>
-            {isSSA && (
-              <div>
-                <Label htmlFor="u-org">Organization</Label>
-                <select id="u-org" value={orgId} onChange={(e) => setOrgId(e.target.value)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-                  <option value="">Select an organization…</option>
-                  {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </div>
-            )}
           </>
         )}
         <div>

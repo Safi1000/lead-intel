@@ -7,19 +7,21 @@ export interface NavItem {
   icon: string // lucide icon name
   flag?: FeatureFlagKey // gated → shows "Soon" tag when off
   roles?: Role[] // when set, only these roles see the item
+  orgContext?: boolean // only show when operating inside an org (SA must have entered one)
   primary?: boolean // highlighted CTA
 }
 
-// Phase 1 manual workflow. Automation/AI/SaaS entries are hidden until later
-// phases. The Leads queue + setter/closer workspaces come online as they're built.
-const GENERATOR: Role[] = ['manager', 'lead_generator']
+// Phase 1 manual workflow. The org-workspace items only appear when inside an
+// org (managers always are; the SA enters via the Organizations list).
+const GENERATORS: Role[] = ['superadmin', 'admin', 'manager', 'lead_generator']
+const ADMINS: Role[] = ['superadmin', 'admin', 'manager']
 export const CLIENT_NAV: NavItem[] = [
-  { label: 'Home', to: '/home', icon: 'LayoutDashboard' },
-  { label: 'Leads', to: '/leads', icon: 'Users' },
-  { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', roles: GENERATOR },
-  { label: 'Upload', to: '/upload', icon: 'FileUp', roles: GENERATOR, primary: true },
+  { label: 'Home', to: '/home', icon: 'LayoutDashboard', orgContext: true },
+  { label: 'Leads', to: '/leads', icon: 'Users', orgContext: true },
+  { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', roles: GENERATORS, orgContext: true },
+  { label: 'Upload', to: '/upload', icon: 'FileUp', roles: GENERATORS, orgContext: true, primary: true },
+  { label: 'Users', to: '/users', icon: 'UserCog', roles: ADMINS, orgContext: true },
   { label: 'Organizations', to: '/organizations', icon: 'Building2', roles: ['superadmin', 'admin'] },
-  { label: 'Users', to: '/users', icon: 'UserCog', roles: ['superadmin', 'admin', 'manager'] },
 ]
 
 export const CLIENT_NAV_BOTTOM: NavItem[] = [

@@ -36,6 +36,15 @@ export function RequireAdmin() {
   return <Outlet />
 }
 
+/** Org-workspace routes require an org context. The SA must enter one first. */
+export function RequireOrgContext() {
+  const role = useAuthStore((s) => s.role)
+  const actingOrgId = useAuthStore((s) => s.actingOrgId)
+  const isSA = role === 'superadmin' || role === 'admin'
+  if (isSA && !actingOrgId) return <Navigate to="/organizations" replace />
+  return <Outlet />
+}
+
 /** RequireFeature — render Coming-Soon shell if flag off, never a dead link. */
 export function RequireFeature({ flag, title }: { flag: FeatureFlagKey; title: string }) {
   const on = useAuthStore((s) => s.flags[flag])

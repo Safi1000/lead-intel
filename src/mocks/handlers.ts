@@ -27,6 +27,7 @@ import {
 import {
   acceptTosForCurrent,
   clientForUser,
+  currentOrgId,
   getCurrentUser,
   login as accountsLogin,
   logout as accountsLogout,
@@ -95,6 +96,7 @@ export const handlers = [
       role: u.role,
       feature_flags: DEFAULT_FLAGS,
       permissions: u.permissions,
+      acting_org_id: currentOrgId(),
       tos_accepted_at: u.tos_accepted_at,
     })
   }),

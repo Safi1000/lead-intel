@@ -12,6 +12,8 @@ interface AuthState {
   role: Role | null
   flags: FeatureFlags
   permissions: PermissionOverrides
+  /** Org the user is currently operating in (null = SA on the org list). */
+  actingOrgId: string | null
   tosAcceptedAt: string | null
   status: 'unknown' | 'authenticated' | 'unauthenticated'
   setSession: (p: {
@@ -21,6 +23,7 @@ interface AuthState {
     role: Role
     flags: FeatureFlags
     permissions: PermissionOverrides
+    actingOrgId: string | null
     tosAcceptedAt: string | null
   }) => void
   setToken: (t: string | null) => void
@@ -35,9 +38,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   role: null,
   flags: DEFAULT_FLAGS,
   permissions: NO_PERMS,
+  actingOrgId: null,
   tosAcceptedAt: null,
   status: 'unknown',
-  setSession: ({ accessToken, user, client, role, flags, permissions, tosAcceptedAt }) =>
+  setSession: ({ accessToken, user, client, role, flags, permissions, actingOrgId, tosAcceptedAt }) =>
     set((s) => ({
       accessToken: accessToken ?? s.accessToken,
       user,
@@ -45,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       role,
       flags,
       permissions,
+      actingOrgId,
       tosAcceptedAt,
       status: 'authenticated',
     })),
@@ -58,6 +63,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       role: null,
       flags: DEFAULT_FLAGS,
       permissions: NO_PERMS,
+      actingOrgId: null,
       tosAcceptedAt: null,
       status: 'unauthenticated',
     }),
