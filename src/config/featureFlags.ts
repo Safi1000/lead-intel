@@ -31,34 +31,39 @@ export interface FeatureFlags {
   countryUK: boolean
 }
 
-/** Phase 2 & 3 delivered → all flags ON. */
+/**
+ * Phase 1 (manual lead-handling) scope. Only the features used by the manual
+ * generator → setter → closer workflow are ON; every automation / SaaS-billing /
+ * AI / WhatsApp / CRM feature is OFF (hidden). Flip back on as phases land.
+ */
 export const DEFAULT_FLAGS: FeatureFlags = {
-  signup: true,
-  marketMap: true,
-  usage: true,
-  apiKeys: true,
-  webhooks: true,
-  team: true,
-  billing: true,
-  integrations: true,
-  aiProviders: true,
-  scoring: true,
-  crmPush: true,
-  whatsapp: true,
-  globalSearch: true,
-  marketLocks: true,
-  notesTags: true,
-  assistant: true,
-  outreach: true,
-  campaigns: true,
-  inbox: true,
-  branding: true,
-  resellers: true,
-  predictive: true,
-  apiDocs: true,
-  addons: true,
-  countryCA: true,
-  countryUK: true,
+  signup: false, // self-service signup disabled — accounts are provisioned by SSA/managers
+  team: true, // manage generator/setter/closer users (Req 1, 3, 4)
+  notesTags: true, // per-lead remarks + warm/cold (Req 3, 4, 5)
+  globalSearch: true, // search within the lead queue
+  // --- hidden: automation / SaaS / AI (re-enable in later phases) ---
+  marketMap: false,
+  usage: false,
+  apiKeys: false,
+  webhooks: false,
+  billing: false,
+  integrations: false,
+  aiProviders: false,
+  scoring: false,
+  crmPush: false,
+  whatsapp: false,
+  marketLocks: false,
+  assistant: false,
+  outreach: false,
+  campaigns: false,
+  inbox: false,
+  branding: false,
+  resellers: false,
+  predictive: false,
+  apiDocs: false,
+  addons: false,
+  countryCA: false,
+  countryUK: false,
 }
 
 export type FeatureFlagKey = keyof FeatureFlags

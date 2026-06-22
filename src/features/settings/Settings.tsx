@@ -13,23 +13,19 @@ interface Tab {
 }
 const TABS: Tab[] = [
   { to: '/settings/profile', label: 'Profile' },
-  { to: '/settings/notifications', label: 'Notifications' },
-  { to: '/settings/api-keys', label: 'API Keys', flag: 'apiKeys' },
-  { to: '/settings/webhooks', label: 'Webhooks', flag: 'webhooks' },
-  { to: '/settings/team', label: 'Team', flag: 'team' },
-  { to: '/settings/billing', label: 'Billing', flag: 'billing' },
-  { to: '/settings/integrations', label: 'Integrations', flag: 'integrations' },
-  { to: '/settings/ai-providers', label: 'AI Providers', flag: 'aiProviders' },
-  { to: '/settings/branding', label: 'Branding', flag: 'branding', phase: 'Phase 3' },
+  // User management lives in the dedicated Users page now. Hidden until later
+  // phases: Notifications, API Keys, Webhooks, Billing, Integrations, AI, Branding.
 ]
 
 export function SettingsLayout() {
   const flags = useAuthStore((s) => s.flags)
+  // Only show tabs whose flag is on (or have no flag).
+  const tabs = TABS.filter((t) => !t.flag || flags[t.flag])
   return (
     <div>
-      <PageHeader title="Settings" subtitle="Manage your profile, notifications, and integrations." />
+      <PageHeader title="Settings" subtitle="Manage your profile and team." />
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-[var(--color-border)]">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const soon = t.flag && !flags[t.flag]
           return (
             <NavLink

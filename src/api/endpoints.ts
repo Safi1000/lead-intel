@@ -18,9 +18,19 @@ import type {
   ErrorLogItem,
   EstimateResponse,
   ExportJob,
+  ImportResult,
   Integration,
   LeadDetail,
+  LeadRemark,
   LeadRow,
+  LeadStatus,
+  LeadTemplate,
+  ManagedUser,
+  ManualLead,
+  Org,
+  PermissionOverrides,
+  Role,
+  Temperature,
   MarketLock,
   MarketLockAvailability,
   MarketSummary,
@@ -102,6 +112,55 @@ export const leadsApi = {
   get: (id: string) => api.get<LeadDetail>(`/leads/${id}`).then((r) => r.data),
   update: (id: string, body: { notes?: string; tags?: string[] }) =>
     api.patch<LeadDetail>(`/leads/${id}`, body).then((r) => r.data),
+}
+
+// ---- Organizations (SSA) ----
+export const orgsApi = {
+  list: () => api.get<Org[]>('/orgs').then((r) => r.data),
+  create: (name: string) => api.post<Org>('/orgs', { name }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/orgs/${id}`).then((r) => r.data),
+}
+
+// ---- User management (SSA / manager) ----
+export interface CreateUserBody {
+  name: string
+  email: string
+  password: string
+  role: Role
+  org_id: string | null
+  permissions?: PermissionOverrides
+}
+export const usersApi = {
+  list: (orgId?: string) => api.get<ManagedUser[]>('/users', { params: orgId ? { org_id: orgId } : undefined }).then((r) => r.data),
+  create: (body: CreateUserBody) => api.post<ManagedUser>('/users', body).then((r) => r.data),
+  update: (id: string, body: Partial<{ name: string; role: Role; permissions: PermissionOverrides; status: 'active' | 'disabled'; org_id: string | null }>) =>
+    api.patch<ManagedUser>(`/users/${id}`, body).then((r) => r.data),
+  resetPassword: (id: string, password: string) => api.post(`/users/${id}/reset-password`, { password }).then((r) => r.data),
+  remove: (id: string) => api.delete(`/users/${id}`).then((r) => r.data),
+}
+
+// ---- Templates (manual upload) ----
+export const templatesApi = {
+  list: () => api.get<LeadTemplate[]>('/templates').then((r) => r.data),
+  get: (id: string) => api.get<LeadTemplate>(`/templates/${id}`).then((r) => r.data),
+  create: (body: { name: string; columns: { name: string; required: boolean }[] }) =>
+    api.post<LeadTemplate>('/templates', body).then((r) => r.data),
+  update: (id: string, body: { name: string; columns: { name: string; required: boolean }[] }) =>
+    api.put<LeadTemplate>(`/templates/${id}`, body).then((r) => r.data),
+  remove: (id: string) => api.delete(`/templates/${id}`).then((r) => r.data),
+  import: (id: string, body: { headers: string[]; rows: Record<string, string>[] }) =>
+    api.post<ImportResult>(`/templates/${id}/import`, body).then((r) => r.data),
+}
+
+// ---- Manual leads (shared-pool workflow) ----
+export const manualLeadsApi = {
+  list: (params?: { status?: LeadStatus; search?: string }) =>
+    api.get<Paginated<ManualLead>>('/leads', { params }).then((r) => r.data),
+  get: (id: string) => api.get<ManualLead>(`/leads/manual/${id}`).then((r) => r.data),
+  update: (id: string, body: Partial<{ status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }>) =>
+    api.patch<ManualLead>(`/leads/manual/${id}`, body).then((r) => r.data),
+  addRemark: (id: string, body: { text: string; author: string; author_role: Role }) =>
+    api.post<LeadRemark>(`/leads/manual/${id}/remarks`, body).then((r) => r.data),
 }
 
 // ---- Batches / reports / exports ----

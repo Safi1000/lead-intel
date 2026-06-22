@@ -1,9 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { PanelLeftClose, PanelLeft, ShieldCheck } from 'lucide-react'
+import { NavLink } from 'react-router-dom'
+import { PanelLeftClose, PanelLeft } from 'lucide-react'
 import { CLIENT_NAV, CLIENT_NAV_BOTTOM, type NavItem } from './nav'
 import { Icon } from './icon'
 import { useUIStore } from '../../stores/uiStore'
-import { useAuthStore, isAdminRole } from '../../stores/authStore'
+import { useAuthStore } from '../../stores/authStore'
 import { cn } from '../../lib/utils'
 
 function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
@@ -43,7 +43,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const toggle = useUIStore((s) => s.toggleSidebar)
   const role = useAuthStore((s) => s.role)
-  const navigate = useNavigate()
 
   return (
     <aside
@@ -60,27 +59,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {CLIENT_NAV.map((item) => (
+        {CLIENT_NAV.filter((item) => !item.roles || (role !== null && item.roles.includes(role))).map((item) => (
           <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </nav>
 
       <div className="space-y-0.5 border-t border-[var(--color-border)] p-3">
-        {isAdminRole(role) && (
-          <button
-            onClick={() => {
-              navigate('/admin')
-              onNavigate?.()
-            }}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-[8px] px-3 py-2 text-sm font-medium text-[var(--color-admin)] hover:bg-purple-50',
-              collapsed && 'justify-center',
-            )}
-          >
-            <ShieldCheck className="h-[18px] w-[18px]" />
-            {!collapsed && 'Admin Panel'}
-          </button>
-        )}
         {CLIENT_NAV_BOTTOM.map((item) => (
           <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}

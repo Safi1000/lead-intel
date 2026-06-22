@@ -11,7 +11,6 @@ import type {
   NotificationItem,
   Run,
   StageProgress,
-  User,
 } from '../api/types'
 
 // --- tiny seeded RNG for stable-ish mock data ---
@@ -33,24 +32,6 @@ function id(prefix: string) {
 const NOW = Date.parse('2026-06-17T18:00:00Z')
 function ago(minutes: number) {
   return new Date(NOW - minutes * 60_000).toISOString()
-}
-
-export const mockUser: User = {
-  id: 'usr_owner',
-  name: 'Hayan Saif',
-  email: 'demo@techexcel.io',
-  role: 'client_owner',
-  timezone: 'America/New_York',
-  tos_accepted_at: ago(60 * 24 * 30),
-}
-
-export const mockAdmin: User = {
-  id: 'usr_admin',
-  name: 'TechExcel Ops',
-  email: 'admin@techexcel.io',
-  role: 'admin',
-  timezone: 'America/New_York',
-  tos_accepted_at: ago(60 * 24 * 90),
 }
 
 export const mockClient: Client = {
@@ -310,7 +291,7 @@ function makeRun(opts: {
     created_at: ago(opts.ageMin),
     started_at: ago(opts.ageMin - 1),
     completed_at: terminal ? ago(opts.ageMin - 40) : null,
-    started_by: mockUser.name,
+    started_by: 'System',
     error_reason:
       opts.status === 'failed'
         ? 'Contact-discovery provider returned 429 (rate limited) repeatedly.'

@@ -3,10 +3,11 @@ import { useAuthStore } from '../../stores/authStore'
 import { can, type Action, type Resource } from '../../config/permissions'
 import { Tooltip } from '../ui/controls'
 
-/** Hook form of the RBAC check (§I-4). */
+/** Hook form of the RBAC check (§I-4). Honors per-user permission overrides. */
 export function useCan(action: Action, resource: Resource): boolean {
   const role = useAuthStore((s) => s.role)
-  return can(role, action, resource)
+  const permissions = useAuthStore((s) => s.permissions)
+  return can(role, action, resource, permissions)
 }
 
 /**

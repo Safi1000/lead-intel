@@ -66,7 +66,7 @@ export function BatchesPage() {
 export function FillRateReportPage() {
   const { batchId } = useParams()
   const { role } = useAuth()
-  const canSeeCost = role === 'client_owner' || role === 'client_admin' || role === 'client_billing'
+  const canSeeCost = role === 'manager'
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['batch-report', batchId],
     queryFn: () => batchesApi.report(batchId as string),

@@ -3,18 +3,21 @@ import type { ConfidenceStatus, RunStage, RunStatus } from '../config/constants'
 import type { FeatureFlags } from '../config/featureFlags'
 
 export type Role =
+  // Internal platform staff
   | 'superadmin'
   | 'admin'
-  | 'client_owner'
-  | 'client_admin'
-  | 'client_member'
-  | 'client_billing'
+  // Tenant roles (manual lead-handling workflow)
+  | 'manager' // tenant admin: manages users, oversees everything
+  | 'lead_generator' // uploads leads via templates
+  | 'setter' // tests/calls leads, leaves remarks, sets warm/cold
+  | 'closer' // closes/keeps-open/returns leads, sets warm/cold
 
 export interface User {
   id: string
   name: string
   email: string
   role: Role
+  org_id: string | null // null = SSA (cross-org)
   avatar_url?: string | null
   timezone: string
   tos_accepted_at: string | null
@@ -27,12 +30,41 @@ export interface Client {
   credits_remaining: number | null
 }
 
+/** Explicit per-user permission overrides layered on top of the role matrix. */
+export interface PermissionOverrides {
+  granted: string[] // "resource:action" keys force-allowed
+  denied: string[] // "resource:action" keys force-denied
+}
+
 export interface MeResponse {
   user: User
-  client: Client
+  client: Client // the user's org (synthetic "All organizations" for SSA)
   role: Role
   feature_flags: FeatureFlags
+  permissions: PermissionOverrides
   tos_accepted_at: string | null
+}
+
+// ---- Organizations & user management ----
+export interface Org {
+  id: string
+  name: string
+  created_at: string
+  user_count?: number
+  manager_count?: number
+}
+
+export interface ManagedUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+  org_id: string | null
+  org_name?: string | null
+  status: 'active' | 'disabled'
+  permissions: PermissionOverrides
+  created_at: string
+  created_by?: string | null
 }
 
 export interface AuthResponse {
@@ -497,4 +529,72 @@ export interface AuditEntry {
   resource: string
   client: string
   reason?: string | null
+}
+
+// ============== Phase 1 — Manual lead workflow ==============
+
+/** A column the uploaded Excel sheet must provide. Header match is CASE-SENSITIVE. */
+export interface TemplateColumn {
+  id: string
+  name: string // exact, case-sensitive header expected in the sheet
+  required: boolean
+}
+
+export interface LeadTemplate {
+  id: string
+  name: string
+  org_id: string | null
+  columns: TemplateColumn[]
+  created_by: string
+  created_at: string
+  updated_at: string
+  lead_count: number // leads imported against this template
+}
+
+/** Lead lifecycle in the shared-pool workflow (generator → setter → closer). */
+export type LeadStatus =
+  | 'new' // imported, in the unclaimed pool
+  | 'with_setter' // a setter is testing/calling
+  | 'with_closer' // setter finished → in the closer pool
+  | 'open' // closer is keeping it open / working it
+  | 'closed' // closer closed (done)
+  | 'returned' // closer sent it back to a setter
+
+export type Temperature = 'warm' | 'cold' | null
+
+export interface LeadRemark {
+  id: string
+  author: string
+  author_role: Role
+  text: string
+  at: string
+}
+
+export interface ManualLead {
+  id: string
+  org_id: string | null
+  template_id: string
+  template_name: string
+  /** Raw imported cell values, keyed by the template's case-sensitive column names. */
+  data: Record<string, string>
+  display_name: string // best-effort primary label for lists
+  status: LeadStatus
+  temperature: Temperature
+  setter: string | null // claiming setter (name)
+  closer: string | null // claiming closer (name)
+  remarks: LeadRemark[]
+  created_at: string
+  updated_at: string
+}
+
+/** Result of importing an Excel sheet against a template. */
+export interface ImportRejection {
+  row: number // 1-based row number in the sheet (excluding header)
+  reason: string
+}
+export interface ImportResult {
+  template_id: string
+  total_rows: number
+  imported: number
+  rejected: ImportRejection[]
 }

@@ -36,10 +36,10 @@ const TRADES: Trade[] = [
 
 // ---- Team ----
 const team: TeamMember[] = [
-  { id: 'usr_owner', name: 'Hayan Saif', email: 'demo@techexcel.io', role: 'client_owner', status: 'active', last_active: new Date().toISOString() },
-  { id: 'tm_2', name: 'Jordan Lee', email: 'jordan@acme.io', role: 'client_admin', status: 'active', last_active: null },
-  { id: 'tm_3', name: 'Sam Rivera', email: 'sam@acme.io', role: 'client_member', status: 'active', last_active: null },
-  { id: 'tm_4', name: 'Pat Morgan', email: 'pat@acme.io', role: 'client_billing', status: 'invited', last_active: null },
+  { id: 'usr_manager', name: 'Hayan Saif', email: 'demo@techexcel.io', role: 'manager', status: 'active', last_active: new Date().toISOString() },
+  { id: 'tm_2', name: 'Gen Garcia', email: 'gen@acme.io', role: 'lead_generator', status: 'active', last_active: null },
+  { id: 'tm_3', name: 'Sam Setter', email: 'sam@acme.io', role: 'setter', status: 'active', last_active: null },
+  { id: 'tm_4', name: 'Casey Closer', email: 'casey@acme.io', role: 'closer', status: 'invited', last_active: null },
 ]
 
 // ---- Billing ----

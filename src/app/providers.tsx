@@ -46,6 +46,7 @@ function SessionBootstrap({ children }: { children: React.ReactNode }) {
           client: me.client,
           role: me.role,
           flags: me.feature_flags,
+          permissions: me.permissions,
           tosAcceptedAt: me.tos_accepted_at,
         }),
       )

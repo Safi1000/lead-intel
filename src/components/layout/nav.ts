@@ -1,26 +1,25 @@
 import type { FeatureFlagKey } from '../../config/featureFlags'
+import type { Role } from '../../api/types'
 
 export interface NavItem {
   label: string
   to: string
   icon: string // lucide icon name
   flag?: FeatureFlagKey // gated → shows "Soon" tag when off
+  roles?: Role[] // when set, only these roles see the item
   primary?: boolean // highlighted CTA
 }
 
+// Phase 1 manual workflow. Automation/AI/SaaS entries are hidden until later
+// phases. The Leads queue + setter/closer workspaces come online as they're built.
+const GENERATOR: Role[] = ['manager', 'lead_generator']
 export const CLIENT_NAV: NavItem[] = [
   { label: 'Home', to: '/home', icon: 'LayoutDashboard' },
-  { label: 'New Run', to: '/runs/new', icon: 'Plus', primary: true },
-  { label: 'Runs', to: '/runs', icon: 'Workflow' },
-  { label: 'Batches', to: '/batches', icon: 'Boxes' },
-  { label: 'Exports', to: '/exports', icon: 'Download' },
-  { label: 'Market Map', to: '/market-map', icon: 'Map', flag: 'marketMap' },
-  { label: 'Usage', to: '/usage', icon: 'Gauge', flag: 'usage' },
-  { label: 'Assistant', to: '/assistant', icon: 'Bot', flag: 'assistant' },
-  { label: 'Outreach', to: '/outreach', icon: 'PenLine', flag: 'outreach' },
-  { label: 'Campaigns', to: '/campaigns', icon: 'MessageSquare', flag: 'campaigns' },
-  { label: 'Inbox', to: '/inbox', icon: 'Inbox', flag: 'inbox' },
-  { label: 'Reseller', to: '/reseller', icon: 'Network', flag: 'resellers' },
+  { label: 'Leads', to: '/leads', icon: 'Users' },
+  { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', roles: GENERATOR },
+  { label: 'Upload', to: '/upload', icon: 'FileUp', roles: GENERATOR, primary: true },
+  { label: 'Organizations', to: '/organizations', icon: 'Building2', roles: ['superadmin', 'admin'] },
+  { label: 'Users', to: '/users', icon: 'UserCog', roles: ['superadmin', 'admin', 'manager'] },
 ]
 
 export const CLIENT_NAV_BOTTOM: NavItem[] = [
@@ -28,11 +27,6 @@ export const CLIENT_NAV_BOTTOM: NavItem[] = [
 ]
 
 export const ADMIN_NAV: NavItem[] = [
-  { label: 'Run Monitoring', to: '/admin/runs', icon: 'Activity' },
-  { label: 'Cost Tracking', to: '/admin/costs', icon: 'DollarSign' },
-  { label: 'Error Log', to: '/admin/errors', icon: 'AlertTriangle' },
   { label: 'Clients', to: '/admin/clients', icon: 'Building2' },
   { label: 'Audit Log', to: '/admin/audit', icon: 'FileClock' },
-  { label: 'Market Locks', to: '/admin/market-locks', icon: 'Lock' },
-  { label: 'Resellers', to: '/admin/resellers', icon: 'Network' },
 ]

@@ -1,67 +1,81 @@
-/** RBAC permission matrix (§I-4). resource × action → allowed roles. */
-import type { Role } from '../api/types'
+/** RBAC permission matrix. resource × action → allowed roles. */
+import type { PermissionOverrides, Role } from '../api/types'
 
 export type Action = 'view' | 'create' | 'edit' | 'delete' | 'manage'
 export type Resource =
-  | 'runs'
-  | 'leads'
-  | 'notes'
-  | 'exports'
+  | 'templates' // lead-upload templates
+  | 'upload' // manual lead import
+  | 'leads' // the shared lead queue
+  | 'users' // team / user management
+  | 'account' // tenant account settings
+  // Legacy resources referenced only by hidden (flag-gated) pages. Kept in the
+  // type so those screens compile; intentionally absent from MATRIX → denied
+  // for tenant roles until their phase is re-enabled.
   | 'billing'
-  | 'team'
-  | 'integrations'
-  | 'apiKeys'
   | 'webhooks'
-  | 'marketLocks'
+  | 'apiKeys'
   | 'aiProviders'
   | 'branding'
-  | 'campaigns'
-  | 'account'
-  | 'reseller'
+  | 'marketLocks'
 
-const ALL_CLIENT: Role[] = ['client_owner', 'client_admin', 'client_member', 'client_billing']
-const OWNER_ADMIN: Role[] = ['client_owner', 'client_admin']
-const BILLING_ROLES: Role[] = ['client_owner', 'client_billing']
+const TENANT_ALL: Role[] = ['manager', 'lead_generator', 'setter', 'closer']
+const GENERATOR: Role[] = ['manager', 'lead_generator']
+const WORKERS: Role[] = ['manager', 'setter', 'closer']
 
-const MATRIX: Record<Resource, Partial<Record<Action, Role[]>>> = {
-  runs: { view: ALL_CLIENT, create: OWNER_ADMIN, edit: OWNER_ADMIN, delete: OWNER_ADMIN },
-  leads: { view: ALL_CLIENT, edit: ALL_CLIENT },
-  notes: { view: ALL_CLIENT, create: ALL_CLIENT, edit: ALL_CLIENT, delete: OWNER_ADMIN },
-  exports: { view: ALL_CLIENT, create: ALL_CLIENT },
-  billing: { view: BILLING_ROLES, manage: BILLING_ROLES },
-  team: { view: OWNER_ADMIN, manage: OWNER_ADMIN },
-  integrations: { view: OWNER_ADMIN, manage: OWNER_ADMIN },
-  apiKeys: { view: OWNER_ADMIN, manage: OWNER_ADMIN },
-  webhooks: { view: OWNER_ADMIN, manage: OWNER_ADMIN },
-  marketLocks: { view: ALL_CLIENT, manage: BILLING_ROLES },
-  aiProviders: { view: OWNER_ADMIN, manage: OWNER_ADMIN },
-  branding: { view: OWNER_ADMIN, manage: ['client_owner'] },
-  campaigns: { view: ALL_CLIENT, create: OWNER_ADMIN, manage: OWNER_ADMIN },
-  account: { view: ALL_CLIENT, manage: ['client_owner'] },
-  reseller: { view: ['client_owner'], manage: ['client_owner'] },
+const MATRIX: Partial<Record<Resource, Partial<Record<Action, Role[]>>>> = {
+  // Generators (and managers) build templates and upload leads.
+  templates: { view: GENERATOR, create: GENERATOR, edit: GENERATOR, delete: ['manager'] },
+  upload: { view: GENERATOR, create: GENERATOR },
+  // Everyone sees the queue; setters/closers act on leads.
+  leads: { view: TENANT_ALL, edit: WORKERS },
+  // Only managers manage users and the account.
+  users: { view: ['manager'], manage: ['manager'] },
+  account: { view: TENANT_ALL, manage: ['manager'] },
 }
 
-export function can(role: Role | null, action: Action, resource: Resource): boolean {
+export const permKey = (resource: Resource, action: Action) => `${resource}:${action}`
+
+/** Effective permission check: SSA all-access, then per-user overrides, then role matrix. */
+export function can(role: Role | null, action: Action, resource: Resource, overrides?: PermissionOverrides | null): boolean {
   if (!role) return false
   if (role === 'superadmin' || role === 'admin') return true
+  const key = permKey(resource, action)
+  if (overrides?.denied?.includes(key)) return false
+  if (overrides?.granted?.includes(key)) return true
   const allowed = MATRIX[resource]?.[action]
   return allowed ? allowed.includes(role) : false
 }
 
+/** Whether the role grants this permission by default (before overrides) — used to seed the toggles UI. */
+export function roleGrants(role: Role, action: Action, resource: Resource): boolean {
+  if (role === 'superadmin' || role === 'admin') return true
+  return MATRIX[resource]?.[action]?.includes(role) ?? false
+}
+
+/** Toggle-able permissions shown in the user-management UI. */
+export const PERMISSION_CATALOG: { resource: Resource; action: Action; label: string }[] = [
+  { resource: 'templates', action: 'create', label: 'Create & edit upload templates' },
+  { resource: 'templates', action: 'delete', label: 'Delete templates' },
+  { resource: 'upload', action: 'create', label: 'Upload leads' },
+  { resource: 'leads', action: 'view', label: 'View the lead queue' },
+  { resource: 'leads', action: 'edit', label: 'Work leads (remarks, status, warm/cold)' },
+  { resource: 'users', action: 'manage', label: 'Manage users in the org' },
+]
+
 export const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'Super Admin',
   admin: 'Admin',
-  client_owner: 'Owner',
-  client_admin: 'Admin',
-  client_member: 'Member',
-  client_billing: 'Billing',
+  manager: 'Manager',
+  lead_generator: 'Lead Generator',
+  setter: 'Setter',
+  closer: 'Closer',
 }
 
 export const ROLE_CAPABILITIES: Record<Role, string> = {
   superadmin: 'Full internal platform access.',
-  admin: 'Internal monitoring, overrides, audit.',
-  client_owner: 'Everything, including billing, team, and account ownership.',
-  client_admin: 'All features except ownership transfer and account closure.',
-  client_member: 'View runs/leads, add notes & tags, export.',
-  client_billing: 'Billing and invoices only, plus read access.',
+  admin: 'Internal monitoring, client oversight, audit.',
+  manager: 'Manages users and oversees the full lead pipeline.',
+  lead_generator: 'Creates upload templates and imports leads.',
+  setter: 'Tests and calls leads, leaves remarks, sets warm/cold.',
+  closer: 'Closes, holds, or returns leads; sets warm/cold.',
 }

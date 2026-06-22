@@ -1,6 +1,8 @@
 import { create } from 'zustand'
-import type { Client, Role, User } from '../api/types'
+import type { Client, PermissionOverrides, Role, User } from '../api/types'
 import { DEFAULT_FLAGS, type FeatureFlags } from '../config/featureFlags'
+
+const NO_PERMS: PermissionOverrides = { granted: [], denied: [] }
 
 interface AuthState {
   /** Access token kept in memory only — never localStorage (§18-C). */
@@ -9,6 +11,7 @@ interface AuthState {
   client: Client | null
   role: Role | null
   flags: FeatureFlags
+  permissions: PermissionOverrides
   tosAcceptedAt: string | null
   status: 'unknown' | 'authenticated' | 'unauthenticated'
   setSession: (p: {
@@ -17,6 +20,7 @@ interface AuthState {
     client: Client
     role: Role
     flags: FeatureFlags
+    permissions: PermissionOverrides
     tosAcceptedAt: string | null
   }) => void
   setToken: (t: string | null) => void
@@ -30,15 +34,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   client: null,
   role: null,
   flags: DEFAULT_FLAGS,
+  permissions: NO_PERMS,
   tosAcceptedAt: null,
   status: 'unknown',
-  setSession: ({ accessToken, user, client, role, flags, tosAcceptedAt }) =>
+  setSession: ({ accessToken, user, client, role, flags, permissions, tosAcceptedAt }) =>
     set((s) => ({
       accessToken: accessToken ?? s.accessToken,
       user,
       client,
       role,
       flags,
+      permissions,
       tosAcceptedAt,
       status: 'authenticated',
     })),
@@ -51,6 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       client: null,
       role: null,
       flags: DEFAULT_FLAGS,
+      permissions: NO_PERMS,
       tosAcceptedAt: null,
       status: 'unauthenticated',
     }),

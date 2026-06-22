@@ -20,13 +20,19 @@ import {
   errorLog,
   findLead,
   findRun,
-  mockAdmin,
-  mockClient,
-  mockUser,
   notifications,
   tickRuns,
   toLeadRow,
 } from './data'
+import {
+  acceptTosForCurrent,
+  clientForUser,
+  getCurrentUser,
+  login as accountsLogin,
+  logout as accountsLogout,
+  toUser,
+  updateCurrentProfile,
+} from './accounts'
 import type { ConfidenceStatus } from '../config/constants'
 
 const ok = (data: unknown) => HttpResponse.json(data as object)
@@ -45,16 +51,6 @@ function paginate<T>(rows: T[], url: URL): Paginated<T> {
   }
 }
 
-// who is "logged in" depends on the demo credential used
-let currentUser = mockUser
-
-const profile: ProfileSettings = {
-  name: mockUser.name,
-  email: mockUser.email,
-  timezone: mockUser.timezone,
-  language: 'en',
-}
-
 let notificationPrefs: NotificationPrefs = {
   batch_ready: { email: true, whatsapp: false },
   hot_lead: { email: true, whatsapp: false },
@@ -68,17 +64,19 @@ export const handlers = [
   // ---- Auth ----
   http.post('/api/auth/login', async ({ request }) => {
     await delay(400)
-    const { email, password } = (await request.json()) as {
-      email: string
-      password: string
-    }
-    if (!password || password.length < 4)
-      return fail(401, 'invalid_credentials', 'Invalid email or password.')
-    currentUser = email.includes('admin') ? mockAdmin : mockUser
-    return ok({ access_token: 'mock.jwt.token', refresh_token: 'mock.refresh', user: currentUser })
+    const { email, password } = (await request.json()) as { email: string; password: string }
+    const res = accountsLogin(email ?? '', password ?? '')
+    if ('error' in res) return fail(401, 'invalid_credentials', res.error)
+    return ok({ access_token: `mock.${res.user.id}`, refresh_token: 'mock.refresh', user: toUser(res.user) })
   }),
-  http.post('/api/auth/refresh', () => ok({ access_token: 'mock.jwt.token.refreshed' })),
-  http.post('/api/auth/logout', () => ok({})),
+  http.post('/api/auth/refresh', () => {
+    const u = getCurrentUser()
+    return u ? ok({ access_token: `mock.${u.id}` }) : fail(401, 'unauthenticated', 'Session expired.')
+  }),
+  http.post('/api/auth/logout', () => {
+    accountsLogout()
+    return ok({})
+  }),
   http.post('/api/auth/forgot-password', async () => {
     await delay(300)
     return ok({})
@@ -88,19 +86,21 @@ export const handlers = [
     if (token === 'expired') return fail(400, 'token_expired', 'This reset link has expired.')
     return ok({})
   }),
-  http.get('/api/auth/me', () =>
-    ok({
-      user: currentUser,
-      client: mockClient,
-      role: currentUser.role,
+  http.get('/api/auth/me', () => {
+    const u = getCurrentUser()
+    if (!u) return fail(401, 'unauthenticated', 'Not signed in.')
+    return ok({
+      user: toUser(u),
+      client: clientForUser(u),
+      role: u.role,
       feature_flags: DEFAULT_FLAGS,
-      tos_accepted_at: currentUser.tos_accepted_at,
-    }),
-  ),
+      permissions: u.permissions,
+      tos_accepted_at: u.tos_accepted_at,
+    })
+  }),
   http.post('/api/auth/accept-tos', () => {
-    const at = new Date().toISOString()
-    currentUser.tos_accepted_at = at
-    return ok({ tos_accepted_at: at })
+    const at = acceptTosForCurrent()
+    return at ? ok({ tos_accepted_at: at }) : fail(401, 'unauthenticated', 'Not signed in.')
   }),
 
   // ---- Runs ----
@@ -140,7 +140,7 @@ export const handlers = [
       leads_found: 0,
       leads_enriched: 0,
       created_at: new Date().toISOString(),
-      started_by: currentUser.name,
+      started_by: getCurrentUser()?.name ?? 'System',
       fill_rate: null,
       cost_cents: 0,
     }
@@ -295,10 +295,15 @@ export const handlers = [
   }),
 
   // ---- Settings ----
-  http.get('/api/settings/profile', () => ok(profile)),
+  http.get('/api/settings/profile', () => {
+    const u = getCurrentUser()
+    return ok({ name: u?.name ?? '', email: u?.email ?? '', timezone: u?.timezone ?? 'UTC', language: 'en' })
+  }),
   http.patch('/api/settings/profile', async ({ request }) => {
-    Object.assign(profile, (await request.json()) as Partial<ProfileSettings>)
-    return ok(profile)
+    const patch = (await request.json()) as Partial<ProfileSettings>
+    updateCurrentProfile({ name: patch.name, timezone: patch.timezone })
+    const u = getCurrentUser()
+    return ok({ name: u?.name ?? '', email: u?.email ?? '', timezone: u?.timezone ?? 'UTC', language: patch.language ?? 'en' })
   }),
   http.post('/api/settings/profile/password', async ({ request }) => {
     const { current } = (await request.json()) as { current: string; next: string }

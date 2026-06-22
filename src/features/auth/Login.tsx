@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import { authApi } from '../../api/endpoints'
-import { useAuthStore, isAdminRole } from '../../stores/authStore'
+import { useAuthStore } from '../../stores/authStore'
 import { markSession, queryClient } from '../../app/providers'
 import { normalizeError } from '../../api/client'
 import { Button, FieldError, Input, Label } from '../../components/ui/primitives'
@@ -27,7 +27,7 @@ export function LoginPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'demo@techexcel.io', password: 'demo1234', remember: true },
+    defaultValues: { email: '', password: '', remember: true },
   })
 
   const login = useMutation({
@@ -42,11 +42,11 @@ export function LoginPage() {
         client: me.client,
         role: me.role,
         flags: me.feature_flags,
+        permissions: me.permissions,
         tosAcceptedAt: me.tos_accepted_at,
       })
       await queryClient.invalidateQueries()
-      if (isAdminRole(me.role)) navigate('/admin', { replace: true })
-      else navigate(returnTo || '/home', { replace: true })
+      navigate(returnTo || '/home', { replace: true })
     },
   })
 
@@ -88,7 +88,7 @@ export function LoginPage() {
           Sign in
         </Button>
         <p className="rounded-[8px] bg-slate-50 p-3 text-center text-[12px] text-[var(--color-text-muted)]">
-          Demo: any password (4+ chars) works. Use an email containing <b>admin</b> to enter the admin panel.
+          Sign in with the account your administrator created for you.
         </p>
       </form>
     </AuthLayout>

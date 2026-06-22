@@ -17,14 +17,14 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 import type { Role, TeamMember } from '../../api/types'
 
-const ASSIGNABLE: Role[] = ['client_admin', 'client_member', 'client_billing']
+const ASSIGNABLE: Role[] = ['lead_generator', 'setter', 'closer']
 
 export function TeamSettingsPage() {
   const qc = useQueryClient()
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['team'], queryFn: teamApi.list })
   const [inviteOpen, setInviteOpen] = useState(false)
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<Role>('client_member')
+  const [role, setRole] = useState<Role>('setter')
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null)
 
   const invite = useMutation({
@@ -53,7 +53,7 @@ export function TeamSettingsPage() {
   })
 
   const members = data ?? []
-  const owners = members.filter((m) => m.role === 'client_owner')
+  const managers = members.filter((m) => m.role === 'manager')
 
   return (
     <div className="reveal max-w-3xl space-y-6">
@@ -62,7 +62,7 @@ export function TeamSettingsPage() {
           <h2 className="text-[16px] font-semibold">Team &amp; roles</h2>
           <p className="text-sm text-[var(--color-text-secondary)]">Invite teammates and manage their access.</p>
         </div>
-        <Can action="manage" resource="team">
+        <Can action="manage" resource="users">
           <Button onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4" /> Invite</Button>
         </Can>
       </div>
@@ -77,7 +77,7 @@ export function TeamSettingsPage() {
         ) : (
           <ul className="divide-y divide-[var(--color-border)]">
             {members.map((m) => {
-              const isLastOwner = m.role === 'client_owner' && owners.length === 1
+              const isLastOwner = m.role === 'manager' && managers.length === 1
               return (
                 <li key={m.id} className="flex items-center gap-3 px-5 py-3.5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-primary)] text-[13px] font-semibold text-white">
@@ -90,10 +90,10 @@ export function TeamSettingsPage() {
                   {m.status === 'invited' && (
                     <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Pending</span>
                   )}
-                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'client_owner' ? 'bg-blue-50 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'manager' ? 'bg-blue-50 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
                     {ROLE_LABELS[m.role]}
                   </span>
-                  <Can action="manage" resource="team" fallback={<span className="w-8" />}>
+                  <Can action="manage" resource="users" fallback={<span className="w-8" />}>
                     <DropdownMenu>
                       <DropdownTrigger asChild>
                         <button className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-slate-100" aria-label="Member actions">
@@ -128,9 +128,9 @@ export function TeamSettingsPage() {
       <Card className="p-5">
         <h3 className="text-sm font-semibold">Roles</h3>
         <ul className="mt-3 space-y-2">
-          {(['client_owner', 'client_admin', 'client_member', 'client_billing'] as Role[]).map((r) => (
+          {(['manager', 'lead_generator', 'setter', 'closer'] as Role[]).map((r) => (
             <li key={r} className="flex gap-3 text-[13px]">
-              <span className="w-20 shrink-0 font-medium">{ROLE_LABELS[r]}</span>
+              <span className="w-28 shrink-0 font-medium">{ROLE_LABELS[r]}</span>
               <span className="text-[var(--color-text-secondary)]">{ROLE_CAPABILITIES[r]}</span>
             </li>
           ))}
