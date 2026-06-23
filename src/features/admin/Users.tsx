@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { KeyRound, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-react'
-import { usersApi, statsApi, type CreateUserBody, type OrgUserStats } from '../../api/endpoints'
+import { formatDistanceToNow } from 'date-fns'
+import { KeyRound, MessageSquare, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-react'
+import { usersApi, statsApi, userRemarksApi, type CreateUserBody, type OrgUserStats } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth } from '../../hooks'
 import { ROLE_LABELS, PERMISSION_CATALOG, permKey, roleGrants } from '../../config/permissions'
-import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Button, Card, Input, Label, Textarea } from '../../components/ui/primitives'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import { DropdownMenu, DropdownTrigger, DropdownContent, DropdownItem } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
@@ -71,11 +72,14 @@ export function UsersPage() {
   const canSeeManagerStats = role === 'manager' || role === 'superadmin' || role === 'admin'
   const usersQ = useQuery({ queryKey: ['users'], queryFn: () => usersApi.list() })
   const statsQ = useQuery({ queryKey: ['org-user-stats'], queryFn: () => statsApi.org() })
+  const remarkCountsQ = useQuery({ queryKey: ['user-remark-counts'], queryFn: () => userRemarksApi.counts() })
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedUser | null>(null)
   const [resetTarget, setResetTarget] = useState<ManagedUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null)
+  const [remarksTarget, setRemarksTarget] = useState<ManagedUser | null>(null)
+  const remarkCounts = remarkCountsQ.data ?? {}
 
   const del = useMutation({
     mutationFn: (id: string) => usersApi.remove(id),
@@ -121,7 +125,14 @@ export function UsersPage() {
                 {users.map((u) => (
                   <tr key={u.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
                     <td className="px-5 py-3">
-                      <p className="font-medium">{u.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{u.name}</p>
+                        {remarkCounts[u.id] > 0 && (
+                          <button onClick={() => setRemarksTarget(u)} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-slate-200" title="View remarks">
+                            <MessageSquare className="h-3 w-3" /> {remarkCounts[u.id]}
+                          </button>
+                        )}
+                      </div>
                       <p className="text-[12px] text-[var(--color-text-muted)]">{u.email}</p>
                     </td>
                     <td className="px-3 py-3"><span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[12px] font-medium">{ROLE_LABELS[u.role]}</span></td>
@@ -147,6 +158,7 @@ export function UsersPage() {
                         </DropdownTrigger>
                         <DropdownContent>
                           <DropdownItem onSelect={() => { setEditing(u); setFormOpen(true) }}>Edit role &amp; permissions</DropdownItem>
+                          <DropdownItem onSelect={() => setRemarksTarget(u)}><MessageSquare className="h-4 w-4" /> Remarks</DropdownItem>
                           <DropdownItem onSelect={() => setResetTarget(u)}><KeyRound className="h-4 w-4" /> Reset password</DropdownItem>
                           <DropdownItem onSelect={() => toggleStatus.mutate(u)}>{u.status === 'active' ? 'Disable' : 'Enable'} account</DropdownItem>
                           <DropdownItem destructive onSelect={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4" /> Remove</DropdownItem>
@@ -170,6 +182,14 @@ export function UsersPage() {
       )}
 
       {resetTarget && <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />}
+
+      {remarksTarget && (
+        <UserRemarksDialog
+          user={remarksTarget}
+          onClose={() => setRemarksTarget(null)}
+          onChanged={() => qc.invalidateQueries({ queryKey: ['user-remark-counts'] })}
+        />
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}
@@ -275,6 +295,59 @@ function ResetPasswordDialog({ user, onClose }: { user: ManagedUser; onClose: ()
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button loading={reset.isPending} disabled={password.length < 6} onClick={() => reset.mutate()}>Reset password</Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+/** Manager/SA-only remarks thread about a user. */
+function UserRemarksDialog({ user, onClose, onChanged }: { user: ManagedUser; onClose: () => void; onChanged: () => void }) {
+  const qc = useQueryClient()
+  const key = ['user-remarks', user.id]
+  const { data, isLoading } = useQuery({ queryKey: key, queryFn: () => userRemarksApi.list(user.id) })
+  const [text, setText] = useState('')
+
+  const refresh = () => { qc.invalidateQueries({ queryKey: key }); onChanged() }
+  const add = useMutation({
+    mutationFn: () => userRemarksApi.add(user.id, text),
+    onSuccess: () => { setText(''); refresh() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  const del = useMutation({
+    mutationFn: (id: string) => userRemarksApi.remove(id),
+    onSuccess: () => refresh(),
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
+  const remarks = data ?? []
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Remarks — ${user.name}`} description="Private notes for managers and super admins only. This user can't see them.">
+      <div className="space-y-4">
+        <div className="max-h-[40vh] space-y-2 overflow-y-auto">
+          {isLoading ? (
+            <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>
+          ) : remarks.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No remarks yet.</p>
+          ) : (
+            remarks.map((r) => (
+              <div key={r.id} className="group rounded-[10px] bg-[var(--color-surface-2)] p-3">
+                <div className="mb-1 flex items-center gap-2 text-[12px]">
+                  <span className="font-semibold text-[var(--color-text)]">{r.author ?? 'Unknown'}</span>
+                  <span className="text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(r.at), { addSuffix: true })}</span>
+                  <button onClick={() => del.mutate(r.id)} className="ml-auto rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition group-hover:opacity-100 hover:bg-slate-200 hover:text-red-600" aria-label="Delete remark"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{r.text}</p>
+              </div>
+            ))
+          )}
+        </div>
+        <div>
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder={`Add a remark about ${user.name.split(' ')[0]}…`} />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>Close</Button>
+            <Button loading={add.isPending} disabled={!text.trim()} onClick={() => add.mutate()}>Add remark</Button>
+          </div>
         </div>
       </div>
     </Dialog>

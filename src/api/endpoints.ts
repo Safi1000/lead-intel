@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
-import type { ActivityType, BatchAssignment, Client, LeadActivity, LeadBatch, LeadStage, TemplateColumn, User } from './types'
+import type { ActivityType, BatchAssignment, Client, LeadActivity, LeadBatch, LeadStage, TemplateColumn, User, UserRemark } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -255,6 +255,40 @@ export const usersApi = {
     invokeAdmin({ action: 'update_user', id, ...body }),
   resetPassword: (id: string, password: string) => invokeAdmin({ action: 'reset_password', id, password }),
   remove: (id: string) => invokeAdmin({ action: 'delete_user', id }),
+}
+
+// ---- User remarks (manager/SA notes about a user) ----
+export const userRemarksApi = {
+  list: async (profileId: string): Promise<UserRemark[]> => {
+    const { data, error } = await supabase.from('user_remarks').select('*').eq('profile_id', profileId).order('at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as UserRemark[]
+  },
+  /** Remark counts per user in the current org (one query for the whole list). */
+  counts: async (): Promise<Record<string, number>> => {
+    const org = effectiveOrgId()
+    const rows = await fetchAll<{ profile_id: string }>((from, to) => {
+      let q = supabase.from('user_remarks').select('profile_id').range(from, to)
+      if (org) q = q.eq('org_id', org)
+      return q
+    })
+    const out: Record<string, number> = {}
+    for (const r of rows) out[r.profile_id] = (out[r.profile_id] ?? 0) + 1
+    return out
+  },
+  add: async (profileId: string, text: string): Promise<UserRemark> => {
+    const author = useAuthStore.getState().user?.name ?? null
+    const author_id = useAuthStore.getState().user?.id ?? null
+    const { data, error } = await supabase.from('user_remarks')
+      .insert({ profile_id: profileId, org_id: effectiveOrgId(), text: text.trim(), author, author_id })
+      .select().single()
+    if (error) throw new Error(error.message)
+    return data as UserRemark
+  },
+  remove: async (id: string) => {
+    const { error } = await supabase.from('user_remarks').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+  },
 }
 
 // ---- Templates (manual upload) ----

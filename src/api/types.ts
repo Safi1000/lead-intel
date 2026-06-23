@@ -600,6 +600,17 @@ export interface LeadRemark {
   at: string
 }
 
+/** A manager/SA remark about a user (Users panel). Manager/SA-only at the DB level. */
+export interface UserRemark {
+  id: string
+  profile_id: string
+  org_id: string
+  author: string | null
+  author_id: string | null
+  text: string
+  at: string
+}
+
 /** A single uploaded sheet. Carries the import outcome + live lead stats. */
 export interface LeadBatch {
   id: string
