@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
-import type { Client, TemplateColumn, User } from './types'
+import type { Client, LeadBatch, TemplateColumn, User } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -66,6 +66,29 @@ function effectiveOrgId(): string | null {
   const s = useAuthStore.getState()
   const isSA = s.role === 'superadmin' || s.role === 'admin'
   return isSA ? s.actingOrgId : (s.user?.org_id ?? null)
+}
+
+/** PostgREST caps a single response at 1000 rows; page through until exhausted. */
+const PAGE_SIZE = 1000
+async function fetchAll<T>(
+  make: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await make(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(error.message)
+    const rows = data ?? []
+    out.push(...rows)
+    if (rows.length < PAGE_SIZE) break
+  }
+  return out
+}
+
+/** Split an array into chunks of `size` (used to keep insert payloads bounded). */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
 }
 
 interface ProfileRow {
@@ -258,10 +281,12 @@ export const templatesApi = {
     const tpls = data ?? []
     const counts: Record<string, number> = {}
     if (tpls.length) {
-      let lq = supabase.from('leads').select('template_id')
-      if (org) lq = lq.eq('org_id', org)
-      const { data: leadRows } = await lq
-      for (const r of leadRows ?? []) if (r.template_id) counts[r.template_id] = (counts[r.template_id] ?? 0) + 1
+      const leadRows = await fetchAll<{ template_id: string | null }>((from, to) => {
+        let lq = supabase.from('leads').select('template_id').range(from, to)
+        if (org) lq = lq.eq('org_id', org)
+        return lq
+      })
+      for (const r of leadRows) if (r.template_id) counts[r.template_id] = (counts[r.template_id] ?? 0) + 1
     }
     return tpls.map((t) => mapTemplate(t, counts[t.id as string] ?? 0))
   },
@@ -282,15 +307,16 @@ export const templatesApi = {
     return mapTemplate(data)
   },
   remove: async (id: string) => { const { error } = await supabase.from('templates').delete().eq('id', id); if (error) throw new Error(error.message) },
-  import: async (id: string, body: { headers: string[]; rows: Record<string, string>[] }): Promise<ImportResult> => {
+  import: async (id: string, body: { headers: string[]; rows: Record<string, string>[]; file_name?: string }): Promise<ImportResult> => {
     const { data: t, error } = await supabase.from('templates').select('*').eq('id', id).single()
     if (error || !t) throw new Error('Template not found.')
     const cols = (t.columns as TemplateColumn[]) ?? []
     const missing = cols.filter((c) => c.required && !body.headers.includes(c.name))
     if (missing.length) throw new Error(`Sheet is missing required column(s): ${missing.map((c) => `"${c.name}"`).join(', ')}. Header match is case-sensitive.`)
     const org = effectiveOrgId()
+    const createdBy = useAuthStore.getState().user?.name ?? null
     const rejected: { row: number; reason: string }[] = []
-    const toInsert: Record<string, unknown>[] = []
+    const prepared: Record<string, unknown>[] = []
     body.rows.forEach((row, idx) => {
       const rowNo = idx + 1
       const data: Record<string, string> = {}
@@ -298,16 +324,34 @@ export const templatesApi = {
       const emptyReq = cols.filter((c) => c.required && !data[c.name])
       if (emptyReq.length) { rejected.push({ row: rowNo, reason: `Empty required value(s): ${emptyReq.map((c) => c.name).join(', ')}` }); return }
       if (cols.every((c) => !data[c.name])) { rejected.push({ row: rowNo, reason: 'Blank row' }); return }
-      toInsert.push({ org_id: org, template_id: t.id, template_name: t.name, data, display_name: leadDisplayName(data, cols), status: 'new' })
+      prepared.push({ data, display_name: leadDisplayName(data, cols) })
     })
-    if (toInsert.length) { const { error: iErr } = await supabase.from('leads').insert(toInsert); if (iErr) throw new Error(iErr.message) }
-    return { template_id: t.id as string, total_rows: body.rows.length, imported: toInsert.length, rejected }
+
+    // One uploaded sheet = one batch.
+    const { data: batch, error: bErr } = await supabase.from('batches').insert({
+      org_id: org, template_id: t.id, template_name: t.name,
+      file_name: body.file_name ?? 'Upload', total_rows: body.rows.length,
+      imported_count: prepared.length, rejected_count: rejected.length, created_by: createdBy,
+    }).select('id').single()
+    if (bErr || !batch) throw new Error(bErr?.message ?? 'Could not create the batch.')
+
+    const toInsert = prepared.map((p) => ({
+      org_id: org, batch_id: batch.id, template_id: t.id, template_name: t.name,
+      data: p.data, display_name: p.display_name, status: 'new', created_by: createdBy,
+    }))
+    // Chunk inserts so large sheets stay within request limits.
+    for (const part of chunk(toInsert, 500)) {
+      const { error: iErr } = await supabase.from('leads').insert(part)
+      if (iErr) throw new Error(iErr.message)
+    }
+    return { template_id: t.id as string, batch_id: batch.id as string, total_rows: body.rows.length, imported: toInsert.length, rejected }
   },
 }
 
 // ---- Manual leads (shared-pool workflow) ----
 const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): ManualLead => ({
-  id: l.id as string, org_id: (l.org_id as string) ?? null, template_id: (l.template_id as string) ?? '',
+  id: l.id as string, org_id: (l.org_id as string) ?? null, batch_id: (l.batch_id as string) ?? null,
+  template_id: (l.template_id as string) ?? '',
   template_name: (l.template_name as string) ?? '', data: (l.data as Record<string, string>) ?? {},
   display_name: (l.display_name as string) ?? 'Untitled lead', status: l.status as ManualLead['status'],
   temperature: (l.temperature as Temperature) ?? null, setter: (l.setter as string) ?? null, closer: (l.closer as string) ?? null,
@@ -315,14 +359,16 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
 })
 
 export const manualLeadsApi = {
-  list: async (params?: { status?: LeadStatus; search?: string }): Promise<Paginated<ManualLead>> => {
+  list: async (params?: { status?: LeadStatus; search?: string; batch_id?: string }): Promise<Paginated<ManualLead>> => {
     const org = effectiveOrgId()
-    let q = supabase.from('leads').select('*').order('updated_at', { ascending: false })
-    if (org) q = q.eq('org_id', org)
-    if (params?.status) q = q.eq('status', params.status)
-    const { data, error } = await q
-    if (error) throw new Error(error.message)
-    let rows = (data ?? []).map((l) => mapLead(l))
+    const data = await fetchAll<Record<string, unknown>>((from, to) => {
+      let q = supabase.from('leads').select('*').order('updated_at', { ascending: false }).range(from, to)
+      if (org) q = q.eq('org_id', org)
+      if (params?.batch_id) q = q.eq('batch_id', params.batch_id)
+      if (params?.status) q = q.eq('status', params.status)
+      return q
+    })
+    let rows = data.map((l) => mapLead(l))
     if (params?.search) {
       const s = params.search.toLowerCase()
       rows = rows.filter((l) => l.display_name.toLowerCase().includes(s) || Object.values(l.data).some((v) => String(v).toLowerCase().includes(s)))
@@ -348,7 +394,93 @@ export const manualLeadsApi = {
   },
 }
 
-// ---- Batches / reports / exports ----
+// ---- Lead batches (one per uploaded sheet) ----
+const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
+  id: r.id as string, org_id: (r.org_id as string) ?? null, template_id: (r.template_id as string) ?? null,
+  template_name: (r.template_name as string) ?? '', file_name: (r.file_name as string) ?? 'Upload',
+  total_rows: Number(r.total_rows ?? 0), imported_count: Number(r.imported_count ?? 0), rejected_count: Number(r.rejected_count ?? 0),
+  created_by: (r.created_by as string) ?? null, created_at: r.created_at as string,
+  lead_count: Number(r.lead_count ?? 0), new_count: Number(r.new_count ?? 0),
+  with_setter: Number(r.with_setter ?? 0), with_closer: Number(r.with_closer ?? 0),
+  open_count: Number(r.open_count ?? 0), closed_count: Number(r.closed_count ?? 0), returned_count: Number(r.returned_count ?? 0),
+  warm: Number(r.warm ?? 0), cold: Number(r.cold ?? 0),
+})
+
+export const leadBatchesApi = {
+  list: async (): Promise<LeadBatch[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('batch_stats').select('*').order('created_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data ?? []).map(mapBatch)
+  },
+  get: async (id: string): Promise<LeadBatch> => {
+    const { data, error } = await supabase.from('batch_stats').select('*').eq('id', id).single()
+    if (error || !data) throw new Error('Batch not found.')
+    return mapBatch(data)
+  },
+}
+
+// ---- Per-user workload stats (Users panel) ----
+export interface OrgUserStats {
+  byUploader: Record<string, { batches: number; leads: number }>
+  bySetter: Record<string, { total: number; active: number; passed: number; warm: number; cold: number }>
+  byCloser: Record<string, { total: number; closed: number; open: number; returned: number; warm: number; cold: number }>
+  totals: { leads: number; batches: number; new: number; with_setter: number; with_closer: number; open: number; closed: number; returned: number; warm: number; cold: number }
+}
+type LeadStatRow = { status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }
+
+export const statsApi = {
+  org: async (): Promise<OrgUserStats> => {
+    const empty: OrgUserStats = { byUploader: {}, bySetter: {}, byCloser: {}, totals: { leads: 0, batches: 0, new: 0, with_setter: 0, with_closer: 0, open: 0, closed: 0, returned: 0, warm: 0, cold: 0 } }
+    const org = effectiveOrgId()
+    if (!org) return empty
+    const batches = await leadBatchesApi.list()
+    const leads = await fetchAll<LeadStatRow>((from, to) =>
+      supabase.from('leads').select('status,temperature,setter,closer').eq('org_id', org).range(from, to),
+    )
+    const out: OrgUserStats = { byUploader: {}, bySetter: {}, byCloser: {}, totals: { ...empty.totals } }
+    out.totals.batches = batches.length
+    for (const b of batches) {
+      if (!b.created_by) continue
+      const u = (out.byUploader[b.created_by] ??= { batches: 0, leads: 0 })
+      u.batches += 1
+      u.leads += b.imported_count
+    }
+    for (const l of leads) {
+      out.totals.leads += 1
+      if (l.status === 'new') out.totals.new += 1
+      else if (l.status === 'with_setter') out.totals.with_setter += 1
+      else if (l.status === 'with_closer') out.totals.with_closer += 1
+      else if (l.status === 'open') out.totals.open += 1
+      else if (l.status === 'closed') out.totals.closed += 1
+      else if (l.status === 'returned') out.totals.returned += 1
+      if (l.temperature === 'warm') out.totals.warm += 1
+      else if (l.temperature === 'cold') out.totals.cold += 1
+      if (l.setter) {
+        const s = (out.bySetter[l.setter] ??= { total: 0, active: 0, passed: 0, warm: 0, cold: 0 })
+        s.total += 1
+        if (l.status === 'with_setter') s.active += 1
+        if (l.status === 'with_closer' || l.status === 'open' || l.status === 'closed') s.passed += 1
+        if (l.temperature === 'warm') s.warm += 1
+        else if (l.temperature === 'cold') s.cold += 1
+      }
+      if (l.closer) {
+        const c = (out.byCloser[l.closer] ??= { total: 0, closed: 0, open: 0, returned: 0, warm: 0, cold: 0 })
+        c.total += 1
+        if (l.status === 'closed') c.closed += 1
+        if (l.status === 'open') c.open += 1
+        if (l.status === 'returned') c.returned += 1
+        if (l.temperature === 'warm') c.warm += 1
+        else if (l.temperature === 'cold') c.cold += 1
+      }
+    }
+    return out
+  },
+}
+
+// ---- Batches / reports / exports (legacy enrichment, MSW) ----
 export const batchesApi = {
   list: () => api.get<Paginated<Batch>>('/batches').then((r) => r.data),
   report: (id: string) =>

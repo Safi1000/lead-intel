@@ -20,6 +20,7 @@ import { NotificationsSettingsPage } from '../features/settings/Notifications'
 // Phase 1 manual-workflow screens (code-split)
 const LeadTemplatesPage = lazy(() => import('../features/templates/Templates').then((m) => ({ default: m.TemplatesPage })))
 const UploadPage = lazy(() => import('../features/upload/Upload').then((m) => ({ default: m.UploadPage })))
+const BatchesPage = lazy(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
 const LeadQueuePage = lazy(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazy(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
 const OrganizationsPage = lazy(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
@@ -82,7 +83,8 @@ export const router = createBrowserRouter([
                 element: <RequireOrgContext />,
                 children: [
                   { path: 'home', element: <WorkHomePage /> },
-                  { path: 'leads', element: L(<LeadQueuePage />) },
+                  { path: 'leads', element: L(<BatchesPage />) },
+                  { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
                   {
                     element: <RequireRole roles={['superadmin', 'admin', 'manager', 'lead_generator']} />,

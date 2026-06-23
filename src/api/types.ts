@@ -572,9 +572,34 @@ export interface LeadRemark {
   at: string
 }
 
+/** A single uploaded sheet. Carries the import outcome + live lead stats. */
+export interface LeadBatch {
+  id: string
+  org_id: string | null
+  template_id: string | null
+  template_name: string
+  file_name: string
+  total_rows: number
+  imported_count: number
+  rejected_count: number
+  created_by: string | null
+  created_at: string
+  // live stats (from batch_stats view)
+  lead_count: number
+  new_count: number
+  with_setter: number
+  with_closer: number
+  open_count: number
+  closed_count: number
+  returned_count: number
+  warm: number
+  cold: number
+}
+
 export interface ManualLead {
   id: string
   org_id: string | null
+  batch_id: string | null
   template_id: string
   template_name: string
   /** Raw imported cell values, keyed by the template's case-sensitive column names. */
@@ -596,6 +621,7 @@ export interface ImportRejection {
 }
 export interface ImportResult {
   template_id: string
+  batch_id: string
   total_rows: number
   imported: number
   rejected: ImportRejection[]

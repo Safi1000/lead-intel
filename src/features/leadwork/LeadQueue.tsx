@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { Search, Users } from 'lucide-react'
-import { manualLeadsApi } from '../../api/endpoints'
+import { ArrowLeft, Search, Users } from 'lucide-react'
+import { leadBatchesApi, manualLeadsApi } from '../../api/endpoints'
 import { useAuth, useDebounce } from '../../hooks'
 import { Card, Input } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
@@ -13,13 +13,19 @@ import { STATUS_META, STATUS_ORDER, TEMP_META, queueTabsFor } from './workflow'
 import type { LeadStatus, ManualLead } from '../../api/types'
 
 export function LeadQueuePage() {
+  const { batchId } = useParams()
   const { role, user } = useAuth()
   const me = user?.name ?? ''
   const isManagerView = role === 'manager' || role === 'admin' || role === 'superadmin' || role === 'lead_generator'
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['manual-leads'],
-    queryFn: () => manualLeadsApi.list(),
+    queryKey: ['manual-leads', batchId ?? 'all'],
+    queryFn: () => manualLeadsApi.list(batchId ? { batch_id: batchId } : undefined),
+  })
+  const { data: batch } = useQuery({
+    queryKey: ['lead-batch', batchId],
+    queryFn: () => leadBatchesApi.get(batchId as string),
+    enabled: !!batchId,
   })
 
   const tabs = useMemo(() => queueTabsFor(role), [role])
@@ -45,7 +51,15 @@ export function LeadQueuePage() {
 
   return (
     <div className="reveal">
-      <PageHeader title="Leads" subtitle="The shared pool. Setters pull new leads, closers pick up leads passed on to them." />
+      {batchId && (
+        <Link to="/leads" className="mb-4 inline-flex items-center gap-1 text-[13px] text-[var(--color-primary)] hover:underline">
+          <ArrowLeft className="h-4 w-4" /> All batches
+        </Link>
+      )}
+      <PageHeader
+        title={batch ? batch.file_name : 'Leads'}
+        subtitle={batch ? `${batch.template_name} · ${batch.lead_count} lead${batch.lead_count === 1 ? '' : 's'}` : 'The shared pool. Setters pull new leads, closers pick up leads passed on to them.'}
+      />
 
       {/* Tabs */}
       <div className="mb-4 flex flex-wrap items-center gap-2">

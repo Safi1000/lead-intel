@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { KeyRound, MoreVertical, Plus, Trash2, UserPlus } from 'lucide-react'
-import { usersApi, type CreateUserBody } from '../../api/endpoints'
+import { usersApi, statsApi, type CreateUserBody, type OrgUserStats } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
+import { useAuth } from '../../hooks'
 import { ROLE_LABELS, PERMISSION_CATALOG, permKey, roleGrants } from '../../config/permissions'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
@@ -38,9 +39,38 @@ function toOverrides(role: Role, state: Record<string, boolean>): PermissionOver
   return { granted, denied }
 }
 
+/** Compact, role-specific activity chips for a user. */
+function UserStatChips({ user: u, stats }: { user: ManagedUser; stats: OrgUserStats }) {
+  const chips: string[] = []
+  if (u.role === 'manager') {
+    // Org-wide rollup (visible only on this manager/SA-only page).
+    chips.push(`${stats.totals.leads} leads`, `${stats.totals.batches} batches`, `${stats.totals.closed} closed`, `${stats.totals.warm} warm`, `${stats.totals.cold} cold`)
+  } else if (u.role === 'lead_generator') {
+    const s = stats.byUploader[u.name]
+    chips.push(`${s?.batches ?? 0} batches`, `${s?.leads ?? 0} leads uploaded`)
+  } else if (u.role === 'setter') {
+    const s = stats.bySetter[u.name]
+    chips.push(`${s?.total ?? 0} assigned`, `${s?.active ?? 0} active`, `${s?.passed ?? 0} passed`, `${s?.warm ?? 0} warm`, `${s?.cold ?? 0} cold`)
+  } else if (u.role === 'closer') {
+    const s = stats.byCloser[u.name]
+    chips.push(`${s?.total ?? 0} taken`, `${s?.closed ?? 0} closed`, `${s?.open ?? 0} open`, `${s?.returned ?? 0} returned`)
+  }
+  if (chips.length === 0) return <span className="text-[12px] text-[var(--color-text-muted)]">—</span>
+  return (
+    <div className="flex flex-wrap gap-1">
+      {chips.map((c) => (
+        <span key={c} className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium tabular-nums text-[var(--color-text-secondary)]">{c}</span>
+      ))}
+    </div>
+  )
+}
+
 export function UsersPage() {
   const qc = useQueryClient()
+  const { role } = useAuth()
+  const canSeeManagerStats = role === 'manager' || role === 'superadmin' || role === 'admin'
   const usersQ = useQuery({ queryKey: ['users'], queryFn: () => usersApi.list() })
+  const statsQ = useQuery({ queryKey: ['org-user-stats'], queryFn: () => statsApi.org() })
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<ManagedUser | null>(null)
@@ -82,6 +112,7 @@ export function UsersPage() {
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
                   <th className="px-5 py-2.5 font-medium">User</th>
                   <th className="px-3 py-2.5 font-medium">Role</th>
+                  <th className="px-3 py-2.5 font-medium">Activity</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5" />
                 </tr>
@@ -94,6 +125,15 @@ export function UsersPage() {
                       <p className="text-[12px] text-[var(--color-text-muted)]">{u.email}</p>
                     </td>
                     <td className="px-3 py-3"><span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[12px] font-medium">{ROLE_LABELS[u.role]}</span></td>
+                    <td className="px-3 py-3">
+                      {u.role === 'manager' && !canSeeManagerStats ? (
+                        <span className="text-[12px] text-[var(--color-text-muted)]">—</span>
+                      ) : statsQ.data ? (
+                        <UserStatChips user={u} stats={statsQ.data} />
+                      ) : (
+                        <span className="text-[12px] text-[var(--color-text-muted)]">…</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       <span className={cn('inline-flex items-center gap-1 text-[12px] font-medium', u.status === 'active' ? 'text-[var(--c-verified)]' : 'text-[var(--color-text-muted)]')}>
                         <span className={cn('h-1.5 w-1.5 rounded-full', u.status === 'active' ? 'bg-[var(--c-verified)]' : 'bg-slate-300')} />

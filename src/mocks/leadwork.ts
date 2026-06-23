@@ -143,6 +143,7 @@ export const leadworkHandlers = [
       leads.unshift({
         id: nid('lead'),
         org_id: t.org_id,
+        batch_id: null,
         template_id: t.id,
         template_name: t.name,
         data,
@@ -159,7 +160,7 @@ export const leadworkHandlers = [
     })
     t.lead_count += imported
 
-    const result: ImportResult = { template_id: t.id, total_rows: rows.length, imported, rejected }
+    const result: ImportResult = { template_id: t.id, batch_id: nid('batch'), total_rows: rows.length, imported, rejected }
     return ok(result)
   }),
 

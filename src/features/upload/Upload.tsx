@@ -36,7 +36,7 @@ export function UploadPage() {
   )
 
   const importMut = useMutation({
-    mutationFn: () => templatesApi.import(templateId, { headers: sheet!.headers, rows: sheet!.rows }),
+    mutationFn: () => templatesApi.import(templateId, { headers: sheet!.headers, rows: sheet!.rows, file_name: sheet!.fileName }),
     onSuccess: (res) => {
       setResult(res)
       if (res.imported > 0) toast.success(`Imported ${res.imported} lead${res.imported === 1 ? '' : 's'}`)
@@ -192,7 +192,12 @@ export function UploadPage() {
           {/* Result */}
           {result && (
             <Card className="p-5">
-              <h3 className="text-[15px] font-semibold">Import complete</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[15px] font-semibold">Import complete</h3>
+                {result.imported > 0 && (
+                  <Link to={`/leads/batch/${result.batch_id}`}><Button size="sm" variant="outline">View this batch</Button></Link>
+                )}
+              </div>
               <div className="mt-3 flex gap-6 text-sm">
                 <div><span className="text-[24px] font-bold tabular-nums text-[var(--c-verified)]">{result.imported}</span><p className="text-[12px] text-[var(--color-text-muted)]">Imported</p></div>
                 <div><span className="text-[24px] font-bold tabular-nums text-[var(--c-unverified)]">{result.rejected.length}</span><p className="text-[12px] text-[var(--color-text-muted)]">Rejected</p></div>
