@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
-import type { Client, LeadBatch, TemplateColumn, User } from './types'
+import type { BatchAssignment, Client, LeadBatch, TemplateColumn, User } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -351,6 +351,7 @@ export const templatesApi = {
 // ---- Manual leads (shared-pool workflow) ----
 const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): ManualLead => ({
   id: l.id as string, org_id: (l.org_id as string) ?? null, batch_id: (l.batch_id as string) ?? null,
+  setter_id: (l.setter_id as string) ?? null, closer_id: (l.closer_id as string) ?? null,
   template_id: (l.template_id as string) ?? '',
   template_name: (l.template_name as string) ?? '', data: (l.data as Record<string, string>) ?? {},
   display_name: (l.display_name as string) ?? 'Untitled lead', status: l.status as ManualLead['status'],
@@ -404,6 +405,7 @@ const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
   with_setter: Number(r.with_setter ?? 0), with_closer: Number(r.with_closer ?? 0),
   open_count: Number(r.open_count ?? 0), closed_count: Number(r.closed_count ?? 0), returned_count: Number(r.returned_count ?? 0),
   warm: Number(r.warm ?? 0), cold: Number(r.cold ?? 0),
+  assigned_count: Number(r.assigned_count ?? 0), unassigned_count: Number(r.unassigned_count ?? 0),
 })
 
 export const leadBatchesApi = {
@@ -419,6 +421,42 @@ export const leadBatchesApi = {
     const { data, error } = await supabase.from('batch_stats').select('*').eq('id', id).single()
     if (error || !data) throw new Error('Batch not found.')
     return mapBatch(data)
+  },
+}
+
+// ---- Batch assignment (manager → setters/closers) ----
+export const assignmentApi = {
+  /** Who can currently see this batch. */
+  listForBatch: async (batchId: string): Promise<BatchAssignment[]> => {
+    const { data, error } = await supabase.from('batch_assignments').select('*').eq('batch_id', batchId)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as BatchAssignment[]
+  },
+  /** Grant a setter/closer visibility of a batch (no lead assignment). */
+  assignBatch: async (batchId: string, userId: string, role: 'setter' | 'closer') => {
+    const org = effectiveOrgId()
+    const { error } = await supabase.from('batch_assignments').upsert(
+      { batch_id: batchId, user_id: userId, org_id: org, role },
+      { onConflict: 'batch_id,user_id' },
+    )
+    if (error) throw new Error(error.message)
+  },
+  /** Revoke a user's access to a batch. */
+  unassignBatch: async (batchId: string, userId: string) => {
+    const { error } = await supabase.from('batch_assignments').delete().eq('batch_id', batchId).eq('user_id', userId)
+    if (error) throw new Error(error.message)
+  },
+  /** Randomly assign `count` still-unassigned leads in a batch to a setter. Returns # assigned. */
+  assignLeadsToSetter: async (batchId: string, setterId: string, count: number): Promise<number> => {
+    const { data, error } = await supabase.rpc('assign_leads_to_setter', { p_batch: batchId, p_setter: setterId, p_count: count })
+    if (error) throw new Error(error.message)
+    return Number(data ?? 0)
+  },
+  /** Assign specific (typically warm) leads in a batch to a closer. Returns # assigned. */
+  assignLeadsToCloser: async (batchId: string, closerId: string, leadIds: string[]): Promise<number> => {
+    const { data, error } = await supabase.rpc('assign_leads_to_closer', { p_batch: batchId, p_closer: closerId, p_lead_ids: leadIds })
+    if (error) throw new Error(error.message)
+    return Number(data ?? 0)
   },
 }
 

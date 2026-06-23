@@ -11,7 +11,7 @@ import { Button, Card, Textarea } from '../../components/ui/primitives'
 import { ErrorState, LoadingState } from '../../components/feedback'
 import { toast } from 'sonner'
 import { cn } from '../../lib/utils'
-import { STATUS_META, TEMP_META, actionsFor, canWorkLeads, type LeadPatch } from './workflow'
+import { STATUS_META, TEMP_META, actionsFor, canClassify, canWorkLeads, type LeadPatch } from './workflow'
 import type { Temperature } from '../../api/types'
 
 const digits = (s: string) => s.replace(/[^\d]/g, '')
@@ -107,7 +107,8 @@ export function ManualLeadDetailPage() {
   if (isError || !lead) return <ErrorState onRetry={() => refetch()} />
 
   const st = STATUS_META[lead.status]
-  const actions = canWork ? actionsFor(role, lead, me) : []
+  const actions = actionsFor(role, lead)
+  const classify = canClassify(role)
   const backTo = lead.batch_id ? `/leads/batch/${lead.batch_id}` : '/leads'
 
   return (
@@ -217,7 +218,7 @@ export function ManualLeadDetailPage() {
             </dl>
           </Card>
 
-          {canWork && (
+          {classify && (
             <Card className="p-5">
               <h2 className="mb-3 text-[15px] font-semibold">Classify</h2>
               <div className="flex gap-2">
@@ -241,7 +242,7 @@ export function ManualLeadDetailPage() {
             </Card>
           )}
 
-          {canWork && actions.length > 0 && (
+          {actions.length > 0 && (
             <Card className="p-5">
               <h2 className="mb-3 text-[15px] font-semibold">Actions</h2>
               <div className="space-y-2">

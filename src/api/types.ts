@@ -594,12 +594,26 @@ export interface LeadBatch {
   returned_count: number
   warm: number
   cold: number
+  assigned_count: number
+  unassigned_count: number
+}
+
+/** A setter/closer granted visibility of a batch by a manager. */
+export interface BatchAssignment {
+  id: string
+  batch_id: string
+  user_id: string
+  org_id: string
+  role: Extract<Role, 'setter' | 'closer'>
+  created_at: string
 }
 
 export interface ManualLead {
   id: string
   org_id: string | null
   batch_id: string | null
+  setter_id: string | null
+  closer_id: string | null
   template_id: string
   template_name: string
   /** Raw imported cell values, keyed by the template's case-sensitive column names. */

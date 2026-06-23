@@ -144,6 +144,8 @@ export const leadworkHandlers = [
         id: nid('lead'),
         org_id: t.org_id,
         batch_id: null,
+        setter_id: null,
+        closer_id: null,
         template_id: t.id,
         template_name: t.name,
         data,

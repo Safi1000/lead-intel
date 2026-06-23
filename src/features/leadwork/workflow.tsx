@@ -27,33 +27,27 @@ export interface WorkflowAction {
   patch: LeadPatch
 }
 
-const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin'
+export const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin'
 
-/** Status-changing actions available to `role` on `lead` (acting as `me`). */
-export function actionsFor(role: Role | null, lead: ManualLead, me: string): WorkflowAction[] {
+/**
+ * Status-changing actions available to `role` on `lead`.
+ * Distribution is manager-driven: setters/closers receive leads via assignment,
+ * they don't self-claim from a pool.
+ */
+export function actionsFor(role: Role | null, lead: ManualLead): WorkflowAction[] {
   const manager = isManagerRole(role)
   const out: WorkflowAction[] = []
 
-  // Setter lane
-  if (role === 'setter' || manager) {
-    if (lead.status === 'new' || lead.status === 'returned') {
-      out.push({ key: 'claim', label: 'Claim & start calling', variant: 'primary', patch: { status: 'with_setter', setter: me } })
-    }
-    if (lead.status === 'with_setter') {
-      out.push({ key: 'pass', label: 'Pass to closer', variant: 'primary', patch: { status: 'with_closer' } })
-    }
-  }
-
-  // Closer lane
+  // Closer lane — works leads a manager routed to them.
   if (role === 'closer' || manager) {
     if (lead.status === 'with_closer') {
-      out.push({ key: 'take', label: 'Take lead', variant: 'primary', patch: { status: 'open', closer: me } })
+      out.push({ key: 'take', label: 'Take lead', variant: 'primary', patch: { status: 'open' } })
     }
     if (lead.status === 'with_closer' || lead.status === 'open') {
-      out.push({ key: 'close', label: 'Mark closed', variant: 'primary', patch: { status: 'closed', closer: me } })
-      out.push({ key: 'return', label: 'Return to setter', variant: 'outline', patch: { status: 'returned', setter: null, closer: null } })
+      out.push({ key: 'close', label: 'Mark closed', variant: 'primary', patch: { status: 'closed' } })
+      out.push({ key: 'return', label: 'Return to setter', variant: 'outline', patch: { status: 'returned' } })
     }
-    if (manager && lead.status === 'closed') {
+    if (manager && (lead.status === 'closed' || lead.status === 'returned')) {
       out.push({ key: 'reopen', label: 'Re-open', variant: 'outline', patch: { status: 'open' } })
     }
   }
@@ -61,36 +55,12 @@ export function actionsFor(role: Role | null, lead: ManualLead, me: string): Wor
   return out
 }
 
-/** Whether `role` can leave remarks / set temperature on leads. */
+/** Whether `role` can leave remarks on leads. */
 export function canWorkLeads(role: Role | null): boolean {
   return role === 'setter' || role === 'closer' || isManagerRole(role)
 }
 
-/** Role-aware tabs for the lead queue. */
-export interface QueueTab {
-  key: string
-  label: string
-  filter: (lead: ManualLead, me: string) => boolean
-}
-
-export function queueTabsFor(role: Role | null): QueueTab[] {
-  const all: QueueTab = { key: 'all', label: 'All leads', filter: () => true }
-
-  if (role === 'setter') {
-    return [
-      { key: 'pool', label: 'Setter pool', filter: (l) => l.status === 'new' || l.status === 'returned' },
-      { key: 'mine', label: 'My leads', filter: (l, me) => l.status === 'with_setter' && l.setter === me },
-      all,
-    ]
-  }
-  if (role === 'closer') {
-    return [
-      { key: 'pool', label: 'Closer pool', filter: (l) => l.status === 'with_closer' },
-      { key: 'mine', label: 'My leads', filter: (l, me) => l.status === 'open' && l.closer === me },
-      { key: 'closed', label: 'Closed', filter: (l) => l.status === 'closed' },
-      all,
-    ]
-  }
-  // manager / generator / admin: full visibility with status chips handled separately
-  return [all]
+/** Whether `role` can mark leads warm/cold (setters classify; managers may override). */
+export function canClassify(role: Role | null): boolean {
+  return role === 'setter' || isManagerRole(role)
 }
