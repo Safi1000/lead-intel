@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import type { Client, PermissionOverrides, Role, User } from '../api/types'
 import { DEFAULT_FLAGS, type FeatureFlags } from '../config/featureFlags'
+import { clearActingOrg, loadActingOrg, saveActingOrg } from '../lib/actingOrg'
 
 const NO_PERMS: PermissionOverrides = { granted: [], denied: [] }
+const ALL_ORGS: Client = { id: '*', name: 'All organizations', plan: 'scale', credits_remaining: null }
 
 interface AuthState {
   /** Access token kept in memory only — never localStorage (§18-C). */
@@ -28,6 +30,9 @@ interface AuthState {
   }) => void
   setToken: (t: string | null) => void
   acceptTos: (at: string) => void
+  /** SA enters an org (View) — pure client state, persisted locally. */
+  enterOrg: (id: string, name: string) => void
+  exitOrg: () => void
   clear: () => void
 }
 
@@ -38,7 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   role: null,
   flags: DEFAULT_FLAGS,
   permissions: NO_PERMS,
-  actingOrgId: null,
+  actingOrgId: loadActingOrg()?.id ?? null,
   tosAcceptedAt: null,
   status: 'unknown',
   setSession: ({ accessToken, user, client, role, flags, permissions, actingOrgId, tosAcceptedAt }) =>
@@ -55,7 +60,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     })),
   setToken: (t) => set({ accessToken: t }),
   acceptTos: (at) => set({ tosAcceptedAt: at }),
-  clear: () =>
+  enterOrg: (id, name) => {
+    saveActingOrg({ id, name })
+    set({ actingOrgId: id, client: { id, name, plan: 'growth', credits_remaining: null } })
+  },
+  exitOrg: () => {
+    clearActingOrg()
+    set({ actingOrgId: null, client: ALL_ORGS })
+  },
+  clear: () => {
+    clearActingOrg()
     set({
       accessToken: null,
       user: null,
@@ -66,7 +80,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       actingOrgId: null,
       tosAcceptedAt: null,
       status: 'unauthenticated',
-    }),
+    })
+  },
 }))
 
 export const isAdminRole = (role: Role | null) =>

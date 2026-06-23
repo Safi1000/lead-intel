@@ -1,5 +1,10 @@
 /** Typed endpoint modules (§2 api/). Components never call axios directly. */
 import { api } from './client'
+import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../stores/authStore'
+import { DEFAULT_FLAGS } from '../config/featureFlags'
+import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
+import type { Client, TemplateColumn, User } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -54,18 +59,88 @@ import type {
   WebhookDelivery,
 } from './types'
 
+// ===== Supabase-backed core (auth, orgs, users, templates, leads) =====
+
+/** Org the signed-in user effectively operates in (SA → entered org; others → own org). */
+function effectiveOrgId(): string | null {
+  const s = useAuthStore.getState()
+  const isSA = s.role === 'superadmin' || s.role === 'admin'
+  return isSA ? s.actingOrgId : (s.user?.org_id ?? null)
+}
+
+interface ProfileRow {
+  id: string
+  name: string
+  email: string
+  role: Role
+  org_id: string | null
+  status: 'active' | 'disabled'
+  permissions: PermissionOverrides
+  timezone: string
+  tos_accepted_at: string | null
+  created_by: string | null
+  created_at: string
+  org?: { id?: string; name?: string } | null
+}
+
+const toUser = (p: ProfileRow): User => ({ id: p.id, name: p.name, email: p.email, role: p.role, org_id: p.org_id, timezone: p.timezone, tos_accepted_at: p.tos_accepted_at })
+const toManagedUser = (p: ProfileRow): ManagedUser => ({ id: p.id, name: p.name, email: p.email, role: p.role, org_id: p.org_id, org_name: p.org?.name ?? null, status: p.status, permissions: p.permissions, created_at: p.created_at, created_by: p.created_by })
+
+async function fetchProfile(id: string): Promise<ProfileRow | null> {
+  const { data } = await supabase.from('profiles').select('*, org:orgs(id,name)').eq('id', id).single()
+  return (data as ProfileRow) ?? null
+}
+
+/** Invoke the privileged `admin` edge function; surface its error message. */
+async function invokeAdmin<T = unknown>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('admin', { body })
+  if (error) {
+    let msg = error.message
+    const ctx = (error as { context?: Response }).context
+    if (ctx && typeof ctx.json === 'function') { try { const j = await ctx.json(); if (j?.error) msg = j.error } catch { /* ignore */ } }
+    throw new Error(msg)
+  }
+  if (data && typeof data === 'object' && 'error' in data) throw new Error((data as { error: string }).error)
+  return data as T
+}
+
 // ---- Auth ----
 export const authApi = {
-  login: (body: { email: string; password: string }) =>
-    api.post<AuthResponse>('/auth/login', body).then((r) => r.data),
-  me: () => api.get<MeResponse>('/auth/me').then((r) => r.data),
-  logout: () => api.post('/auth/logout').then((r) => r.data),
-  forgotPassword: (body: { email: string }) =>
-    api.post('/auth/forgot-password', body).then((r) => r.data),
-  resetPassword: (body: { token: string; password: string }) =>
-    api.post('/auth/reset-password', body).then((r) => r.data),
-  acceptTos: () =>
-    api.post<{ tos_accepted_at: string }>('/auth/accept-tos').then((r) => r.data),
+  login: async (body: { email: string; password: string }): Promise<AuthResponse> => {
+    clearActingOrg()
+    const { data, error } = await supabase.auth.signInWithPassword({ email: body.email.trim(), password: body.password })
+    if (error || !data.session || !data.user) throw new Error(error?.message ?? 'Invalid email or password.')
+    const profile = await fetchProfile(data.user.id)
+    if (!profile) { await supabase.auth.signOut(); throw new Error('No profile is linked to this account.') }
+    if (profile.status === 'disabled') { await supabase.auth.signOut(); throw new Error('This account has been disabled.') }
+    return { access_token: data.session.access_token, user: toUser(profile) }
+  },
+  me: async (): Promise<MeResponse> => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const profile = await fetchProfile(user.id)
+    if (!profile) throw new Error('No profile')
+    const isSA = profile.role === 'superadmin' || profile.role === 'admin'
+    let client: Client
+    let acting_org_id: string | null
+    if (isSA) {
+      const acting = loadActingOrg()
+      acting_org_id = acting?.id ?? null
+      client = acting ? { id: acting.id, name: acting.name, plan: 'growth', credits_remaining: null } : { id: '*', name: 'All organizations', plan: 'scale', credits_remaining: null }
+    } else {
+      acting_org_id = profile.org_id
+      client = { id: profile.org_id ?? '*', name: profile.org?.name ?? 'Organization', plan: 'growth', credits_remaining: null }
+    }
+    return { user: toUser(profile), client, role: profile.role, feature_flags: DEFAULT_FLAGS, permissions: profile.permissions, acting_org_id, tos_accepted_at: profile.tos_accepted_at }
+  },
+  logout: async () => { clearActingOrg(); await supabase.auth.signOut() },
+  forgotPassword: async (body: { email: string }) => { await supabase.auth.resetPasswordForEmail(body.email.trim()) },
+  resetPassword: async (body: { token: string; password: string }) => { await supabase.auth.updateUser({ password: body.password }) },
+  acceptTos: async (): Promise<{ tos_accepted_at: string }> => {
+    const { data, error } = await supabase.rpc('accept_tos')
+    if (error) throw new Error(error.message)
+    return { tos_accepted_at: data as string }
+  },
 }
 
 // ---- Runs ----
@@ -116,11 +191,22 @@ export const leadsApi = {
 
 // ---- Organizations (SSA) ----
 export const orgsApi = {
-  list: () => api.get<Org[]>('/orgs').then((r) => r.data),
-  create: (name: string) => api.post<Org>('/orgs', { name }).then((r) => r.data),
-  remove: (id: string) => api.delete(`/orgs/${id}`).then((r) => r.data),
-  enter: (id: string) => api.post(`/orgs/${id}/enter`).then((r) => r.data),
-  exit: () => api.post('/orgs/exit').then((r) => r.data),
+  list: async (): Promise<Org[]> => {
+    const { data: orgs, error } = await supabase.from('orgs').select('*').order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    const { data: profs } = await supabase.from('profiles').select('org_id, role')
+    return (orgs ?? []).map((o) => ({
+      ...o,
+      user_count: (profs ?? []).filter((p) => p.org_id === o.id).length,
+      manager_count: (profs ?? []).filter((p) => p.org_id === o.id && p.role === 'manager').length,
+    }))
+  },
+  create: async (name: string): Promise<Org> => {
+    const { data, error } = await supabase.from('orgs').insert({ name: name.trim() }).select().single()
+    if (error) throw new Error(error.message)
+    return data as Org
+  },
+  remove: (id: string) => invokeAdmin({ action: 'delete_org', id }),
 }
 
 // ---- User management (SSA / manager) ----
@@ -133,36 +219,133 @@ export interface CreateUserBody {
   permissions?: PermissionOverrides
 }
 export const usersApi = {
-  list: (orgId?: string) => api.get<ManagedUser[]>('/users', { params: orgId ? { org_id: orgId } : undefined }).then((r) => r.data),
-  create: (body: CreateUserBody) => api.post<ManagedUser>('/users', body).then((r) => r.data),
-  update: (id: string, body: Partial<{ name: string; role: Role; permissions: PermissionOverrides; status: 'active' | 'disabled'; org_id: string | null }>) =>
-    api.patch<ManagedUser>(`/users/${id}`, body).then((r) => r.data),
-  resetPassword: (id: string, password: string) => api.post(`/users/${id}/reset-password`, { password }).then((r) => r.data),
-  remove: (id: string) => api.delete(`/users/${id}`).then((r) => r.data),
+  list: async (): Promise<ManagedUser[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('profiles').select('*, org:orgs(id,name)').neq('role', 'superadmin').order('created_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data as ProfileRow[]).map(toManagedUser)
+  },
+  create: (body: CreateUserBody) => invokeAdmin<ManagedUser>({ action: 'create_user', ...body, org_id: body.org_id ?? effectiveOrgId() }),
+  update: (id: string, body: Partial<{ name: string; role: Role; permissions: PermissionOverrides; status: 'active' | 'disabled' }>) =>
+    invokeAdmin({ action: 'update_user', id, ...body }),
+  resetPassword: (id: string, password: string) => invokeAdmin({ action: 'reset_password', id, password }),
+  remove: (id: string) => invokeAdmin({ action: 'delete_user', id }),
 }
 
 // ---- Templates (manual upload) ----
+const withIds = (cols: { name: string; required: boolean }[]): TemplateColumn[] =>
+  cols.map((c) => ({ id: crypto.randomUUID(), name: c.name, required: c.required }))
+const mapTemplate = (t: Record<string, unknown>, lead_count = 0): LeadTemplate => ({
+  id: t.id as string, name: t.name as string, org_id: (t.org_id as string) ?? null,
+  columns: (t.columns as TemplateColumn[]) ?? [], created_by: (t.created_by as string) ?? '',
+  created_at: t.created_at as string, updated_at: t.updated_at as string, lead_count,
+})
+function leadDisplayName(data: Record<string, string>, cols: TemplateColumn[]): string {
+  const preferred = cols.find((c) => /name|business|company|contact/i.test(c.name))
+  const key = preferred?.name ?? cols[0]?.name
+  return (key && data[key]) || 'Untitled lead'
+}
+
 export const templatesApi = {
-  list: () => api.get<LeadTemplate[]>('/templates').then((r) => r.data),
-  get: (id: string) => api.get<LeadTemplate>(`/templates/${id}`).then((r) => r.data),
-  create: (body: { name: string; columns: { name: string; required: boolean }[] }) =>
-    api.post<LeadTemplate>('/templates', body).then((r) => r.data),
-  update: (id: string, body: { name: string; columns: { name: string; required: boolean }[] }) =>
-    api.put<LeadTemplate>(`/templates/${id}`, body).then((r) => r.data),
-  remove: (id: string) => api.delete(`/templates/${id}`).then((r) => r.data),
-  import: (id: string, body: { headers: string[]; rows: Record<string, string>[] }) =>
-    api.post<ImportResult>(`/templates/${id}/import`, body).then((r) => r.data),
+  list: async (): Promise<LeadTemplate[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('templates').select('*').order('created_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    const tpls = data ?? []
+    const counts: Record<string, number> = {}
+    if (tpls.length) {
+      let lq = supabase.from('leads').select('template_id')
+      if (org) lq = lq.eq('org_id', org)
+      const { data: leadRows } = await lq
+      for (const r of leadRows ?? []) if (r.template_id) counts[r.template_id] = (counts[r.template_id] ?? 0) + 1
+    }
+    return tpls.map((t) => mapTemplate(t, counts[t.id as string] ?? 0))
+  },
+  get: async (id: string): Promise<LeadTemplate> => {
+    const { data, error } = await supabase.from('templates').select('*').eq('id', id).single()
+    if (error || !data) throw new Error('Template not found.')
+    return mapTemplate(data)
+  },
+  create: async (body: { name: string; columns: { name: string; required: boolean }[] }): Promise<LeadTemplate> => {
+    const created_by = useAuthStore.getState().user?.name ?? null
+    const { data, error } = await supabase.from('templates').insert({ name: body.name, columns: withIds(body.columns), org_id: effectiveOrgId(), created_by }).select().single()
+    if (error) throw new Error(error.message)
+    return mapTemplate(data)
+  },
+  update: async (id: string, body: { name: string; columns: { name: string; required: boolean }[] }): Promise<LeadTemplate> => {
+    const { data, error } = await supabase.from('templates').update({ name: body.name, columns: withIds(body.columns), updated_at: new Date().toISOString() }).eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    return mapTemplate(data)
+  },
+  remove: async (id: string) => { const { error } = await supabase.from('templates').delete().eq('id', id); if (error) throw new Error(error.message) },
+  import: async (id: string, body: { headers: string[]; rows: Record<string, string>[] }): Promise<ImportResult> => {
+    const { data: t, error } = await supabase.from('templates').select('*').eq('id', id).single()
+    if (error || !t) throw new Error('Template not found.')
+    const cols = (t.columns as TemplateColumn[]) ?? []
+    const missing = cols.filter((c) => c.required && !body.headers.includes(c.name))
+    if (missing.length) throw new Error(`Sheet is missing required column(s): ${missing.map((c) => `"${c.name}"`).join(', ')}. Header match is case-sensitive.`)
+    const org = effectiveOrgId()
+    const rejected: { row: number; reason: string }[] = []
+    const toInsert: Record<string, unknown>[] = []
+    body.rows.forEach((row, idx) => {
+      const rowNo = idx + 1
+      const data: Record<string, string> = {}
+      for (const c of cols) data[c.name] = (row[c.name] ?? '').toString().trim()
+      const emptyReq = cols.filter((c) => c.required && !data[c.name])
+      if (emptyReq.length) { rejected.push({ row: rowNo, reason: `Empty required value(s): ${emptyReq.map((c) => c.name).join(', ')}` }); return }
+      if (cols.every((c) => !data[c.name])) { rejected.push({ row: rowNo, reason: 'Blank row' }); return }
+      toInsert.push({ org_id: org, template_id: t.id, template_name: t.name, data, display_name: leadDisplayName(data, cols), status: 'new' })
+    })
+    if (toInsert.length) { const { error: iErr } = await supabase.from('leads').insert(toInsert); if (iErr) throw new Error(iErr.message) }
+    return { template_id: t.id as string, total_rows: body.rows.length, imported: toInsert.length, rejected }
+  },
 }
 
 // ---- Manual leads (shared-pool workflow) ----
+const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): ManualLead => ({
+  id: l.id as string, org_id: (l.org_id as string) ?? null, template_id: (l.template_id as string) ?? '',
+  template_name: (l.template_name as string) ?? '', data: (l.data as Record<string, string>) ?? {},
+  display_name: (l.display_name as string) ?? 'Untitled lead', status: l.status as ManualLead['status'],
+  temperature: (l.temperature as Temperature) ?? null, setter: (l.setter as string) ?? null, closer: (l.closer as string) ?? null,
+  remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
+})
+
 export const manualLeadsApi = {
-  list: (params?: { status?: LeadStatus; search?: string }) =>
-    api.get<Paginated<ManualLead>>('/leads', { params }).then((r) => r.data),
-  get: (id: string) => api.get<ManualLead>(`/leads/manual/${id}`).then((r) => r.data),
-  update: (id: string, body: Partial<{ status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }>) =>
-    api.patch<ManualLead>(`/leads/manual/${id}`, body).then((r) => r.data),
-  addRemark: (id: string, body: { text: string; author: string; author_role: Role }) =>
-    api.post<LeadRemark>(`/leads/manual/${id}/remarks`, body).then((r) => r.data),
+  list: async (params?: { status?: LeadStatus; search?: string }): Promise<Paginated<ManualLead>> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('leads').select('*').order('updated_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    if (params?.status) q = q.eq('status', params.status)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    let rows = (data ?? []).map((l) => mapLead(l))
+    if (params?.search) {
+      const s = params.search.toLowerCase()
+      rows = rows.filter((l) => l.display_name.toLowerCase().includes(s) || Object.values(l.data).some((v) => String(v).toLowerCase().includes(s)))
+    }
+    return { data: rows, page: 1, page_size: rows.length, total: rows.length }
+  },
+  get: async (id: string): Promise<ManualLead> => {
+    const { data, error } = await supabase.from('leads').select('*').eq('id', id).single()
+    if (error || !data) throw new Error('Lead not found.')
+    const { data: remarks } = await supabase.from('lead_remarks').select('*').eq('lead_id', id).order('at', { ascending: true })
+    return mapLead(data, (remarks ?? []) as LeadRemark[])
+  },
+  update: async (id: string, body: Partial<{ status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }>): Promise<ManualLead> => {
+    const { data, error } = await supabase.from('leads').update({ ...body, updated_at: new Date().toISOString() }).eq('id', id).select().single()
+    if (error) throw new Error(error.message)
+    return mapLead(data)
+  },
+  addRemark: async (id: string, body: { text: string; author: string; author_role: Role }): Promise<LeadRemark> => {
+    const { data, error } = await supabase.from('lead_remarks').insert({ lead_id: id, author: body.author, author_role: body.author_role, text: body.text }).select().single()
+    if (error) throw new Error(error.message)
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', id)
+    return data as LeadRemark
+  },
 }
 
 // ---- Batches / reports / exports ----

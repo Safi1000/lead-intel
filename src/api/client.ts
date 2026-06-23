@@ -83,5 +83,9 @@ export function normalizeError(error: unknown): NormalizedError {
       fields: e.response?.data?.error?.fields,
     }
   }
+  // Supabase (and other) errors are thrown as plain Error — surface the message.
+  if (error instanceof Error && error.message) {
+    return { code: 'error', message: error.message }
+  }
   return { code: 'unknown', message: 'Unexpected error.' }
 }

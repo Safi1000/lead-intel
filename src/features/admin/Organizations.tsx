@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Building2, LogIn, Plus, Trash2, UserPlus } from 'lucide-react'
-import { authApi, orgsApi, usersApi } from '../../api/endpoints'
+import { orgsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -15,23 +15,18 @@ import type { Org } from '../../api/types'
 export function OrganizationsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
-  const setSession = useAuthStore((s) => s.setSession)
+  const enterOrg = useAuthStore((s) => s.enterOrg)
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['orgs'], queryFn: orgsApi.list })
 
   const [createOpen, setCreateOpen] = useState(false)
   const [addManagerFor, setAddManagerFor] = useState<Org | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Org | null>(null)
 
-  const enter = useMutation({
-    mutationFn: (id: string) => orgsApi.enter(id),
-    onSuccess: async () => {
-      const me = await authApi.me()
-      setSession({ user: me.user, client: me.client, role: me.role, flags: me.feature_flags, permissions: me.permissions, actingOrgId: me.acting_org_id, tosAcceptedAt: me.tos_accepted_at })
-      await qc.invalidateQueries()
-      navigate('/home')
-    },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
+  const onView = (o: Org) => {
+    enterOrg(o.id, o.name)
+    qc.invalidateQueries()
+    navigate('/home')
+  }
 
   const del = useMutation({
     mutationFn: (id: string) => orgsApi.remove(id),
@@ -68,7 +63,7 @@ export function OrganizationsPage() {
                 <button onClick={() => setDeleteTarget(o)} aria-label="Delete organization" className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-slate-100"><Trash2 className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 flex items-center gap-2 border-t border-[var(--color-border)] pt-3">
-                <Button size="sm" className="flex-1" loading={enter.isPending && enter.variables === o.id} onClick={() => enter.mutate(o.id)}>
+                <Button size="sm" className="flex-1" onClick={() => onView(o)}>
                   <LogIn className="h-3.5 w-3.5" /> View
                 </Button>
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => setAddManagerFor(o)}>
