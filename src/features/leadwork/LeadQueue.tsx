@@ -79,18 +79,26 @@ export function LeadQueuePage() {
   const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [assignCloserFor, setAssignCloserFor] = useState<string[] | null>(null)
+  const [setterFilter, setSetterFilter] = useState('all')
+  const [closerFilter, setCloserFilter] = useState('all')
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
 
+  // Distinct setters/closers present in this batch, for the filter dropdowns.
+  const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
+  const closerNames = useMemo(() => [...new Set(leads.map((l) => l.closer).filter((n): n is string => !!n))].sort(), [leads])
+
   const filtered = useMemo(() => leads.filter((l) => {
     if (activeTab && !activeTab.filter(l)) return false
+    if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
+    if (closerFilter !== 'all' && l.closer !== (closerFilter === 'none' ? null : closerFilter)) return false
     if (search) {
       const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, activeTab, search])
+  }), [leads, activeTab, search, setterFilter, closerFilter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
@@ -141,9 +149,30 @@ export function LeadQueuePage() {
         })}
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-        <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative max-w-sm flex-1 sm:min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
+        </div>
+        {isManager && (
+          <>
+            <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter"
+              className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+              <option value="all">All setters</option>
+              <option value="none">Unassigned</option>
+              {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select value={closerFilter} onChange={(e) => setCloserFilter(e.target.value)} aria-label="Filter by closer"
+              className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+              <option value="all">All closers</option>
+              <option value="none">No closer</option>
+              {closerNames.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            {(setterFilter !== 'all' || closerFilter !== 'all') && (
+              <button onClick={() => { setSetterFilter('all'); setCloserFilter('all') }} className="text-[13px] text-[var(--color-primary)] hover:underline">Clear</button>
+            )}
+          </>
+        )}
       </div>
 
       {selectable && selected.size > 0 && (
