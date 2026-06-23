@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { useAuthStore } from '../stores/authStore'
 import { AppShell } from '../components/layout/AppShell'
 import { AdminShell } from '../components/layout/AdminShell'
 import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext } from './guards'
@@ -21,6 +22,7 @@ import { NotificationsSettingsPage } from '../features/settings/Notifications'
 const LeadTemplatesPage = lazy(() => import('../features/templates/Templates').then((m) => ({ default: m.TemplatesPage })))
 const UploadPage = lazy(() => import('../features/upload/Upload').then((m) => ({ default: m.UploadPage })))
 const BatchesPage = lazy(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
+const DueTodayPage = lazy(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
 const LeadQueuePage = lazy(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazy(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
 const OrganizationsPage = lazy(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
@@ -51,6 +53,12 @@ const AdminAuditPage = lazy(() => import('../features/admin/AdminAudit').then((m
 
 const L = (el: React.ReactNode) => <Suspense fallback={<LoadingState />}>{el}</Suspense>
 
+/** Role-based landing: setters start on their daily "Due Today" list (Feature 2). */
+function Landing() {
+  const role = useAuthStore((s) => s.role)
+  return <Navigate to={role === 'setter' ? '/today' : '/home'} replace />
+}
+
 export const router = createBrowserRouter([
   // ---- Public / auth ----
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
@@ -77,12 +85,13 @@ export const router = createBrowserRouter([
           {
             element: <AppShell />,
             children: [
-              { index: true, element: <Navigate to="/home" replace /> },
+              { index: true, element: <Landing /> },
               // Org workspace — requires being inside an org (SA enters via the org list).
               {
                 element: <RequireOrgContext />,
                 children: [
                   { path: 'home', element: <WorkHomePage /> },
+                  { path: 'today', element: L(<DueTodayPage />) },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },

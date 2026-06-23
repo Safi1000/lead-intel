@@ -12,39 +12,35 @@ import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
-import { STATUS_META, TEMP_META, isManagerRole } from './workflow'
-import type { ManualLead, ManagedUser } from '../../api/types'
+import { StageSelect, FollowUpCell } from './controls'
+import { canWorkLeads, isManagerRole } from './workflow'
+import type { LeadStage, ManualLead, ManagedUser } from '../../api/types'
 
-interface Tab {
-  key: string
-  label: string
-  filter: (l: ManualLead) => boolean
-}
+interface Tab { key: string; label: string; filter: (l: ManualLead) => boolean }
 
 function tabsFor(role: string | null): Tab[] {
   if (role === 'setter') {
     return [
       { key: 'all', label: 'My leads', filter: () => true },
-      { key: 'warm', label: 'Warm', filter: (l) => l.temperature === 'warm' },
-      { key: 'cold', label: 'Cold', filter: (l) => l.temperature === 'cold' },
+      { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
+      { key: 'notnow', label: 'Not Now', filter: (l) => l.stage === 'Not Now' },
     ]
   }
   if (role === 'closer') {
     return [
-      { key: 'to_take', label: 'To take', filter: (l) => l.status === 'with_closer' },
-      { key: 'working', label: 'Working', filter: (l) => l.status === 'open' },
-      { key: 'closed', label: 'Closed', filter: (l) => l.status === 'closed' },
+      { key: 'tocall', label: 'To call', filter: (l) => l.stage === 'Booked' },
+      { key: 'won', label: 'Won', filter: (l) => l.stage === 'Won' },
+      { key: 'lost', label: 'Lost', filter: (l) => l.stage === 'Lost' },
       { key: 'all', label: 'All', filter: () => true },
     ]
   }
-  // manager / SA / generator
   return [
     { key: 'all', label: 'All', filter: () => true },
     { key: 'unassigned', label: 'Unassigned', filter: (l) => !l.setter_id },
     { key: 'assigned', label: 'Assigned', filter: (l) => !!l.setter_id },
-    { key: 'warm', label: 'Warm', filter: (l) => l.temperature === 'warm' },
-    { key: 'cold', label: 'Cold', filter: (l) => l.temperature === 'cold' },
-    { key: 'closed', label: 'Closed', filter: (l) => l.status === 'closed' },
+    { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
+    { key: 'won', label: 'Won', filter: (l) => l.stage === 'Won' },
+    { key: 'lost', label: 'Lost', filter: (l) => l.stage === 'Lost' },
   ]
 }
 
@@ -53,6 +49,7 @@ export function LeadQueuePage() {
   const qc = useQueryClient()
   const { role } = useAuth()
   const isManager = isManagerRole(role)
+  const canEdit = canWorkLeads(role)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['manual-leads', batchId ?? 'all'],
@@ -62,6 +59,17 @@ export function LeadQueuePage() {
     queryKey: ['lead-batch', batchId],
     queryFn: () => leadBatchesApi.get(batchId as string),
     enabled: !!batchId,
+  })
+
+  const patch = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Parameters<typeof manualLeadsApi.update>[1] }) => manualLeadsApi.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['manual-leads'] })
+      qc.invalidateQueries({ queryKey: ['lead-batch', batchId] })
+      qc.invalidateQueries({ queryKey: ['lead-batches'] })
+      qc.invalidateQueries({ queryKey: ['due-today'] })
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
   })
 
   const tabs = useMemo(() => tabsFor(role), [role])
@@ -75,20 +83,18 @@ export function LeadQueuePage() {
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
 
-  const filtered = useMemo(() => {
-    return leads.filter((l) => {
-      if (activeTab && !activeTab.filter(l)) return false
-      if (search) {
-        const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
-        if (!hay.includes(search)) return false
-      }
-      return true
-    })
-  }, [leads, activeTab, search])
+  const filtered = useMemo(() => leads.filter((l) => {
+    if (activeTab && !activeTab.filter(l)) return false
+    if (search) {
+      const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
+      if (!hay.includes(search)) return false
+    }
+    return true
+  }), [leads, activeTab, search])
 
-  // Manager may select leads (for closer assignment) on the warm/unassigned views.
-  const selectable = isManager && (tab === 'warm' || tab === 'unassigned' || tab === 'assigned')
-  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  // Manager selects leads (typically Booked) to hand to a closer.
+  const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const allShownSelected = filtered.length > 0 && filtered.every((l) => selected.has(l.id))
   const toggleAll = () => setSelected((s) => {
     const n = new Set(s)
@@ -107,35 +113,28 @@ export function LeadQueuePage() {
       <PageHeader
         title={batch ? batch.file_name : 'Leads'}
         subtitle={batch ? `${batch.template_name} · ${batch.lead_count} lead${batch.lead_count === 1 ? '' : 's'}` : 'Leads assigned to you.'}
-        actions={isManager && batchId ? (
-          <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button>
-        ) : undefined}
+        actions={isManager && batchId ? <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button> : undefined}
       />
 
       {isManager && batch && (
         <div className="mb-4 flex flex-wrap gap-2 text-[12px] text-[var(--color-text-muted)]">
           <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.unassigned_count} unassigned</span>
           <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.assigned_count} assigned</span>
-          <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-600">{batch.warm} warm</span>
-          <span className="rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-700">{batch.closed_count} closed</span>
+          <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">{batch.booked_count} booked</span>
+          <span className="rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-700">{batch.won_count} won</span>
+          <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-600">{batch.lost_count} lost</span>
         </div>
       )}
 
       {isManager && batchId && <BatchAccess batchId={batchId} />}
 
-      {/* Tabs */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {tabs.map((t) => {
           const count = leads.filter(t.filter).length
           return (
-            <button
-              key={t.key}
-              onClick={() => { setTab(t.key); setSelected(new Set()) }}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-                tab === t.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100',
-              )}
-            >
+            <button key={t.key} onClick={() => { setTab(t.key); setSelected(new Set()) }}
+              className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
+                tab === t.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100')}>
               {t.label} <span className="tabular-nums opacity-70">{count}</span>
             </button>
           )
@@ -147,7 +146,6 @@ export function LeadQueuePage() {
         <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
       </div>
 
-      {/* Selection action bar (manager assigning warm/selected leads to a closer) */}
       {selectable && selected.size > 0 && (
         <div className="mb-3 flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-primary)] bg-blue-50/50 px-4 py-2.5 text-sm">
           <span className="font-medium">{selected.size} selected</span>
@@ -159,23 +157,17 @@ export function LeadQueuePage() {
       )}
 
       <Card>
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState onRetry={() => refetch()} />
-        ) : filtered.length === 0 ? (
+        {isLoading ? <LoadingState /> : isError ? <ErrorState onRetry={() => refetch()} /> : filtered.length === 0 ? (
           <EmptyState icon={Users} title="No leads here" message={leads.length === 0 ? 'No leads are assigned to you in this batch yet.' : 'No leads match this view.'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                  {selectable && (
-                    <th className="px-4 py-2.5"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>
-                  )}
+                  {selectable && <th className="px-4 py-2.5"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>}
                   <th className="px-5 py-2.5 font-medium">Lead</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
-                  <th className="px-3 py-2.5 font-medium">Temp</th>
+                  <th className="px-3 py-2.5 font-medium">Follow-up</th>
                   {isManager && <th className="px-3 py-2.5 font-medium">Setter</th>}
                   {isManager && <th className="px-3 py-2.5 font-medium">Closer</th>}
                   <th className="px-3 py-2.5 font-medium">Updated</th>
@@ -183,7 +175,10 @@ export function LeadQueuePage() {
               </thead>
               <tbody>
                 {filtered.map((l) => (
-                  <LeadRow key={l.id} lead={l} isManager={isManager} selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)} />
+                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit}
+                    selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)}
+                    onStage={(stage) => patch.mutate({ id: l.id, body: { stage } })}
+                    onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })} />
                 ))}
               </tbody>
             </table>
@@ -192,42 +187,28 @@ export function LeadQueuePage() {
       </Card>
 
       {assignSetterOpen && batchId && batch && (
-        <AssignToSetterDialog
-          batchId={batchId}
-          unassigned={batch.unassigned_count}
-          onClose={() => setAssignSetterOpen(false)}
-          onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }}
-        />
+        <AssignToSetterDialog batchId={batchId} unassigned={batch.unassigned_count} onClose={() => setAssignSetterOpen(false)} onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }} />
       )}
       {assignCloserFor && batchId && (
-        <AssignToCloserDialog
-          batchId={batchId}
-          leadIds={assignCloserFor}
-          onClose={() => setAssignCloserFor(null)}
-          onDone={() => { setAssignCloserFor(null); setSelected(new Set()); qc.invalidateQueries() }}
-        />
+        <AssignToCloserDialog batchId={batchId} leadIds={assignCloserFor} onClose={() => setAssignCloserFor(null)} onDone={() => { setAssignCloserFor(null); setSelected(new Set()); qc.invalidateQueries() }} />
       )}
     </div>
   )
 }
 
-function LeadRow({ lead: l, isManager, selectable, checked, onToggle }: { lead: ManualLead; isManager: boolean; selectable: boolean; checked: boolean; onToggle: () => void }) {
-  const st = STATUS_META[l.status]
-  const temp = l.temperature ? TEMP_META[l.temperature] : null
+function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onToggle, onStage, onFollowUp }: {
+  lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean
+  selectable: boolean; checked: boolean; onToggle: () => void
+  onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void
+}) {
   return (
     <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
-      {selectable && (
-        <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>
-      )}
+      {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <Link to={`/leads/manual/${l.id}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</Link>
       </td>
-      <td className="px-3 py-3"><span className={cn('inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium', st.className)}>{st.label}</span></td>
-      <td className="px-3 py-3">
-        {temp ? (
-          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium', temp.className)}><temp.icon className="h-3 w-3" /> {temp.label}</span>
-        ) : <span className="text-[var(--color-text-muted)]">—</span>}
-      </td>
+      <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={onStage} /></td>
+      <td className="px-3 py-3"><FollowUpCell value={l.next_follow_up} disabled={!canEdit} onChange={onFollowUp} /></td>
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.setter ?? '—'}</td>}
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.closer ?? '—'}</td>}
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}</td>
@@ -235,7 +216,6 @@ function LeadRow({ lead: l, isManager, selectable, checked, onToggle }: { lead: 
   )
 }
 
-/** Manager-only: who can see this batch, with revoke. */
 function BatchAccess({ batchId }: { batchId: string }) {
   const qc = useQueryClient()
   const { data: assignments } = useQuery({ queryKey: ['batch-assignments', batchId], queryFn: () => assignmentApi.listForBatch(batchId) })
@@ -243,7 +223,7 @@ function BatchAccess({ batchId }: { batchId: string }) {
   const nameFor = (id: string) => usersList?.find((u) => u.id === id)?.name ?? 'User'
   const revoke = useMutation({
     mutationFn: (userId: string) => assignmentApi.unassignBatch(batchId, userId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['batch-assignments', batchId] }) },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['batch-assignments', batchId] }),
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const list = assignments ?? []

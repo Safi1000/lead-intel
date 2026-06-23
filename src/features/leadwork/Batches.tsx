@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { FileSpreadsheet, FileUp, Flame, Layers, Search, Snowflake } from 'lucide-react'
+import { FileSpreadsheet, FileUp, Layers, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { leadBatchesApi } from '../../api/endpoints'
 import { useAuth, useDebounce } from '../../hooks'
@@ -25,9 +25,9 @@ export function BatchesPage() {
   const totals = useMemo(() => ({
     batches: batches.length,
     leads: batches.reduce((s, b) => s + b.lead_count, 0),
-    closed: batches.reduce((s, b) => s + b.closed_count, 0),
-    warm: batches.reduce((s, b) => s + b.warm, 0),
-    cold: batches.reduce((s, b) => s + b.cold, 0),
+    booked: batches.reduce((s, b) => s + b.booked_count, 0),
+    won: batches.reduce((s, b) => s + b.won_count, 0),
+    lost: batches.reduce((s, b) => s + b.lost_count, 0),
   }), [batches])
 
   const filtered = useMemo(() => {
@@ -47,9 +47,9 @@ export function BatchesPage() {
         <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
           <StatCard label="Batches" value={totals.batches} />
           <StatCard label="Total leads" value={totals.leads} />
-          <StatCard label="Closed" value={totals.closed} />
-          <StatCard label="Warm" value={totals.warm} />
-          <StatCard label="Cold" value={totals.cold} />
+          <StatCard label="Booked" value={totals.booked} />
+          <StatCard label="Won" value={totals.won} />
+          <StatCard label="Lost" value={totals.lost} />
         </div>
       )}
 
@@ -77,8 +77,8 @@ export function BatchesPage() {
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
                   <th className="px-5 py-2.5 font-medium">Batch</th>
                   <th className="px-3 py-2.5 font-medium">Leads</th>
-                  <th className="px-3 py-2.5 font-medium">Progress</th>
-                  <th className="px-3 py-2.5 font-medium">Temp</th>
+                  <th className="px-3 py-2.5 font-medium">Pipeline</th>
+                  <th className="px-3 py-2.5 font-medium">Assigned</th>
                   <th className="px-3 py-2.5 font-medium">Uploaded</th>
                 </tr>
               </thead>
@@ -119,19 +119,17 @@ function BatchRow({ batch: b, onOpen }: { batch: LeadBatch; onOpen: () => void }
       <td className="px-3 py-3">
         <div className="flex flex-wrap gap-1">
           <Pill label="new" value={b.new_count} className="bg-slate-100 text-slate-600" />
-          <Pill label="setter" value={b.with_setter} className="bg-blue-50 text-blue-700" />
-          <Pill label="closer" value={b.with_closer} className="bg-violet-50 text-violet-700" />
-          <Pill label="open" value={b.open_count} className="bg-amber-50 text-amber-700" />
-          <Pill label="closed" value={b.closed_count} className="bg-green-50 text-green-700" />
-          <Pill label="returned" value={b.returned_count} className="bg-orange-50 text-orange-700" />
+          <Pill label="contacted" value={b.contacted_count} className="bg-blue-50 text-blue-700" />
+          <Pill label="interested" value={b.interested_count} className="bg-violet-50 text-violet-700" />
+          <Pill label="booked" value={b.booked_count} className="bg-amber-50 text-amber-700" />
+          <Pill label="won" value={b.won_count} className="bg-green-50 text-green-700" />
+          <Pill label="lost" value={b.lost_count} className="bg-red-50 text-red-600" />
           {b.lead_count === 0 && <span className="text-[12px] text-[var(--color-text-muted)]">—</span>}
         </div>
       </td>
       <td className="px-3 py-3">
-        <div className="flex items-center gap-2 text-[12px]">
-          <span className="inline-flex items-center gap-1 text-red-600"><Flame className="h-3.5 w-3.5" /> {b.warm}</span>
-          <span className="inline-flex items-center gap-1 text-sky-600"><Snowflake className="h-3.5 w-3.5" /> {b.cold}</span>
-        </div>
+        <span className="text-[13px] tabular-nums text-[var(--color-text-secondary)]">{b.assigned_count}</span>
+        <span className="text-[12px] text-[var(--color-text-muted)]"> / {b.lead_count}</span>
       </td>
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}</td>
     </tr>

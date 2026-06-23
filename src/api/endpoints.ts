@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
-import type { BatchAssignment, Client, LeadBatch, TemplateColumn, User } from './types'
+import type { ActivityType, BatchAssignment, Client, LeadActivity, LeadBatch, LeadStage, TemplateColumn, User } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -355,6 +355,7 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
   template_id: (l.template_id as string) ?? '',
   template_name: (l.template_name as string) ?? '', data: (l.data as Record<string, string>) ?? {},
   display_name: (l.display_name as string) ?? 'Untitled lead', status: l.status as ManualLead['status'],
+  stage: (l.stage as ManualLead['stage']) ?? 'New', next_follow_up: (l.next_follow_up as string) ?? null, call_at: (l.call_at as string) ?? null,
   temperature: (l.temperature as Temperature) ?? null, setter: (l.setter as string) ?? null, closer: (l.closer as string) ?? null,
   remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
 })
@@ -382,7 +383,7 @@ export const manualLeadsApi = {
     const { data: remarks } = await supabase.from('lead_remarks').select('*').eq('lead_id', id).order('at', { ascending: true })
     return mapLead(data, (remarks ?? []) as LeadRemark[])
   },
-  update: async (id: string, body: Partial<{ status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }>): Promise<ManualLead> => {
+  update: async (id: string, body: Partial<{ status: LeadStatus; stage: LeadStage; next_follow_up: string | null; call_at: string | null; temperature: Temperature; setter: string | null; closer: string | null }>): Promise<ManualLead> => {
     const { data, error } = await supabase.from('leads').update({ ...body, updated_at: new Date().toISOString() }).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     return mapLead(data)
@@ -393,6 +394,38 @@ export const manualLeadsApi = {
     await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', id)
     return data as LeadRemark
   },
+  /** Feature 2 — leads whose Next Follow-Up Date is today or earlier (RLS scopes per user). */
+  dueToday: async (): Promise<ManualLead[]> => {
+    const org = effectiveOrgId()
+    const today = new Date().toISOString().slice(0, 10)
+    const data = await fetchAll<Record<string, unknown>>((from, to) => {
+      let q = supabase.from('leads').select('*').not('next_follow_up', 'is', null).lte('next_follow_up', today)
+        .not('stage', 'in', '("Won","Lost")')
+        .order('next_follow_up', { ascending: true }).range(from, to)
+      if (org) q = q.eq('org_id', org)
+      return q
+    })
+    return data.map((l) => mapLead(l))
+  },
+}
+
+// ---- Lead activity log (Feature 3) ----
+export const activitiesApi = {
+  list: async (leadId: string): Promise<LeadActivity[]> => {
+    const { data, error } = await supabase.from('lead_activities').select('*').eq('lead_id', leadId).order('at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as LeadActivity[]
+  },
+  add: async (leadId: string, body: { type: ActivityType; note?: string | null }): Promise<LeadActivity> => {
+    const author = useAuthStore.getState().user?.name ?? null
+    const author_id = useAuthStore.getState().user?.id ?? null
+    const { data, error } = await supabase.from('lead_activities')
+      .insert({ lead_id: leadId, type: body.type, note: body.note ?? null, author, author_id })
+      .select().single()
+    if (error) throw new Error(error.message)
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId)
+    return data as LeadActivity
+  },
 }
 
 // ---- Lead batches (one per uploaded sheet) ----
@@ -401,11 +434,11 @@ const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
   template_name: (r.template_name as string) ?? '', file_name: (r.file_name as string) ?? 'Upload',
   total_rows: Number(r.total_rows ?? 0), imported_count: Number(r.imported_count ?? 0), rejected_count: Number(r.rejected_count ?? 0),
   created_by: (r.created_by as string) ?? null, created_at: r.created_at as string,
-  lead_count: Number(r.lead_count ?? 0), new_count: Number(r.new_count ?? 0),
-  with_setter: Number(r.with_setter ?? 0), with_closer: Number(r.with_closer ?? 0),
-  open_count: Number(r.open_count ?? 0), closed_count: Number(r.closed_count ?? 0), returned_count: Number(r.returned_count ?? 0),
-  warm: Number(r.warm ?? 0), cold: Number(r.cold ?? 0),
+  lead_count: Number(r.lead_count ?? 0),
   assigned_count: Number(r.assigned_count ?? 0), unassigned_count: Number(r.unassigned_count ?? 0),
+  new_count: Number(r.new_count ?? 0), contacted_count: Number(r.contacted_count ?? 0),
+  interested_count: Number(r.interested_count ?? 0), booked_count: Number(r.booked_count ?? 0),
+  notnow_count: Number(r.notnow_count ?? 0), won_count: Number(r.won_count ?? 0), lost_count: Number(r.lost_count ?? 0),
 })
 
 export const leadBatchesApi = {
@@ -463,20 +496,20 @@ export const assignmentApi = {
 // ---- Per-user workload stats (Users panel) ----
 export interface OrgUserStats {
   byUploader: Record<string, { batches: number; leads: number }>
-  bySetter: Record<string, { total: number; active: number; passed: number; warm: number; cold: number }>
-  byCloser: Record<string, { total: number; closed: number; open: number; returned: number; warm: number; cold: number }>
-  totals: { leads: number; batches: number; new: number; with_setter: number; with_closer: number; open: number; closed: number; returned: number; warm: number; cold: number }
+  bySetter: Record<string, { total: number; contacted: number; booked: number; won: number }>
+  byCloser: Record<string, { total: number; booked: number; won: number; lost: number }>
+  totals: { leads: number; batches: number; new: number; booked: number; won: number; lost: number }
 }
-type LeadStatRow = { status: LeadStatus; temperature: Temperature; setter: string | null; closer: string | null }
+type LeadStatRow = { stage: LeadStage; setter: string | null; closer: string | null }
 
 export const statsApi = {
   org: async (): Promise<OrgUserStats> => {
-    const empty: OrgUserStats = { byUploader: {}, bySetter: {}, byCloser: {}, totals: { leads: 0, batches: 0, new: 0, with_setter: 0, with_closer: 0, open: 0, closed: 0, returned: 0, warm: 0, cold: 0 } }
+    const empty: OrgUserStats = { byUploader: {}, bySetter: {}, byCloser: {}, totals: { leads: 0, batches: 0, new: 0, booked: 0, won: 0, lost: 0 } }
     const org = effectiveOrgId()
     if (!org) return empty
     const batches = await leadBatchesApi.list()
     const leads = await fetchAll<LeadStatRow>((from, to) =>
-      supabase.from('leads').select('status,temperature,setter,closer').eq('org_id', org).range(from, to),
+      supabase.from('leads').select('stage,setter,closer').eq('org_id', org).range(from, to),
     )
     const out: OrgUserStats = { byUploader: {}, bySetter: {}, byCloser: {}, totals: { ...empty.totals } }
     out.totals.batches = batches.length
@@ -488,30 +521,23 @@ export const statsApi = {
     }
     for (const l of leads) {
       out.totals.leads += 1
-      if (l.status === 'new') out.totals.new += 1
-      else if (l.status === 'with_setter') out.totals.with_setter += 1
-      else if (l.status === 'with_closer') out.totals.with_closer += 1
-      else if (l.status === 'open') out.totals.open += 1
-      else if (l.status === 'closed') out.totals.closed += 1
-      else if (l.status === 'returned') out.totals.returned += 1
-      if (l.temperature === 'warm') out.totals.warm += 1
-      else if (l.temperature === 'cold') out.totals.cold += 1
+      if (l.stage === 'New') out.totals.new += 1
+      else if (l.stage === 'Booked') out.totals.booked += 1
+      else if (l.stage === 'Won') out.totals.won += 1
+      else if (l.stage === 'Lost') out.totals.lost += 1
       if (l.setter) {
-        const s = (out.bySetter[l.setter] ??= { total: 0, active: 0, passed: 0, warm: 0, cold: 0 })
+        const s = (out.bySetter[l.setter] ??= { total: 0, contacted: 0, booked: 0, won: 0 })
         s.total += 1
-        if (l.status === 'with_setter') s.active += 1
-        if (l.status === 'with_closer' || l.status === 'open' || l.status === 'closed') s.passed += 1
-        if (l.temperature === 'warm') s.warm += 1
-        else if (l.temperature === 'cold') s.cold += 1
+        if (l.stage !== 'New') s.contacted += 1
+        if (l.stage === 'Booked') s.booked += 1
+        if (l.stage === 'Won') s.won += 1
       }
       if (l.closer) {
-        const c = (out.byCloser[l.closer] ??= { total: 0, closed: 0, open: 0, returned: 0, warm: 0, cold: 0 })
+        const c = (out.byCloser[l.closer] ??= { total: 0, booked: 0, won: 0, lost: 0 })
         c.total += 1
-        if (l.status === 'closed') c.closed += 1
-        if (l.status === 'open') c.open += 1
-        if (l.status === 'returned') c.returned += 1
-        if (l.temperature === 'warm') c.warm += 1
-        else if (l.temperature === 'cold') c.cold += 1
+        if (l.stage === 'Booked') c.booked += 1
+        if (l.stage === 'Won') c.won += 1
+        if (l.stage === 'Lost') c.lost += 1
       }
     }
     return out

@@ -564,6 +564,34 @@ export type LeadStatus =
 
 export type Temperature = 'warm' | 'cold' | null
 
+/** Feature 1 — the sales pipeline stage. 7 fixed values; default "New". */
+export type LeadStage = 'New' | 'Contacted' | 'Interested' | 'Booked' | 'Not Now' | 'Won' | 'Lost'
+export const LEAD_STAGES: LeadStage[] = ['New', 'Contacted', 'Interested', 'Booked', 'Not Now', 'Won', 'Lost']
+
+/** Feature 3 — structured activity-log entry types (quick buttons). */
+export type ActivityType =
+  | 'Called - No Answer'
+  | 'Called - Spoke'
+  | 'Left Voicemail'
+  | 'Emailed'
+  | 'Replied'
+  | 'Booked'
+  | 'No Show'
+  | 'Note'
+export const ACTIVITY_TYPES: ActivityType[] = [
+  'Called - No Answer', 'Called - Spoke', 'Left Voicemail', 'Emailed', 'Replied', 'Booked', 'No Show', 'Note',
+]
+
+export interface LeadActivity {
+  id: string
+  lead_id: string
+  type: ActivityType
+  note: string | null
+  author: string | null
+  author_id: string | null
+  at: string
+}
+
 export interface LeadRemark {
   id: string
   author: string
@@ -586,16 +614,16 @@ export interface LeadBatch {
   created_at: string
   // live stats (from batch_stats view)
   lead_count: number
-  new_count: number
-  with_setter: number
-  with_closer: number
-  open_count: number
-  closed_count: number
-  returned_count: number
-  warm: number
-  cold: number
   assigned_count: number
   unassigned_count: number
+  // stage breakdown
+  new_count: number
+  contacted_count: number
+  interested_count: number
+  booked_count: number
+  notnow_count: number
+  won_count: number
+  lost_count: number
 }
 
 /** A setter/closer granted visibility of a batch by a manager. */
@@ -619,8 +647,11 @@ export interface ManualLead {
   /** Raw imported cell values, keyed by the template's case-sensitive column names. */
   data: Record<string, string>
   display_name: string // best-effort primary label for lists
-  status: LeadStatus
-  temperature: Temperature
+  status: LeadStatus // internal assignment lifecycle (set by assignment RPCs)
+  stage: LeadStage // Feature 1 — user-facing sales pipeline stage
+  next_follow_up: string | null // Feature 2 — ISO date (YYYY-MM-DD) or null
+  call_at: string | null // Feature 4 — booked call date/time (ISO) or null
+  temperature: Temperature // legacy; superseded by `stage`
   setter: string | null // claiming setter (name)
   closer: string | null // claiming closer (name)
   remarks: LeadRemark[]

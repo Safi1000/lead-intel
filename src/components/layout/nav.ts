@@ -15,8 +15,10 @@ export interface NavItem {
 // org (managers always are; the SA enters via the Organizations list).
 const GENERATORS: Role[] = ['superadmin', 'admin', 'manager', 'lead_generator']
 const ADMINS: Role[] = ['superadmin', 'admin', 'manager']
+const WORKERS_NAV: Role[] = ['superadmin', 'admin', 'manager', 'setter', 'closer']
 export const CLIENT_NAV: NavItem[] = [
   { label: 'Home', to: '/home', icon: 'LayoutDashboard', orgContext: true },
+  { label: 'Due Today', to: '/today', icon: 'CalendarClock', roles: WORKERS_NAV, orgContext: true },
   { label: 'Leads', to: '/leads', icon: 'Users', orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', roles: GENERATORS, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', roles: GENERATORS, orgContext: true, primary: true },

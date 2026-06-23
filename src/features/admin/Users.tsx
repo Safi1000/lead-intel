@@ -44,16 +44,16 @@ function UserStatChips({ user: u, stats }: { user: ManagedUser; stats: OrgUserSt
   const chips: string[] = []
   if (u.role === 'manager') {
     // Org-wide rollup (visible only on this manager/SA-only page).
-    chips.push(`${stats.totals.leads} leads`, `${stats.totals.batches} batches`, `${stats.totals.closed} closed`, `${stats.totals.warm} warm`, `${stats.totals.cold} cold`)
+    chips.push(`${stats.totals.leads} leads`, `${stats.totals.batches} batches`, `${stats.totals.booked} booked`, `${stats.totals.won} won`, `${stats.totals.lost} lost`)
   } else if (u.role === 'lead_generator') {
     const s = stats.byUploader[u.name]
     chips.push(`${s?.batches ?? 0} batches`, `${s?.leads ?? 0} leads uploaded`)
   } else if (u.role === 'setter') {
     const s = stats.bySetter[u.name]
-    chips.push(`${s?.total ?? 0} assigned`, `${s?.active ?? 0} active`, `${s?.passed ?? 0} passed`, `${s?.warm ?? 0} warm`, `${s?.cold ?? 0} cold`)
+    chips.push(`${s?.total ?? 0} assigned`, `${s?.contacted ?? 0} worked`, `${s?.booked ?? 0} booked`, `${s?.won ?? 0} won`)
   } else if (u.role === 'closer') {
     const s = stats.byCloser[u.name]
-    chips.push(`${s?.total ?? 0} taken`, `${s?.closed ?? 0} closed`, `${s?.open ?? 0} open`, `${s?.returned ?? 0} returned`)
+    chips.push(`${s?.total ?? 0} assigned`, `${s?.booked ?? 0} to call`, `${s?.won ?? 0} won`, `${s?.lost ?? 0} lost`)
   }
   if (chips.length === 0) return <span className="text-[12px] text-[var(--color-text-muted)]">—</span>
   return (

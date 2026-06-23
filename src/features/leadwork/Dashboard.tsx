@@ -1,24 +1,24 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { FileSpreadsheet, FileUp, Flame, Snowflake, Users } from 'lucide-react'
+import { CalendarClock, FileSpreadsheet, FileUp, Users } from 'lucide-react'
 import { manualLeadsApi } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
 import { ROLE_LABELS } from '../../config/permissions'
 import { Button, Card } from '../../components/ui/primitives'
 import { LoadingState } from '../../components/feedback'
 import { PageHeader, StatCard } from '../shared/bits'
-import { STATUS_META, TEMP_META } from './workflow'
-import type { LeadStatus, ManualLead } from '../../api/types'
+import { StageBadge } from './controls'
+import { STAGE_ORDER, isOverdue, isDueToday } from './workflow'
+import type { LeadStage, ManualLead } from '../../api/types'
 
 export function WorkHomePage() {
   const { role, user } = useAuth()
-  const { data, isLoading } = useQuery({ queryKey: ['manual-leads'], queryFn: () => manualLeadsApi.list() })
+  const { data, isLoading } = useQuery({ queryKey: ['manual-leads', 'all'], queryFn: () => manualLeadsApi.list() })
 
   const leads = data?.data ?? []
-  const count = (s: LeadStatus) => leads.filter((l) => l.status === s).length
-  const warm = leads.filter((l) => l.temperature === 'warm').length
-  const cold = leads.filter((l) => l.temperature === 'cold').length
+  const byStage = (s: LeadStage) => leads.filter((l) => l.stage === s).length
+  const due = leads.filter((l) => isDueToday(l.next_follow_up) || isOverdue(l.next_follow_up)).length
   const recent = [...leads].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)).slice(0, 6)
 
   const isGenerator = role === 'manager' || role === 'lead_generator' || role === 'admin' || role === 'superadmin'
@@ -30,6 +30,7 @@ export function WorkHomePage() {
         subtitle={role ? `Signed in as ${ROLE_LABELS[role]}` : undefined}
         actions={
           <div className="flex gap-2">
+            <Link to="/today"><Button variant="outline"><CalendarClock className="h-4 w-4" /> Due today</Button></Link>
             <Link to="/leads"><Button variant="outline"><Users className="h-4 w-4" /> Open leads</Button></Link>
             {isGenerator && <Link to="/upload"><Button><FileUp className="h-4 w-4" /> Upload leads</Button></Link>}
           </div>
@@ -42,30 +43,24 @@ export function WorkHomePage() {
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <StatCard label="Total leads" value={leads.length} to="/leads" />
-            <StatCard label={STATUS_META.new.label} value={count('new')} to="/leads" hint="Unclaimed pool" />
-            <StatCard label={STATUS_META.with_setter.label} value={count('with_setter')} to="/leads" />
-            <StatCard label={STATUS_META.with_closer.label} value={count('with_closer')} to="/leads" />
-            <StatCard label={STATUS_META.open.label} value={count('open')} to="/leads" />
-            <StatCard label={STATUS_META.closed.label} value={count('closed')} to="/leads" />
+            <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" />
+            <StatCard label="New" value={byStage('New')} to="/leads" />
+            <StatCard label="Booked" value={byStage('Booked')} to="/leads" />
+            <StatCard label="Won" value={byStage('Won')} to="/leads" />
+            <StatCard label="Lost" value={byStage('Lost')} to="/leads" />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            {/* Temperature split */}
+            {/* Pipeline breakdown */}
             <Card className="p-5">
-              <h2 className="mb-3 text-[15px] font-semibold">Classification</h2>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-sm"><Flame className="h-4 w-4 text-red-500" /> Warm</span>
-                  <span className="text-[20px] font-bold tabular-nums text-red-600">{warm}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-sm"><Snowflake className="h-4 w-4 text-sky-500" /> Cold</span>
-                  <span className="text-[20px] font-bold tabular-nums text-sky-600">{cold}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-2 text-[var(--color-text-muted)]">
-                  <span className="text-sm">Unclassified</span>
-                  <span className="text-[20px] font-bold tabular-nums">{leads.length - warm - cold}</span>
-                </div>
+              <h2 className="mb-3 text-[15px] font-semibold">Pipeline</h2>
+              <div className="space-y-2">
+                {STAGE_ORDER.map((s) => (
+                  <div key={s} className="flex items-center justify-between">
+                    <StageBadge stage={s} />
+                    <span className="text-[15px] font-bold tabular-nums">{byStage(s)}</span>
+                  </div>
+                ))}
               </div>
             </Card>
 
@@ -78,14 +73,10 @@ export function WorkHomePage() {
               {recent.length === 0 ? (
                 <div className="px-5 py-10 text-center text-sm text-[var(--color-text-muted)]">
                   No leads yet.{' '}
-                  {isGenerator ? <Link to="/templates" className="text-[var(--color-primary)] hover:underline">Create a template</Link> : 'Check back once leads are uploaded.'}
+                  {isGenerator ? <Link to="/templates" className="text-[var(--color-primary)] hover:underline">Create a template</Link> : 'Check back once leads are assigned to you.'}
                 </div>
               ) : (
-                <ul className="divide-y divide-[var(--color-border)]">
-                  {recent.map((l) => (
-                    <RecentRow key={l.id} lead={l} />
-                  ))}
-                </ul>
+                <ul className="divide-y divide-[var(--color-border)]">{recent.map((l) => <RecentRow key={l.id} lead={l} />)}</ul>
               )}
             </Card>
           </div>
@@ -109,8 +100,6 @@ export function WorkHomePage() {
 }
 
 function RecentRow({ lead }: { lead: ManualLead }) {
-  const st = STATUS_META[lead.status]
-  const temp = lead.temperature ? TEMP_META[lead.temperature] : null
   return (
     <li>
       <Link to={`/leads/manual/${lead.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
@@ -118,8 +107,7 @@ function RecentRow({ lead }: { lead: ManualLead }) {
           <p className="truncate text-sm font-medium">{lead.display_name}</p>
           <p className="truncate text-[12px] text-[var(--color-text-muted)]">{lead.template_name}</p>
         </div>
-        {temp && <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${temp.className}`}><temp.icon className="h-3 w-3" /> {temp.label}</span>}
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium ${st.className}`}>{st.label}</span>
+        <StageBadge stage={lead.stage} />
         <span className="hidden text-[12px] text-[var(--color-text-muted)] sm:inline">{formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}</span>
       </Link>
     </li>
