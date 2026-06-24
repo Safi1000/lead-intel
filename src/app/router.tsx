@@ -1,6 +1,28 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+
+// A stale client (e.g. after a redeploy with new chunk hashes) can fail to fetch
+// a lazily-imported chunk — "Failed to fetch dynamically imported module". When
+// that happens, reload once to pick up the fresh index + assets.
+const CHUNK_RELOAD_KEY = 'li-chunk-reload'
+function lazyPage<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    factory()
+      .then((m) => {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+        return m
+      })
+      .catch((err: unknown) => {
+        if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+          window.location.reload()
+          return new Promise<{ default: T }>(() => {}) // hang until the reload happens
+        }
+        throw err
+      }),
+  )
+}
 import { AppShell } from '../components/layout/AppShell'
 import { AdminShell } from '../components/layout/AdminShell'
 import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext } from './guards'
@@ -19,37 +41,37 @@ import { ProfileSettingsPage } from '../features/settings/Profile'
 import { NotificationsSettingsPage } from '../features/settings/Notifications'
 
 // Phase 1 manual-workflow screens (code-split)
-const LeadTemplatesPage = lazy(() => import('../features/templates/Templates').then((m) => ({ default: m.TemplatesPage })))
-const UploadPage = lazy(() => import('../features/upload/Upload').then((m) => ({ default: m.UploadPage })))
-const BatchesPage = lazy(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
-const DueTodayPage = lazy(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
-const LeadQueuePage = lazy(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
-const ManualLeadDetailPage = lazy(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
-const OrganizationsPage = lazy(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
-const UsersPage = lazy(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
+const LeadTemplatesPage = lazyPage(() => import('../features/templates/Templates').then((m) => ({ default: m.TemplatesPage })))
+const UploadPage = lazyPage(() => import('../features/upload/Upload').then((m) => ({ default: m.UploadPage })))
+const BatchesPage = lazyPage(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
+const DueTodayPage = lazyPage(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
+const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
+const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
+const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
+const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
-const UsagePage = lazy(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
-const MarketMapPage = lazy(() => import('../features/market-map/MarketMap').then((m) => ({ default: m.MarketMapPage })))
-const AssistantPage = lazy(() => import('../features/ai/Assistant').then((m) => ({ default: m.AssistantPage })))
-const OutreachPage = lazy(() => import('../features/ai/Outreach').then((m) => ({ default: m.OutreachPage })))
-const CampaignsPage = lazy(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.CampaignsPage })))
-const NewCampaignPage = lazy(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.NewCampaignPage })))
-const CampaignDetailPage = lazy(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.CampaignDetailPage })))
-const TemplatesPage = lazy(() => import('../features/campaigns/Templates').then((m) => ({ default: m.TemplatesPage })))
-const InboxPage = lazy(() => import('../features/inbox/Inbox').then((m) => ({ default: m.InboxPage })))
-const ResellerPage = lazy(() => import('../features/reseller/Reseller').then((m) => ({ default: m.ResellerPage })))
+const UsagePage = lazyPage(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
+const MarketMapPage = lazyPage(() => import('../features/market-map/MarketMap').then((m) => ({ default: m.MarketMapPage })))
+const AssistantPage = lazyPage(() => import('../features/ai/Assistant').then((m) => ({ default: m.AssistantPage })))
+const OutreachPage = lazyPage(() => import('../features/ai/Outreach').then((m) => ({ default: m.OutreachPage })))
+const CampaignsPage = lazyPage(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.CampaignsPage })))
+const NewCampaignPage = lazyPage(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.NewCampaignPage })))
+const CampaignDetailPage = lazyPage(() => import('../features/campaigns/Campaigns').then((m) => ({ default: m.CampaignDetailPage })))
+const TemplatesPage = lazyPage(() => import('../features/campaigns/Templates').then((m) => ({ default: m.TemplatesPage })))
+const InboxPage = lazyPage(() => import('../features/inbox/Inbox').then((m) => ({ default: m.InboxPage })))
+const ResellerPage = lazyPage(() => import('../features/reseller/Reseller').then((m) => ({ default: m.ResellerPage })))
 // Settings tabs (lazy)
-const BillingSettingsPage = lazy(() => import('../features/billing/Billing').then((m) => ({ default: m.BillingSettingsPage })))
-const IntegrationsSettingsPage = lazy(() => import('../features/settings/Integrations').then((m) => ({ default: m.IntegrationsSettingsPage })))
-const WebhooksSettingsPage = lazy(() => import('../features/settings/Webhooks').then((m) => ({ default: m.WebhooksSettingsPage })))
-const ApiKeysSettingsPage = lazy(() => import('../features/settings/ApiKeys').then((m) => ({ default: m.ApiKeysSettingsPage })))
-const ApiDocsPage = lazy(() => import('../features/settings/ApiDocs').then((m) => ({ default: m.ApiDocsPage })))
-const AIProvidersSettingsPage = lazy(() => import('../features/settings/AIProviders').then((m) => ({ default: m.AIProvidersSettingsPage })))
-const BrandingSettingsPage = lazy(() => import('../features/settings/Branding').then((m) => ({ default: m.BrandingSettingsPage })))
+const BillingSettingsPage = lazyPage(() => import('../features/billing/Billing').then((m) => ({ default: m.BillingSettingsPage })))
+const IntegrationsSettingsPage = lazyPage(() => import('../features/settings/Integrations').then((m) => ({ default: m.IntegrationsSettingsPage })))
+const WebhooksSettingsPage = lazyPage(() => import('../features/settings/Webhooks').then((m) => ({ default: m.WebhooksSettingsPage })))
+const ApiKeysSettingsPage = lazyPage(() => import('../features/settings/ApiKeys').then((m) => ({ default: m.ApiKeysSettingsPage })))
+const ApiDocsPage = lazyPage(() => import('../features/settings/ApiDocs').then((m) => ({ default: m.ApiDocsPage })))
+const AIProvidersSettingsPage = lazyPage(() => import('../features/settings/AIProviders').then((m) => ({ default: m.AIProvidersSettingsPage })))
+const BrandingSettingsPage = lazyPage(() => import('../features/settings/Branding').then((m) => ({ default: m.BrandingSettingsPage })))
 // Admin (lazy)
-const AdminClientsPage = lazy(() => import('../features/admin/AdminClients').then((m) => ({ default: m.AdminClientsPage })))
-const AdminClientDetailPage = lazy(() => import('../features/admin/AdminClients').then((m) => ({ default: m.AdminClientDetailPage })))
-const AdminAuditPage = lazy(() => import('../features/admin/AdminAudit').then((m) => ({ default: m.AdminAuditPage })))
+const AdminClientsPage = lazyPage(() => import('../features/admin/AdminClients').then((m) => ({ default: m.AdminClientsPage })))
+const AdminClientDetailPage = lazyPage(() => import('../features/admin/AdminClients').then((m) => ({ default: m.AdminClientDetailPage })))
+const AdminAuditPage = lazyPage(() => import('../features/admin/AdminAudit').then((m) => ({ default: m.AdminAuditPage })))
 
 const L = (el: React.ReactNode) => <Suspense fallback={<LoadingState />}>{el}</Suspense>
 
