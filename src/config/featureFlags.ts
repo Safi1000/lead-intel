@@ -17,6 +17,7 @@ export interface FeatureFlags {
   globalSearch: boolean
   marketLocks: boolean
   notesTags: boolean
+  bookings: boolean // AE meetings + setter Calendly booking (Free-plan, polled)
   // P3
   assistant: boolean
   outreach: boolean
@@ -41,6 +42,7 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   team: true, // manage generator/setter/closer users (Req 1, 3, 4)
   notesTags: true, // per-lead remarks + warm/cold (Req 3, 4, 5)
   globalSearch: true, // search within the lead queue
+  bookings: true, // AE meetings page + setter Calendly booking page
   // --- hidden: automation / SaaS / AI (re-enable in later phases) ---
   marketMap: false,
   usage: false,

@@ -3,8 +3,15 @@ import { handlers } from './handlers'
 import { p2p3Handlers } from './p2p3'
 import { leadworkHandlers } from './leadwork'
 import { accountsHandlers } from './accountsHandlers'
+import { bookingsHandlers } from './bookings'
 
-export const worker = setupWorker(...handlers, ...p2p3Handlers, ...leadworkHandlers, ...accountsHandlers)
+// The bookings module talks to real Calendly (via the Vercel serverless proxy
+// at /api/bookings/*) in production. We only mock it in dev so the demo works;
+// in a production build these handlers are omitted and the requests fall
+// through to the real serverless functions.
+const devOnlyHandlers = import.meta.env.DEV ? bookingsHandlers : []
+
+export const worker = setupWorker(...handlers, ...p2p3Handlers, ...leadworkHandlers, ...accountsHandlers, ...devOnlyHandlers)
 
 /** Start MSW. Always on in this build — the backend is mocked (§17). */
 export async function startMockServer() {

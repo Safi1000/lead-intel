@@ -1,6 +1,9 @@
 /** Platform constants (§2 config/constants.ts). */
 
 export const POLL_INTERVAL_MS = 5000 // live run progress polling (§8, §18-D)
+// Calendly Free plan has no webhooks → the AE Meetings list is kept fresh by
+// polling. Transport-agnostic: a future webhook/WS path can replace this.
+export const BOOKINGS_SYNC_INTERVAL_MS = 120_000 // 2 min
 export const SEARCH_DEBOUNCE_MS = 300
 export const LEAD_PAGE_SIZE = 100 // keep page size <= 100 (§10)
 

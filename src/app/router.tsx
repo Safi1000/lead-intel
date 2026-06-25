@@ -47,6 +47,8 @@ const BatchesPage = lazyPage(() => import('../features/leadwork/Batches').then((
 const DueTodayPage = lazyPage(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
 const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
+const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
+const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
@@ -128,6 +130,20 @@ export const router = createBrowserRouter([
                   {
                     element: <RequirePermission resource="users" action="manage" />,
                     children: [{ path: 'users', element: L(<UsersPage />) }],
+                  },
+                  // Bookings (Calendly). Gated by flag, then per-role permission.
+                  {
+                    element: <RequireFeature flag="bookings" title="Bookings" />,
+                    children: [
+                      {
+                        element: <RequirePermission resource="bookings" action="view" />,
+                        children: [{ path: 'bookings', element: L(<MeetingsPage />) }],
+                      },
+                      {
+                        element: <RequirePermission resource="bookings" action="create" />,
+                        children: [{ path: 'bookings/new', element: L(<NewBookingPage />) }],
+                      },
+                    ],
                   },
                 ],
               },

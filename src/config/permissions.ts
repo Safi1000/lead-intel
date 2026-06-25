@@ -6,6 +6,7 @@ export type Resource =
   | 'templates' // lead-upload templates
   | 'upload' // manual lead import
   | 'leads' // the shared lead queue
+  | 'bookings' // AE meetings + setter booking (Calendly)
   | 'users' // team / user management
   | 'account' // tenant account settings
   // Legacy resources referenced only by hidden (flag-gated) pages. Kept in the
@@ -28,6 +29,8 @@ const MATRIX: Partial<Record<Resource, Partial<Record<Action, Role[]>>>> = {
   upload: { view: GENERATOR, create: GENERATOR },
   // Everyone sees the queue; setters/closers act on leads.
   leads: { view: TENANT_ALL, edit: WORKERS },
+  // Bookings: the AE (closer) + manager read the Meetings page; setters + managers book.
+  bookings: { view: ['manager', 'closer'], create: ['manager', 'setter'] },
   // Only managers manage users and the account.
   users: { view: ['manager'], manage: ['manager'] },
   account: { view: TENANT_ALL, manage: ['manager'] },
@@ -62,6 +65,8 @@ export const PERMISSION_CATALOG: { resource: Resource; action: Action; label: st
   { resource: 'upload', action: 'create', label: 'Upload leads' },
   { resource: 'leads', action: 'view', label: 'View the lead queue' },
   { resource: 'leads', action: 'edit', label: 'Work leads (remarks, status, warm/cold)' },
+  { resource: 'bookings', action: 'view', label: 'View AE meetings (booked calls)' },
+  { resource: 'bookings', action: 'create', label: 'Book meetings for AEs' },
   { resource: 'users', action: 'manage', label: 'Manage users in the org' },
 ]
 

@@ -20,6 +20,8 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Home', to: '/home', icon: 'LayoutDashboard', orgContext: true },
   { label: 'Due Today', to: '/today', icon: 'CalendarClock', roles: WORKERS_NAV, orgContext: true },
   { label: 'Leads', to: '/leads', icon: 'Users', orgContext: true },
+  { label: 'Meetings', to: '/bookings', icon: 'CalendarCheck', flag: 'bookings', perm: { resource: 'bookings', action: 'view' }, orgContext: true },
+  { label: 'Book a meeting', to: '/bookings/new', icon: 'CalendarPlus', flag: 'bookings', perm: { resource: 'bookings', action: 'create' }, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
   { label: 'Users', to: '/users', icon: 'UserCog', perm: { resource: 'users', action: 'manage' }, orgContext: true },
