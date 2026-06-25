@@ -43,7 +43,10 @@ export function can(role: Role | null, action: Action, resource: Resource, overr
   if (overrides?.denied?.includes(key)) return false
   if (overrides?.granted?.includes(key)) return true
   const allowed = MATRIX[resource]?.[action]
-  return allowed ? allowed.includes(role) : false
+  if (allowed && allowed.includes(role)) return true
+  // Being able to upload leads implies viewing templates (needed to pick one).
+  if (resource === 'templates' && action === 'view') return can(role, 'create', 'upload', overrides)
+  return false
 }
 
 /** Whether the role grants this permission by default (before overrides) — used to seed the toggles UI. */
