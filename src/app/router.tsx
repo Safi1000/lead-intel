@@ -25,7 +25,7 @@ function lazyPage<T extends ComponentType<unknown>>(factory: () => Promise<{ def
 }
 import { AppShell } from '../components/layout/AppShell'
 import { AdminShell } from '../components/layout/AdminShell'
-import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext } from './guards'
+import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext, RequirePermission } from './guards'
 import { RouteErrorBoundary, NotFoundPage, ForbiddenPage, MaintenancePage } from '../features/misc/ErrorPages'
 import { LegalPage } from '../features/misc/Legal'
 import { LoginPage } from '../features/auth/Login'
@@ -118,14 +118,15 @@ export const router = createBrowserRouter([
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
                   {
-                    element: <RequireRole roles={['superadmin', 'admin', 'manager', 'lead_generator']} />,
-                    children: [
-                      { path: 'templates', element: L(<LeadTemplatesPage />) },
-                      { path: 'upload', element: L(<UploadPage />) },
-                    ],
+                    element: <RequirePermission resource="templates" action="view" />,
+                    children: [{ path: 'templates', element: L(<LeadTemplatesPage />) }],
                   },
                   {
-                    element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
+                    element: <RequirePermission resource="upload" action="create" />,
+                    children: [{ path: 'upload', element: L(<UploadPage />) }],
+                  },
+                  {
+                    element: <RequirePermission resource="users" action="manage" />,
                     children: [{ path: 'users', element: L(<UsersPage />) }],
                   },
                 ],

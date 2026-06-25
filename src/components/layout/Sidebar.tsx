@@ -4,6 +4,7 @@ import { CLIENT_NAV, CLIENT_NAV_BOTTOM, type NavItem } from './nav'
 import { Icon } from './icon'
 import { useUIStore } from '../../stores/uiStore'
 import { useAuthStore } from '../../stores/authStore'
+import { can } from '../../config/permissions'
 import { cn } from '../../lib/utils'
 
 function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
@@ -43,11 +44,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const toggle = useUIStore((s) => s.toggleSidebar)
   const role = useAuthStore((s) => s.role)
+  const permissions = useAuthStore((s) => s.permissions)
   const inOrg = useAuthStore((s) => s.actingOrgId) != null
 
   const visible = CLIENT_NAV.filter((item) => {
-    if (item.roles && !(role !== null && item.roles.includes(role))) return false
     if (item.orgContext && !inOrg) return false
+    if (item.perm) return can(role, item.perm.action, item.perm.resource, permissions)
+    if (item.roles && !(role !== null && item.roles.includes(role))) return false
     return true
   })
 

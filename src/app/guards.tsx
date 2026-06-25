@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore, isAdminRole } from '../stores/authStore'
 import type { Role } from '../api/types'
 import type { FeatureFlagKey } from '../config/featureFlags'
+import { can, type Action, type Resource } from '../config/permissions'
 import { ComingSoon } from '../features/shared/ComingSoon'
 import { LoadingState } from '../components/feedback'
 
@@ -33,6 +34,14 @@ export function RequireRole({ roles }: { roles: Role[] }) {
 export function RequireAdmin() {
   const role = useAuthStore((s) => s.role)
   if (!isAdminRole(role)) return <Navigate to="/403" replace />
+  return <Outlet />
+}
+
+/** Gate a route by the permission system (honors per-user overrides). */
+export function RequirePermission({ resource, action }: { resource: Resource; action: Action }) {
+  const role = useAuthStore((s) => s.role)
+  const permissions = useAuthStore((s) => s.permissions)
+  if (!can(role, action, resource, permissions)) return <Navigate to="/403" replace />
   return <Outlet />
 }
 
