@@ -179,9 +179,27 @@ export async function getMeetingById(id: string, aeIdHint?: string): Promise<any
   return null
 }
 
+/** Write a JSON response using raw Node APIs (no dependency on Vercel's res
+ *  helper chain, which can throw and turn a clean error into a 500). */
 export function sendJson(res: any, status: number, body: unknown) {
-  res.status(status).setHeader('Content-Type', 'application/json')
-  res.send(JSON.stringify(body))
+  const payload = JSON.stringify(body)
+  try {
+    res.statusCode = status
+    res.setHeader('Content-Type', 'application/json')
+    res.end(payload)
+  } catch {
+    if (typeof res.status === 'function') res.status(status).json(body)
+  }
+}
+
+/** Read a query param robustly (req.query, falling back to parsing req.url). */
+export function readQuery(req: any, key: string): string {
+  if (req?.query && req.query[key] != null) return String(req.query[key])
+  try {
+    return new URL(req.url, 'http://localhost').searchParams.get(key) ?? ''
+  } catch {
+    return ''
+  }
 }
 
 /** Broadcast a lightweight "bookings changed" ping to the browser via Supabase

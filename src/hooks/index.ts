@@ -87,6 +87,7 @@ export function useBookingsSync(aeId: string | undefined) {
     isLoading: query.isLoading,
     isError: query.isError,
     isFetching: query.isFetching,
+    error: query.error as unknown,
     refetch: query.refetch,
   }
 }

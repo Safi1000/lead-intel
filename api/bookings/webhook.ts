@@ -8,7 +8,7 @@
 //
 // Auth: configure the webhook URL with ?token=<CAL_WEBHOOK_SECRET>. If the env
 // var is set, requests without the matching token are rejected.
-import { broadcastBookingsChanged, sendJson } from './_lib'
+import { broadcastBookingsChanged, readQuery, sendJson } from './_lib'
 
 const RELEVANT = new Set([
   'BOOKING_CREATED',
@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return sendJson(res, 405, { error: { code: 'method', message: 'POST only' } })
 
   const secret = process.env.CAL_WEBHOOK_SECRET
-  if (secret && req.query?.token !== secret) {
+  if (secret && readQuery(req, 'token') !== secret) {
     return sendJson(res, 401, { error: { code: 'unauthorized', message: 'Invalid webhook token' } })
   }
 

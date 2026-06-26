@@ -4,12 +4,16 @@
 import { listAes, sendJson } from './_lib'
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== 'GET') return sendJson(res, 405, { error: { code: 'method', message: 'GET only' } })
-  const configs = listAes().map((a) => ({
-    aeId: a.id,
-    aeName: a.name,
-    schedulingUrl: a.url,
-    demo: false,
-  }))
-  return sendJson(res, 200, configs)
+  try {
+    if (req.method !== 'GET') return sendJson(res, 405, { error: { code: 'method', message: 'GET only' } })
+    const configs = listAes().map((a) => ({
+      aeId: a.id,
+      aeName: a.name,
+      schedulingUrl: a.url,
+      demo: false,
+    }))
+    return sendJson(res, 200, configs)
+  } catch (e: any) {
+    return sendJson(res, 500, { error: { code: 'error', message: e?.message ?? 'Failed to list AEs' } })
+  }
 }

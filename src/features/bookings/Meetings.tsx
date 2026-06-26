@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarClock, RefreshCw, ExternalLink, StickyNote, Building2, Clock } from 'lucide-react'
 import { useAuth, useBookingsSync } from '../../hooks'
+import { normalizeError } from '../../api/client'
 import { Button, Card } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, CardSkeleton } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
@@ -164,7 +165,7 @@ export function MeetingsPage() {
   // back to the short AE id). In the demo the value is ignored — the mock always
   // returns live-looking meetings.
   const aeId = user?.email || user?.id
-  const { meetings, lastSyncedAt, isLoading, isError, isFetching, refetch } = useBookingsSync(aeId)
+  const { meetings, lastSyncedAt, isLoading, isError, isFetching, error, refetch } = useBookingsSync(aeId)
 
   // Group meetings by day label, preserving ascending order.
   const groups = useMemo(() => {
@@ -205,7 +206,7 @@ export function MeetingsPage() {
       {isLoading ? (
         <div className="space-y-4"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
       ) : isError ? (
-        <ErrorState onRetry={() => refetch()} message="Couldn’t load your meetings. Check the connection and retry." />
+        <ErrorState onRetry={() => refetch()} message={normalizeError(error).message} />
       ) : meetings.length === 0 ? (
         <EmptyState
           icon={CalendarClock}
