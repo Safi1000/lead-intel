@@ -47,7 +47,9 @@ function LeadBlock({ lead }: { lead: ManualLead }) {
     <div className="rounded-[10px] border border-[var(--color-border)] bg-slate-50/60 p-3">
       <div className="mb-2 flex items-center gap-2">
         <Building2 className="h-4 w-4 text-[var(--color-text-muted)]" />
-        <span className="font-semibold text-[var(--color-text)]">{lead.display_name}</span>
+        <Link to={`/leads/manual/${lead.id}`} className="font-semibold text-[var(--color-text)] hover:text-[var(--color-primary)] hover:underline">
+          {lead.display_name}
+        </Link>
       </div>
       <dl className="space-y-0.5">
         <LeadField label="Owner" value={get('Owner Name', 'Owner', 'Contact')} />
