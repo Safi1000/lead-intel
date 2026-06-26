@@ -7,6 +7,7 @@ import { activitiesApi, manualLeadsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
+import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Input, Label, Textarea } from '../../components/ui/primitives'
 import { Dialog } from '../../components/ui/Dialog'
 import { ErrorState, LoadingState } from '../../components/feedback'
@@ -58,6 +59,7 @@ export function ManualLeadDetailPage() {
   const { role, user } = useAuth()
   const me = user?.name ?? ''
   const canWork = canWorkLeads(role)
+  const canBook = useCan('create', 'bookings')
 
   const { data: lead, isLoading, isError, refetch } = useQuery({ queryKey: ['manual-lead', id], queryFn: () => manualLeadsApi.get(id as string), enabled: !!id })
   const { data: activities } = useQuery({ queryKey: ['activities', id], queryFn: () => activitiesApi.list(id as string), enabled: !!id })
@@ -103,7 +105,14 @@ export function ManualLeadDetailPage() {
           </div>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">From template “{lead.template_name}”</p>
         </div>
-        <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => update.mutate({ stage: s })} />
+        <div className="flex items-center gap-2">
+          {canBook && (
+            <Link to={`/bookings/new?leadId=${lead.id}`}>
+              <Button variant="outline" size="sm"><CalendarClock className="h-4 w-4" /> Book a meeting</Button>
+            </Link>
+          )}
+          <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => update.mutate({ stage: s })} />
+        </div>
       </div>
 
       {lead.stage === 'Booked' && <CallCard lead={lead} />}
