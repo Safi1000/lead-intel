@@ -53,28 +53,56 @@ function ensureCalLoaded(origin: string): Promise<any> {
 /** Real inline Cal.com embed (production). */
 function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => void }) {
   const [ready, setReady] = useState(false)
+  const [configError, setConfigError] = useState<string | null>(null)
   const containerId = 'cal-inline-embed'
 
   useEffect(() => {
     let cancelled = false
-    let parsed: URL
-    try { parsed = new URL(url) } catch { return }
+    let parsed: URL | null = null
+    try { parsed = url ? new URL(url) : null } catch { parsed = null }
+    if (!parsed) {
+      setConfigError('This AE has no scheduling URL configured. Set CAL_AE_<ID>_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.')
+      return
+    }
     const origin = parsed.origin
-    const calLink = parsed.pathname.replace(/^\//, '') // e.g. "hamna/30min"
+    const calLink = parsed.pathname.replace(/^\//, '') + parsed.search // e.g. "hamna/30min"
 
-    ensureCalLoaded(origin).then((cal) => {
-      if (cancelled || !cal) return
-      cal('inline', { elementOrSelector: `#${containerId}`, calLink })
-      cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
-      setReady(true)
-    })
+    ensureCalLoaded(origin)
+      .then((cal) => {
+        if (cancelled || !cal) return
+        try {
+          cal('inline', { elementOrSelector: `#${containerId}`, calLink })
+          cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
+        } catch {
+          /* the fallback link below still lets the setter book */
+        }
+        setReady(true) // clear the spinner once we've attempted to mount
+      })
+      .catch(() => setReady(true))
     return () => { cancelled = true }
   }, [url, onScheduled])
+
+  if (configError) {
+    return (
+      <div className="rounded-[10px] border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800">
+        <p className="font-medium">Scheduling widget unavailable</p>
+        <p className="mt-1">{configError}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative min-h-[640px]">
       {!ready && <LoadingState label="Loading scheduling widget…" />}
       <div id={containerId} style={{ minWidth: 320, height: 640, overflow: 'auto' }} />
+      {url && (
+        <p className="mt-2 text-center text-[12px] text-[var(--color-text-muted)]">
+          Trouble loading?{' '}
+          <a className="text-[var(--color-primary)] hover:underline" href={url} target="_blank" rel="noreferrer">
+            Open the scheduling page
+          </a>
+        </p>
+      )}
     </div>
   )
 }
