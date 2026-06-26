@@ -8,7 +8,7 @@
 //
 // Auth: configure the webhook URL with ?token=<CAL_WEBHOOK_SECRET>. If the env
 // var is set, requests without the matching token are rejected.
-import { broadcastBookingsChanged, readQuery, sendJson } from './_lib'
+import { broadcastBookingsChanged, readQuery, sendJson } from './_lib.js'
 
 const RELEVANT = new Set([
   'BOOKING_CREATED',

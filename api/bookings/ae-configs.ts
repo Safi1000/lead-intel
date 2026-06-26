@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GET /api/bookings/ae-configs — the AEs a setter can book for, with each AE's
 // embeddable Cal.com URL. Driven by the CAL_API_KEY__* / CAL_AE_* env vars.
-import { listAes, sendJson } from './_lib'
+import { listAes, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {

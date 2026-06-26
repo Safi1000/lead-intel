@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GET /api/bookings/:id — single meeting detail (optional ?aeId= hint).
-import { getMeetingById, readQuery, sendJson } from './_lib'
+import { getMeetingById, readQuery, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {

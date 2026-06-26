@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GET /api/bookings/upcoming?aeId=... — one AE's upcoming Cal.com meetings,
 // normalized + joined to CRM leads. The API key never leaves this server.
-import { getUpcomingForAe, readQuery, sendJson } from './_lib'
+import { getUpcomingForAe, readQuery, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {
