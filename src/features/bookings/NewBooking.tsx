@@ -301,16 +301,24 @@ export function NewBookingPage() {
   })
   const prefill = useMemo<Prefill>(() => {
     const d = leadQ.data?.data ?? {}
-    const pick = (...keys: string[]) => keys.map((k) => d[k]).find(Boolean)
-    const rawEmail = pick('Email', 'Owner Email', 'Business Email')
-    // Only prefill the email if the lead actually has a valid one — otherwise
-    // leave it blank rather than seeding garbage into the booking form.
-    const email = rawEmail && /^\S+@\S+\.\S+$/.test(rawEmail.trim()) ? rawEmail.trim() : undefined
+    const entries = Object.entries(d).map(([k, v]) => [k, String(v ?? '').trim()] as const).filter(([, v]) => v)
+    // First value whose COLUMN NAME matches a pattern (case-insensitive).
+    const byKey = (re: RegExp) => entries.find(([k]) => re.test(k))?.[1]
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    // Email: any column whose name contains "email" (Email, E-mail, Owner Email,
+    // Email Address, Contact Email…), else any cell that simply looks like an email.
+    let email = byKey(/e-?\s*mail/i)
+    if (!email || !emailRe.test(email)) email = entries.map(([, v]) => v).find((v) => emailRe.test(v))
+    email = email && emailRe.test(email) ? email : undefined
+
+    const name = leadQ.data?.display_name || byKey(/owner|contact|name|company|business/i)
+
     return {
-      name: leadQ.data?.display_name || pick('Owner Name', 'Owner', 'Contact', 'Name'),
+      name,
       email,
       // Source = the batch uploader; fall back to a Lead Source column if present.
-      leadSource: batchQ.data?.created_by || pick('Lead Source', 'Lead source', 'Source') || undefined,
+      leadSource: batchQ.data?.created_by || byKey(/lead\s*source|source/i) || undefined,
       setterName: user?.name ?? undefined,
       crmLeadId,
     }
