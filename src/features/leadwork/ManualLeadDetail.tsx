@@ -127,6 +127,13 @@ export function ManualLeadDetailPage() {
                 className="inline-flex items-center gap-1 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><Copy className="h-3.5 w-3.5" /> Copy all</button>
             </div>
             <dl className="divide-y divide-[var(--color-border)]">
+              <div className="group flex items-start justify-between gap-4 py-2.5">
+                <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">Lead ID</dt>
+                <dd className="flex max-w-[68%] items-start gap-1.5 text-right text-sm">
+                  <span className="break-all text-left font-mono text-[13px]">{lead.id}</span>
+                  <CopyButton text={lead.id} />
+                </dd>
+              </div>
               {Object.entries(lead.data).map(([key, value]) => (
                 <div key={key} className="group flex items-start justify-between gap-4 py-2.5">
                   <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">{key}</dt>

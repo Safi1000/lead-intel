@@ -293,9 +293,13 @@ export function NewBookingPage() {
   const prefill = useMemo<Prefill>(() => {
     const d = leadQ.data?.data ?? {}
     const pick = (...keys: string[]) => keys.map((k) => d[k]).find(Boolean)
+    const rawEmail = pick('Email', 'Owner Email', 'Business Email')
+    // Only prefill the email if the lead actually has a valid one — otherwise
+    // leave it blank rather than seeding garbage into the booking form.
+    const email = rawEmail && /^\S+@\S+\.\S+$/.test(rawEmail.trim()) ? rawEmail.trim() : undefined
     return {
       name: leadQ.data?.display_name || pick('Owner Name', 'Owner', 'Contact', 'Name'),
-      email: pick('Email', 'Owner Email', 'Business Email'),
+      email,
       leadSource: pick('Lead Source', 'Lead source', 'Source'),
       setterName: user?.name ?? undefined,
       crmLeadId,
