@@ -92,9 +92,12 @@ function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => 
   }
 
   return (
-    <div className="relative min-h-[640px]">
+    <div className="relative">
       {!ready && <LoadingState label="Loading scheduling widget…" />}
-      <div id={containerId} style={{ minWidth: 320, height: 640, overflow: 'auto' }} />
+      {/* No fixed height — let Cal.com auto-resize the iframe to its content so
+          the calendar / time slots / booking form are never clipped and the
+          page scrolls naturally. */}
+      <div id={containerId} className="w-full" style={{ minWidth: 320, minHeight: ready ? 600 : 0 }} />
       {url && (
         <p className="mt-2 text-center text-[12px] text-[var(--color-text-muted)]">
           Trouble loading?{' '}
