@@ -6,7 +6,7 @@ import {
   CalendarCheck, ChevronDown, ChevronRight, CircleCheck, CircleX, Hash, Loader2, ArrowRight,
 } from 'lucide-react'
 import { bookingsApi, type AeBookingConfig } from '../../api/bookings'
-import { manualLeadsApi } from '../../api/endpoints'
+import { manualLeadsApi, leadBatchesApi } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { ErrorState, LoadingState } from '../../components/feedback'
@@ -292,6 +292,13 @@ export function NewBookingPage() {
     queryFn: () => manualLeadsApi.get(crmLeadId as string),
     enabled: Boolean(crmLeadId),
   })
+  // Lead Source = whoever uploaded the lead's batch (batch.created_by).
+  const batchId = leadQ.data?.batch_id ?? undefined
+  const batchQ = useQuery({
+    queryKey: ['lead-batch', batchId],
+    queryFn: () => leadBatchesApi.get(batchId as string),
+    enabled: Boolean(batchId),
+  })
   const prefill = useMemo<Prefill>(() => {
     const d = leadQ.data?.data ?? {}
     const pick = (...keys: string[]) => keys.map((k) => d[k]).find(Boolean)
@@ -302,12 +309,13 @@ export function NewBookingPage() {
     return {
       name: leadQ.data?.display_name || pick('Owner Name', 'Owner', 'Contact', 'Name'),
       email,
-      leadSource: pick('Lead Source', 'Lead source', 'Source'),
+      // Source = the batch uploader; fall back to a Lead Source column if present.
+      leadSource: batchQ.data?.created_by || pick('Lead Source', 'Lead source', 'Source') || undefined,
       setterName: user?.name ?? undefined,
       crmLeadId,
     }
-  }, [leadQ.data, user?.name, crmLeadId])
-  const prefillLoading = Boolean(crmLeadId) && leadQ.isLoading
+  }, [leadQ.data, batchQ.data, user?.name, crmLeadId])
+  const prefillLoading = Boolean(crmLeadId) && (leadQ.isLoading || (Boolean(batchId) && batchQ.isLoading))
 
   // Default to the first AE once configs load.
   useEffect(() => {
