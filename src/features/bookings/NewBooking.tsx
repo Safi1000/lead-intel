@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -6,12 +6,25 @@ import {
   CalendarCheck, ChevronDown, ChevronRight, CircleCheck, CircleX, Hash, Loader2, ArrowRight,
 } from 'lucide-react'
 import { bookingsApi, type AeBookingConfig } from '../../api/bookings'
+import { manualLeadsApi } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { CopyButton } from './components'
 import { cn } from '../../lib/utils'
+
+/** Values we auto-fill into the Cal.com booking form so the setter doesn't
+ *  hand-type them. The client name/email come from the CRM lead; setter name +
+ *  CRM Lead ID are known from context. Custom fields prefill by their Cal.com
+ *  field identifier — set those identifiers to: setter-name, lead-source, crm-lead-id. */
+interface Prefill {
+  name?: string
+  email?: string
+  setterName?: string
+  leadSource?: string
+  crmLeadId?: string
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Cal.com's embed API, attached to window by the embed snippet. */
@@ -51,7 +64,7 @@ function ensureCalLoaded(origin: string): Promise<any> {
 }
 
 /** Real inline Cal.com embed (production). */
-function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => void }) {
+function CalInlineEmbed({ url, prefill, onScheduled }: { url: string; prefill: Prefill; onScheduled: () => void }) {
   const [ready, setReady] = useState(false)
   const [configError, setConfigError] = useState<string | null>(null)
   const containerId = 'cal-inline-embed'
@@ -67,11 +80,20 @@ function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => 
     const origin = parsed.origin
     const calLink = parsed.pathname.replace(/^\//, '') + parsed.search // e.g. "hamna/30min"
 
+    // Prefill the booking form. `name`/`email` are Cal.com's built-in fields;
+    // the rest prefill custom questions by their Cal.com field identifier.
+    const config: Record<string, string> = {}
+    if (prefill.name) config.name = prefill.name
+    if (prefill.email) config.email = prefill.email
+    if (prefill.setterName) config['setter-name'] = prefill.setterName
+    if (prefill.leadSource) config['lead-source'] = prefill.leadSource
+    if (prefill.crmLeadId) config['crm-lead-id'] = prefill.crmLeadId
+
     ensureCalLoaded(origin)
       .then((cal) => {
         if (cancelled || !cal) return
         try {
-          cal('inline', { elementOrSelector: `#${containerId}`, calLink })
+          cal('inline', { elementOrSelector: `#${containerId}`, calLink, config })
           cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
         } catch {
           /* the fallback link below still lets the setter book */
@@ -80,7 +102,7 @@ function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => 
       })
       .catch(() => setReady(true))
     return () => { cancelled = true }
-  }, [url, onScheduled])
+  }, [url, prefill, onScheduled])
 
   if (configError) {
     return (
@@ -114,16 +136,16 @@ function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => 
  *  simulate the exact booking outcome (creates a meeting on the AE side). */
 function DemoEmbed({
   ae,
-  defaults,
+  prefill,
   onScheduled,
 }: {
   ae: AeBookingConfig
-  defaults: { setterName?: string; crmLeadId?: string }
+  prefill: Prefill
   onScheduled: () => void
 }) {
-  const [inviteeName, setInviteeName] = useState('')
-  const [inviteeEmail, setInviteeEmail] = useState('')
-  const [leadSource, setLeadSource] = useState('')
+  const [inviteeName, setInviteeName] = useState(prefill.name ?? '')
+  const [inviteeEmail, setInviteeEmail] = useState(prefill.email ?? '')
+  const [leadSource, setLeadSource] = useState(prefill.leadSource ?? '')
   const [context, setContext] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -138,10 +160,10 @@ function DemoEmbed({
         aeId: ae.aeId,
         inviteeName: inviteeName.trim() || 'Client',
         inviteeEmail: inviteeEmail.trim(),
-        setterName: defaults.setterName,
+        setterName: prefill.setterName,
         leadSource: leadSource.trim() || undefined,
         context: context.trim() || undefined,
-        crmLeadId: defaults.crmLeadId,
+        crmLeadId: prefill.crmLeadId,
       })
       onScheduled()
     } catch {
@@ -262,6 +284,25 @@ export function NewBookingPage() {
   const [booked, setBooked] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Pull the CRM lead (when started from one) to prefill the booking form.
+  const leadQ = useQuery({
+    queryKey: ['manual-lead', crmLeadId],
+    queryFn: () => manualLeadsApi.get(crmLeadId as string),
+    enabled: Boolean(crmLeadId),
+  })
+  const prefill = useMemo<Prefill>(() => {
+    const d = leadQ.data?.data ?? {}
+    const pick = (...keys: string[]) => keys.map((k) => d[k]).find(Boolean)
+    return {
+      name: leadQ.data?.display_name || pick('Owner Name', 'Owner', 'Contact', 'Name'),
+      email: pick('Email', 'Owner Email', 'Business Email'),
+      leadSource: pick('Lead Source', 'Lead source', 'Source'),
+      setterName: user?.name ?? undefined,
+      crmLeadId,
+    }
+  }, [leadQ.data, user?.name, crmLeadId])
+  const prefillLoading = Boolean(crmLeadId) && leadQ.isLoading
+
   // Default to the first AE once configs load.
   useEffect(() => {
     if (!aeId && aes && aes.length > 0) setAeId(aes[0].aeId)
@@ -269,11 +310,11 @@ export function NewBookingPage() {
 
   const ae = aes?.find((a) => a.aeId === aeId)
 
-  const onScheduled = () => {
+  const onScheduled = useCallback(() => {
     setBooked(true)
     toast.success('Meeting booked — it will appear on the AE’s Meetings page shortly.')
     qc.invalidateQueries({ queryKey: ['bookings'] })
-  }
+  }, [qc])
 
   return (
     <div className="reveal">
@@ -311,7 +352,7 @@ export function NewBookingPage() {
                 <div className="mt-4 flex items-center justify-between gap-2 rounded-[10px] border border-blue-100 bg-blue-50/60 p-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Hash className="h-4 w-4 text-[var(--color-primary)]" />
-                    <span className="text-[var(--color-text-secondary)]">Paste this into the “CRM Lead ID” question:</span>
+                    <span className="text-[var(--color-text-secondary)]">CRM Lead ID (auto-filled — copy if you need to re-enter it):</span>
                     <span className="font-mono font-semibold text-[var(--color-text)]">{crmLeadId}</span>
                   </div>
                   <CopyButton text={crmLeadId} label="Copy" />
@@ -338,10 +379,12 @@ export function NewBookingPage() {
                 </div>
               ) : !ae ? (
                 <p className="py-8 text-center text-sm text-[var(--color-text-muted)]"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />Select an AE to load their calendar.</p>
+              ) : prefillLoading ? (
+                <LoadingState label="Loading lead details…" />
               ) : ae.demo ? (
-                <DemoEmbed ae={ae} defaults={{ setterName: user?.name, crmLeadId }} onScheduled={onScheduled} />
+                <DemoEmbed key={crmLeadId ?? 'none'} ae={ae} prefill={prefill} onScheduled={onScheduled} />
               ) : (
-                <CalInlineEmbed url={ae.schedulingUrl} onScheduled={onScheduled} />
+                <CalInlineEmbed url={ae.schedulingUrl} prefill={prefill} onScheduled={onScheduled} />
               )}
             </Card>
           </div>
