@@ -84,7 +84,9 @@ function CalInlineEmbed({ url, prefill, onScheduled }: { url: string; prefill: P
     // the rest prefill custom questions by their Cal.com field identifier.
     const config: Record<string, string> = {}
     if (prefill.name) config.name = prefill.name
-    if (prefill.email) config.email = prefill.email
+    // Only prefill the email if the lead has a valid one; otherwise send an
+    // explicit blank so Cal.com doesn't auto-fill the booker's own session email.
+    config.email = prefill.email ?? ''
     if (prefill.setterName) config['setter-name'] = prefill.setterName
     if (prefill.leadSource) config['lead-source'] = prefill.leadSource
     if (prefill.crmLeadId) config['crm-lead-id'] = prefill.crmLeadId
