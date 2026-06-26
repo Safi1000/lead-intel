@@ -13,49 +13,75 @@ import { PageHeader } from '../shared/bits'
 import { CopyButton } from './components'
 import { cn } from '../../lib/utils'
 
-/** Calendly fires this via window.postMessage on the inline embed. */
-function isCalendlyScheduled(e: MessageEvent): boolean {
-  return typeof e.data === 'object' && e.data?.event === 'calendly.event_scheduled'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/** Cal.com's embed API, attached to window by the embed snippet. */
+function getCal(): any | null {
+  return (window as any).Cal ?? null
 }
 
-const CALENDLY_SCRIPT = 'https://assets.calendly.com/assets/external/widget.js'
+/** Load Cal.com's embed script once (the official inline snippet). */
+function ensureCalLoaded(origin: string): Promise<any> {
+  return new Promise((resolve) => {
+    if (getCal()) {
+      resolve(getCal())
+      return
+    }
+    // Official Cal.com embed loader (canonical snippet, typed loosely).
+    ;(function (C: any, A: string, L: string) {
+      const p = (a: any, ar: any) => { a.q.push(ar) }
+      const d = C.document
+      C.Cal = C.Cal || function () {
+        const cal = C.Cal
+        const ar = arguments
+        if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true }
+        if (ar[0] === L) {
+          const api: any = function () { p(api, arguments) }
+          const namespace = ar[1]
+          api.q = api.q || []
+          if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]) } else p(cal, ar)
+          return
+        }
+        p(cal, ar)
+      }
+    })(window, 'https://app.cal.com/embed/embed.js', 'init')
+    const cal = getCal()
+    cal('init', { origin })
+    resolve(cal)
+  })
+}
 
-/** Real inline Calendly embed (production). Loads the widget script once. */
-function CalendlyInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => void }) {
+/** Real inline Cal.com embed (production). */
+function CalInlineEmbed({ url, onScheduled }: { url: string; onScheduled: () => void }) {
   const [ready, setReady] = useState(false)
+  const containerId = 'cal-inline-embed'
 
   useEffect(() => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${CALENDLY_SCRIPT}"]`)
-    if (existing) {
+    let cancelled = false
+    let parsed: URL
+    try { parsed = new URL(url) } catch { return }
+    const origin = parsed.origin
+    const calLink = parsed.pathname.replace(/^\//, '') // e.g. "hamna/30min"
+
+    ensureCalLoaded(origin).then((cal) => {
+      if (cancelled || !cal) return
+      cal('inline', { elementOrSelector: `#${containerId}`, calLink })
+      cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
       setReady(true)
-    } else {
-      const s = document.createElement('script')
-      s.src = CALENDLY_SCRIPT
-      s.async = true
-      s.onload = () => setReady(true)
-      document.body.appendChild(s)
-    }
-  }, [])
-
-  useEffect(() => {
-    const onMsg = (e: MessageEvent) => {
-      if (e.origin.includes('calendly.com') && isCalendlyScheduled(e)) onScheduled()
-    }
-    window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
-  }, [onScheduled])
+    })
+    return () => { cancelled = true }
+  }, [url, onScheduled])
 
   return (
     <div className="relative min-h-[640px]">
       {!ready && <LoadingState label="Loading scheduling widget…" />}
-      <div className="calendly-inline-widget" data-url={url} style={{ minWidth: 320, height: 640 }} />
+      <div id={containerId} style={{ minWidth: 320, height: 640, overflow: 'auto' }} />
     </div>
   )
 }
 
-/** Demo embed — the mock build can't run the real widget, so we simulate the
- *  exact booking outcome (creates a meeting that appears on the AE side). */
-function CalendlyDemoEmbed({
+/** Demo embed — the mock build can't run the real Cal.com widget, so we
+ *  simulate the exact booking outcome (creates a meeting on the AE side). */
+function DemoEmbed({
   ae,
   defaults,
   onScheduled,
@@ -98,7 +124,7 @@ function CalendlyDemoEmbed({
     <div className="space-y-3 rounded-[10px] border border-dashed border-[var(--color-border)] bg-slate-50/60 p-4">
       <p className="text-[13px] text-[var(--color-text-secondary)]">
         <span className="font-medium text-[var(--color-text)]">Demo mode.</span> In production the AE’s live
-        Calendly widget renders here. This panel simulates the same booking so you can see it flow through to
+        Cal.com widget renders here. This panel simulates the same booking so you can see it flow through to
         the AE’s Meetings page.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -282,9 +308,9 @@ export function NewBookingPage() {
               ) : !ae ? (
                 <p className="py-8 text-center text-sm text-[var(--color-text-muted)]"><Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />Select an AE to load their calendar.</p>
               ) : ae.demo ? (
-                <CalendlyDemoEmbed ae={ae} defaults={{ setterName: user?.name, crmLeadId }} onScheduled={onScheduled} />
+                <DemoEmbed ae={ae} defaults={{ setterName: user?.name, crmLeadId }} onScheduled={onScheduled} />
               ) : (
-                <CalendlyInlineEmbed url={ae.calendlyEventUrl} onScheduled={onScheduled} />
+                <CalInlineEmbed url={ae.schedulingUrl} onScheduled={onScheduled} />
               )}
             </Card>
           </div>

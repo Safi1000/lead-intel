@@ -1,7 +1,8 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { runsApi } from '../api/endpoints'
 import { bookingsApi } from '../api/bookings'
+import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ACTIVE_RUN_STATUSES, BOOKINGS_SYNC_INTERVAL_MS, POLL_INTERVAL_MS } from '../config/constants'
 import type { FeatureFlagKey } from '../config/featureFlags'
@@ -47,6 +48,7 @@ export function useRunProgress(runId: string | undefined, admin = false) {
  * hidden and refetches on focus to stay cheap and fresh.
  */
 export function useBookingsSync(aeId: string | undefined) {
+  const qc = useQueryClient()
   const [hidden, setHidden] = React.useState(() => typeof document !== 'undefined' && document.hidden)
 
   React.useEffect(() => {
@@ -62,6 +64,22 @@ export function useBookingsSync(aeId: string | undefined) {
     refetchInterval: hidden ? false : BOOKINGS_SYNC_INTERVAL_MS,
     refetchOnWindowFocus: true,
   })
+
+  // Instant updates: Cal.com webhooks push a "changed" broadcast through
+  // Supabase Realtime; refetch immediately when one arrives. Polling above is
+  // the fallback when realtime isn't connected. No-op in the demo (no broadcaster).
+  React.useEffect(() => {
+    if (!aeId) return
+    const channel = supabase
+      .channel('bookings-changes')
+      .on('broadcast', { event: 'changed' }, () => {
+        qc.invalidateQueries({ queryKey: ['bookings', 'upcoming', aeId] })
+      })
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [aeId, qc])
 
   return {
     meetings: query.data ?? [],

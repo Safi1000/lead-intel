@@ -1,10 +1,10 @@
 /**
  * MSW handlers + stateful fixtures for the Bookings module.
  *
- * Simulates the Calendly-backed endpoints our serverless proxy will expose in
+ * Simulates the Cal.com-backed endpoints our serverless proxy exposes in
  * production. Everything is demoable with `npm run dev` — "upcoming" times are
  * relative to Date.now() so the list always looks live. Per the repo rule there
- * are no Coming-Soon shells: the booking page runs a *simulated* Calendly flow
+ * are no Coming-Soon shells: the booking page runs a *simulated* Cal.com flow
  * in demo (POST /api/bookings/simulate) that actually creates a meeting which
  * then appears on the AE side after the next poll.
  */
@@ -24,8 +24,8 @@ const HOUR = 60 * MIN
 const DAY = 24 * HOUR
 
 const AES: AeBookingConfig[] = [
-  { aeId: 'ae_north', aeName: 'Dana Whitfield', calendlyEventUrl: 'https://calendly.com/leadintel-north/30min', demo: true },
-  { aeId: 'ae_south', aeName: 'Marcus Lee', calendlyEventUrl: 'https://calendly.com/leadintel-south/30min', demo: true },
+  { aeId: 'hamna', aeName: 'Hamna', schedulingUrl: 'https://cal.com/hamna/30min', demo: true },
+  { aeId: 'shayan', aeName: 'Shayan', schedulingUrl: 'https://cal.com/shayan/30min', demo: true },
 ]
 
 /** Build a CRM lead fixture (reuses the real ManualLead shape — not a new model). */
@@ -117,7 +117,7 @@ const fixtures: Fixture[] = [
       endTime: iso(2 * HOUR + 30 * MIN),
       eventTypeName: '30 Min Discovery',
       location: { kind: 'zoom', joinUrl: 'https://zoom.us/j/9876543210' },
-      aeId: 'ae_north',
+      aeId: 'hamna',
       invitee: { name: 'Tom Halloran', email: 'tom@cedarridgeroofing.com', timezone: 'America/Chicago' },
       setter: {
         name: 'Priya Nair',
@@ -143,7 +143,7 @@ const fixtures: Fixture[] = [
       endTime: iso(5 * HOUR + 30 * MIN),
       eventTypeName: '30 Min Discovery',
       location: { kind: 'google_meet', joinUrl: 'https://meet.google.com/abc-defg-hij' },
-      aeId: 'ae_north',
+      aeId: 'hamna',
       invitee: { name: 'Maria Esposito', email: 'maria@blueharborhvac.com', timezone: 'America/New_York' },
       setter: { name: 'Priya Nair', leadSource: 'Cold call list', context: 'Replacing 2 aging rooftop units this season.' },
       // No crmLeadId captured → falls back to email match.
@@ -163,7 +163,7 @@ const fixtures: Fixture[] = [
       endTime: iso(1 * DAY + 3 * HOUR + 30 * MIN),
       eventTypeName: '45 Min Strategy',
       location: { kind: 'phone', detail: '+1 (415) 555-0177' },
-      aeId: 'ae_north',
+      aeId: 'hamna',
       invitee: { name: 'Derek Okafor', email: 'derek@summitelectric.co', timezone: 'America/Los_Angeles' },
       setter: {
         name: 'Sam Rivera',
@@ -188,7 +188,7 @@ const fixtures: Fixture[] = [
       endTime: iso(1 * DAY + 7 * HOUR + 60 * MIN),
       eventTypeName: 'On-site Consultation',
       location: { kind: 'in_person', detail: '1200 Biscayne Blvd, Miami, FL' },
-      aeId: 'ae_south',
+      aeId: 'shayan',
       invitee: { name: 'Jen Castellano', email: 'jen@palmettoplumbing.com', timezone: 'America/New_York' },
       setter: { name: 'Priya Nair', leadSource: 'Google LSA', context: 'High-intent — wants a territory lock for Miami-Dade.' },
       crmLeadId: 'lead_palm',
@@ -207,7 +207,7 @@ const fixtures: Fixture[] = [
       endTime: iso(3 * DAY + 30 * MIN),
       eventTypeName: '30 Min Discovery',
       location: { kind: 'ms_teams', joinUrl: 'https://teams.microsoft.com/l/meetup-join/xyz' },
-      aeId: 'ae_south',
+      aeId: 'shayan',
       invitee: { name: 'Walter Greaves', email: 'walter@greavesroofing.co.uk', timezone: 'Europe/London' },
       setter: { name: 'Sam Rivera', leadSource: 'Webinar', context: 'Attended the spring webinar; curious but early-stage.' },
       // Intentionally no crmLeadId and an email that matches no CRM lead → unmatched.
@@ -228,7 +228,7 @@ const fixtures: Fixture[] = [
       endTime: iso(1 * DAY + 2 * HOUR + 30 * MIN),
       eventTypeName: '30 Min Discovery',
       location: { kind: 'zoom', joinUrl: 'https://zoom.us/j/0000000000' },
-      aeId: 'ae_north',
+      aeId: 'hamna',
       invitee: { name: 'Cancelled Client', email: 'nope@example.com', timezone: 'America/Chicago' },
       setter: { name: 'Priya Nair' },
       crmLeadId: undefined,
@@ -246,7 +246,7 @@ const fixtures: Fixture[] = [
       endTime: iso(-90 * MIN),
       eventTypeName: '30 Min Discovery',
       location: { kind: 'phone', detail: '+1 (312) 555-0142' },
-      aeId: 'ae_north',
+      aeId: 'hamna',
       invitee: { name: 'Past Client', email: 'past@example.com', timezone: 'America/Chicago' },
       setter: { name: 'Priya Nair' },
       crmLeadId: undefined,
@@ -267,11 +267,11 @@ function upcomingFor(aeId: string): MeetingWithLeadDTO[] {
   const now = Date.now()
   let rows = fixtures.filter((f) => f.meeting.status === 'active' && new Date(f.meeting.startTime).getTime() >= now)
   let scoped = rows.filter((f) => f.meeting.aeId === aeId)
-  // Demo fallback: a real logged-in closer has their own uuid, not 'ae_north'.
+  // Demo fallback: a real logged-in closer has their own uuid, not 'hamna'.
   // Re-stamp the north AE's meetings to the caller so the demo always looks live.
   if (scoped.length === 0) {
     scoped = rows
-      .filter((f) => f.meeting.aeId === 'ae_north')
+      .filter((f) => f.meeting.aeId === 'hamna')
       .map((f) => ({ ...f, meeting: { ...f.meeting, aeId } }))
   }
   return scoped
@@ -285,7 +285,7 @@ export const bookingsHandlers = [
   http.get('/api/bookings/upcoming', async ({ request }) => {
     await delay(400)
     const url = new URL(request.url)
-    const aeId = url.searchParams.get('aeId') ?? 'ae_north'
+    const aeId = url.searchParams.get('aeId') ?? 'hamna'
     return ok(upcomingFor(aeId))
   }),
 

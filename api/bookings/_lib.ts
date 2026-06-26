@@ -1,12 +1,13 @@
 /**
  * Server-side helpers for the Bookings proxy. This code runs only on Vercel's
- * Node runtime — never in the browser — so it is the only place the Calendly
- * Personal Access Token (PAT) is ever read. The frontend calls our endpoints;
- * we call Calendly with the secret and return normalized DTOs.
+ * Node runtime — never in the browser — so it is the only place a Cal.com API
+ * key is ever read. The frontend calls our endpoints; we call Cal.com with the
+ * secret and return normalized DTOs.
  *
- * Calendly Free plan: no webhooks, no programmatic booking. We only READ here
- * (GET /scheduled_events + invitees) and the booking happens via the embedded
- * widget on the client.
+ * Provider: Cal.com (api.cal.com v2). We only READ here
+ * (GET /v2/bookings); the booking happens via the embedded Cal.com widget on
+ * the client, and freshness comes from Cal.com webhooks (see webhook.ts) with
+ * polling as a fallback.
  *
  * Note: this file is intentionally dependency-free (uses global fetch) and is
  * NOT part of the Vite/tsc build (tsconfig includes only `src`).
@@ -14,37 +15,39 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const CALENDLY_API_BASE = process.env.CALENDLY_API_BASE || 'https://api.calendly.com'
+const CAL_API_BASE = process.env.CAL_API_BASE || 'https://api.cal.com/v2'
+// Cal.com versions its endpoints by date; this is the bookings API version.
+const CAL_API_VERSION = process.env.CAL_API_VERSION || '2024-08-13'
 
 /**
  * One AE, assembled from env vars. Each AE has a short id you choose (e.g.
- * "dana") which becomes the suffix of the env var names:
- *   CALENDLY_PAT__DANA        = <personal access token>   (secret)
- *   CALENDLY_AE_DANA_NAME     = Dana Whitfield
- *   CALENDLY_AE_DANA_URL      = https://calendly.com/dana/30min
- *   CALENDLY_AE_DANA_EMAIL    = dana@yourcompany.com       (the closer's login email)
+ * "hamna") which becomes the suffix of the env var names:
+ *   CAL_API_KEY__HAMNA      = <cal.com api key>          (secret)
+ *   CAL_AE_HAMNA_NAME       = Hamna
+ *   CAL_AE_HAMNA_URL        = https://cal.com/hamna/30min
+ *   CAL_AE_HAMNA_EMAIL      = hamna@yourcompany.com       (the closer's LOGIN email)
  */
 export interface AeConf {
   id: string
   name: string
   url: string
   email: string
-  token: string
+  apiKey: string
 }
 
-/** Discover all configured AEs from the CALENDLY_PAT__* env vars. */
+/** Discover all configured AEs from the CAL_API_KEY__* env vars. */
 export function listAes(): AeConf[] {
   return Object.keys(process.env)
-    .filter((k) => k.startsWith('CALENDLY_PAT__'))
+    .filter((k) => k.startsWith('CAL_API_KEY__'))
     .map((k) => {
-      const id = k.slice('CALENDLY_PAT__'.length).toLowerCase()
+      const id = k.slice('CAL_API_KEY__'.length).toLowerCase()
       const U = id.toUpperCase()
       return {
         id,
-        name: process.env[`CALENDLY_AE_${U}_NAME`] || id,
-        url: process.env[`CALENDLY_AE_${U}_URL`] || '',
-        email: (process.env[`CALENDLY_AE_${U}_EMAIL`] || '').toLowerCase(),
-        token: process.env[k] || '',
+        name: process.env[`CAL_AE_${U}_NAME`] || id,
+        url: process.env[`CAL_AE_${U}_URL`] || '',
+        email: (process.env[`CAL_AE_${U}_EMAIL`] || '').toLowerCase(),
+        apiKey: process.env[k] || '',
       }
     })
 }
@@ -55,59 +58,44 @@ export function resolveAe(identifier: string): AeConf | undefined {
   return listAes().find((a) => a.email === v || a.id === v)
 }
 
-/** Per-AE PAT, by the short id. */
-export function tokenForAe(aeId: string): string | undefined {
-  return listAes().find((a) => a.id === aeId.toLowerCase())?.token
-}
-
+/** Map a Cal.com location string to our normalized location DTO. */
 function mapLocation(loc: any): any {
-  const type: string = loc?.type ?? 'other'
-  const join = loc?.join_url || loc?.location
-  switch (type) {
-    case 'zoom':
-    case 'zoom_conference':
-      return { kind: 'zoom', joinUrl: join }
-    case 'google_conference':
-      return { kind: 'google_meet', joinUrl: join }
-    case 'microsoft_teams_conference':
-      return { kind: 'ms_teams', joinUrl: join }
-    case 'outbound_call':
-    case 'inbound_call':
-      return { kind: 'phone', detail: loc?.location }
-    case 'physical':
-      return { kind: 'in_person', detail: loc?.location }
-    default:
-      return { kind: 'other', detail: loc?.location, joinUrl: typeof join === 'string' && join.startsWith('http') ? join : undefined }
-  }
+  const raw = typeof loc === 'string' ? loc : loc?.type || loc?.location || ''
+  const url = typeof loc === 'object' ? loc?.link || loc?.url || loc?.join_url : undefined
+  const s = String(raw).toLowerCase()
+  if (s.includes('zoom')) return { kind: 'zoom', joinUrl: url || (s.startsWith('http') ? raw : undefined) }
+  if (s.includes('google') || s.includes('meet')) return { kind: 'google_meet', joinUrl: url }
+  if (s.includes('teams') || s.includes('office365')) return { kind: 'ms_teams', joinUrl: url }
+  if (s.includes('phone') || s.includes('number')) return { kind: 'phone', detail: typeof loc === 'object' ? loc?.location : undefined }
+  if (s.includes('inperson') || s.includes('in_person') || s.includes('attendeeaddress')) return { kind: 'in_person', detail: typeof loc === 'object' ? loc?.location || loc?.address : raw }
+  if (s.startsWith('http')) return { kind: 'other', joinUrl: raw }
+  return { kind: 'other', detail: typeof raw === 'string' ? raw : undefined }
 }
 
-/** Pull the answers to our custom questions out of an invitee payload. */
-function readCustom(answers: any[]): { setterName?: string; leadSource?: string; context?: string; crmLeadId?: string } {
+/** Pull our custom-question answers out of a Cal.com booking's field responses. */
+function readCustom(responses: any): { setterName?: string; leadSource?: string; context?: string; crmLeadId?: string } {
   const out: any = {}
-  for (const a of answers ?? []) {
-    const q = String(a?.question ?? '').toLowerCase()
-    const ans = a?.answer
-    if (!ans) continue
-    if (q.includes('setter')) out.setterName = ans
-    else if (q.includes('source')) out.leadSource = ans
-    else if (q.includes('lead id') || q.includes('crm')) out.crmLeadId = ans
-    else if (q.includes('context')) out.context = ans
+  const obj = responses && typeof responses === 'object' ? responses : {}
+  for (const [rawKey, rawVal] of Object.entries(obj)) {
+    const key = rawKey.toLowerCase()
+    // Cal.com responses can be a plain value or { value, label }.
+    const val = (rawVal && typeof rawVal === 'object' && 'value' in (rawVal as any)) ? (rawVal as any).value : rawVal
+    if (val == null || val === '') continue
+    const v = String(val)
+    if (key.includes('setter')) out.setterName = v
+    else if (key.includes('source')) out.leadSource = v
+    else if (key.includes('crm') || key.includes('lead-id') || key.includes('leadid') || key.includes('lead_id')) out.crmLeadId = v
+    else if (key.includes('context') || key.includes('notes')) out.context = v
   }
   return out
 }
 
-async function calendly(path: string, token: string): Promise<any> {
-  const res = await fetch(`${CALENDLY_API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+async function cal(path: string, apiKey: string): Promise<any> {
+  const res = await fetch(`${CAL_API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${apiKey}`, 'cal-api-version': CAL_API_VERSION, 'Content-Type': 'application/json' },
   })
-  if (!res.ok) throw new Error(`Calendly ${res.status}: ${await res.text()}`)
+  if (!res.ok) throw new Error(`Cal.com ${res.status}: ${await res.text()}`)
   return res.json()
-}
-
-/** Resolve the Calendly user URI for a PAT (needed to scope event queries). */
-async function currentUserUri(token: string): Promise<string> {
-  const me = await calendly('/users/me', token)
-  return me?.resource?.uri
 }
 
 /** Optional CRM lead lookup via Supabase PostgREST (service role, server-side). */
@@ -123,7 +111,6 @@ async function lookupLead(crmLeadId?: string, email?: string): Promise<{ lead?: 
       if (Array.isArray(rows) && rows[0]) return { lead: rows[0], matched: 'matched_by_id' }
     }
     if (email) {
-      // Fallback: match by an email stored in the lead's data JSON.
       const res = await fetch(`${url}/rest/v1/leads?data->>Email=eq.${encodeURIComponent(email)}&limit=1`, { headers })
       const rows = await res.json()
       if (Array.isArray(rows) && rows[0]) return { lead: rows[0], matched: 'matched_by_email' }
@@ -134,69 +121,57 @@ async function lookupLead(crmLeadId?: string, email?: string): Promise<{ lead?: 
   return { lead: undefined, matched: 'unmatched' }
 }
 
-/** Fetch + normalize one AE's upcoming meetings, joined to CRM leads + notes.
- *  `identifier` is the logged-in closer's email (preferred) or the AE's short id. */
-export async function getUpcomingForAe(identifier: string): Promise<any[]> {
-  const ae = resolveAe(identifier)
-  if (!ae || !ae.token) throw new Error(`No Calendly AE configured for "${identifier}".`)
-  const aeId = ae.id
-  const token = ae.token
-  const userUri = await currentUserUri(token)
-  const minStart = new Date().toISOString()
-  const events = await calendly(
-    `/scheduled_events?user=${encodeURIComponent(userUri)}&status=active&min_start_time=${encodeURIComponent(minStart)}&sort=start_time:asc&count=50`,
-    token,
-  )
-
-  const rows: any[] = []
-  for (const ev of events?.collection ?? []) {
-    rows.push(await normalizeEvent(ev, aeId, token))
-  }
-  return rows
-}
-
-/** Normalize one Calendly event into a MeetingWithLeadDTO (invitee + lead join). */
-async function normalizeEvent(ev: any, aeId: string, token: string): Promise<any> {
-  const uuid = String(ev.uri).split('/').pop()
-  let invitee: any = {}
-  let custom: any = {}
-  try {
-    const invitees = await calendly(`/scheduled_events/${uuid}/invitees`, token)
-    const inv = invitees?.collection?.[0]
-    if (inv) {
-      invitee = { name: inv.name, email: inv.email, timezone: inv.timezone }
-      custom = readCustom(inv.questions_and_answers)
-    }
-  } catch {
-    /* invitee fetch failed — still surface the meeting */
-  }
+/** Normalize one Cal.com booking into a MeetingWithLeadDTO (attendee + lead join). */
+async function normalizeBooking(bk: any, aeId: string): Promise<any> {
+  const uid = bk.uid || String(bk.id)
+  const attendee = Array.isArray(bk.attendees) ? bk.attendees[0] : bk.attendee
+  const invitee = attendee ? { name: attendee.name, email: attendee.email, timezone: attendee.timeZone } : {}
+  const custom = readCustom(bk.bookingFieldsResponses ?? bk.responses ?? bk.customInputs)
   const join = await lookupLead(custom.crmLeadId, invitee.email)
   const meeting = {
-    id: uuid,
-    status: ev.status,
-    startTime: ev.start_time,
-    endTime: ev.end_time,
-    eventTypeName: ev.name,
-    location: mapLocation(ev.location),
+    id: uid,
+    status: bk.status === 'cancelled' || bk.status === 'canceled' ? 'canceled' : 'active',
+    startTime: bk.start ?? bk.startTime,
+    endTime: bk.end ?? bk.endTime,
+    eventTypeName: bk.title ?? bk.eventType?.title ?? bk.eventType?.slug ?? 'Meeting',
+    location: mapLocation(bk.location),
     aeId,
     invitee,
     setter: { name: custom.setterName, leadSource: custom.leadSource, context: custom.context },
     crmLeadId: custom.crmLeadId,
-    cancelUrl: ev.cancel_url,
-    rescheduleUrl: ev.reschedule_url,
+    cancelUrl: `https://cal.com/booking/${uid}?cancel=true`,
+    rescheduleUrl: `https://cal.com/reschedule/${uid}`,
     syncedAt: new Date().toISOString(),
   }
   return { meeting, lead: join.lead, matchConfidence: join.matched, setterNotes: [] }
 }
 
-/** Single meeting by uuid. Tries the given AE's token, else scans all AE tokens. */
+/** Fetch + normalize one AE's upcoming meetings, joined to CRM leads + notes.
+ *  `identifier` is the logged-in closer's email (preferred) or the AE's short id. */
+export async function getUpcomingForAe(identifier: string): Promise<any[]> {
+  const ae = resolveAe(identifier)
+  if (!ae || !ae.apiKey) throw new Error(`No Cal.com AE configured for "${identifier}".`)
+  const data = await cal(`/bookings?status=upcoming&sortStart=asc&take=50`, ae.apiKey)
+  const bookings: any[] = data?.data ?? data?.bookings ?? []
+  const now = Date.now()
+  const rows: any[] = []
+  for (const bk of bookings) {
+    const start = new Date(bk.start ?? bk.startTime).getTime()
+    if ((bk.status === 'cancelled' || bk.status === 'canceled') || start < now) continue
+    rows.push(await normalizeBooking(bk, ae.id))
+  }
+  return rows.sort((a, b) => new Date(a.meeting.startTime).getTime() - new Date(b.meeting.startTime).getTime())
+}
+
+/** Single meeting by uid. Tries the given AE, else scans all AEs. */
 export async function getMeetingById(id: string, aeIdHint?: string): Promise<any | null> {
   const aes = aeIdHint ? listAes().filter((a) => a.id === aeIdHint.toLowerCase() || a.email === aeIdHint.toLowerCase()) : listAes()
   for (const ae of aes) {
-    if (!ae.token) continue
+    if (!ae.apiKey) continue
     try {
-      const ev = await calendly(`/scheduled_events/${id}`, ae.token)
-      if (ev?.resource) return await normalizeEvent(ev.resource, ae.id, ae.token)
+      const data = await cal(`/bookings/${id}`, ae.apiKey)
+      const bk = data?.data ?? data?.booking
+      if (bk) return await normalizeBooking(bk, ae.id)
     } catch {
       /* try the next AE */
     }
@@ -207,4 +182,24 @@ export async function getMeetingById(id: string, aeIdHint?: string): Promise<any
 export function sendJson(res: any, status: number, body: unknown) {
   res.status(status).setHeader('Content-Type', 'application/json')
   res.send(JSON.stringify(body))
+}
+
+/** Broadcast a lightweight "bookings changed" ping to the browser via Supabase
+ *  Realtime (HTTP broadcast endpoint, no dependency). Clients refetch on it.
+ *  No-op (and harmless) if Supabase env vars are not configured. */
+export async function broadcastBookingsChanged(trigger: string): Promise<void> {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+  if (!url || !key) return
+  try {
+    await fetch(`${url}/realtime/v1/api/broadcast`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ topic: 'bookings-changes', event: 'changed', payload: { trigger, at: Date.now() } }],
+      }),
+    })
+  } catch {
+    /* best-effort — polling still keeps the list fresh */
+  }
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// GET /api/bookings/upcoming?aeId=... — one AE's upcoming Calendly meetings,
-// normalized + joined to CRM leads. The PAT never leaves this server.
+// GET /api/bookings/upcoming?aeId=... — one AE's upcoming Cal.com meetings,
+// normalized + joined to CRM leads. The API key never leaves this server.
 import { getUpcomingForAe, sendJson } from './_lib'
 
 export default async function handler(req: any, res: any) {
@@ -11,6 +11,6 @@ export default async function handler(req: any, res: any) {
     const rows = await getUpcomingForAe(aeId)
     return sendJson(res, 200, rows)
   } catch (e: any) {
-    return sendJson(res, 502, { error: { code: 'calendly_error', message: e?.message ?? 'Calendly request failed' } })
+    return sendJson(res, 502, { error: { code: 'cal_error', message: e?.message ?? 'Cal.com request failed' } })
   }
 }

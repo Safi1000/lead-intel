@@ -12,6 +12,6 @@ export default async function handler(req: any, res: any) {
     if (!row) return sendJson(res, 404, { error: { code: 'not_found', message: 'Meeting not found' } })
     return sendJson(res, 200, row)
   } catch (e: any) {
-    return sendJson(res, 502, { error: { code: 'calendly_error', message: e?.message ?? 'Calendly request failed' } })
+    return sendJson(res, 502, { error: { code: 'cal_error', message: e?.message ?? 'Cal.com request failed' } })
   }
 }

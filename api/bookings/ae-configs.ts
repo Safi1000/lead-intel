@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GET /api/bookings/ae-configs — the AEs a setter can book for, with each AE's
-// embeddable Calendly URL. Driven by the CALENDLY_PAT__* / CALENDLY_AE_* env vars.
+// embeddable Cal.com URL. Driven by the CAL_API_KEY__* / CAL_AE_* env vars.
 import { listAes, sendJson } from './_lib'
 
 export default async function handler(req: any, res: any) {
@@ -8,7 +8,7 @@ export default async function handler(req: any, res: any) {
   const configs = listAes().map((a) => ({
     aeId: a.id,
     aeName: a.name,
-    calendlyEventUrl: a.url,
+    schedulingUrl: a.url,
     demo: false,
   }))
   return sendJson(res, 200, configs)

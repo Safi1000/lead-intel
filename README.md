@@ -80,7 +80,7 @@ src/
 Built as a self-contained, demoable MVP with the full information architecture scaffolded for
 Phase 2 and Phase 3.
 
-## Bookings module (Calendly)
+## Bookings module (Cal.com)
 
 A two-screen module that lets setters book meetings for an Account Executive (the **closer** role)
 and gives the AE a prep-ready view of upcoming calls.
@@ -88,46 +88,60 @@ and gives the AE a prep-ready view of upcoming calls.
 - **My Upcoming Meetings** (`/bookings`) — visible to **closer (AE) + manager + super admin**.
   Each card shows the meeting time (in the AE's timezone), location, the joined **CRM lead**, and
   the **setter's prep notes**, with a non-blocking warning when no lead matched.
-- **Book a meeting** (`/bookings/new`) — visible to **setter + manager**. Embedded Calendly
+- **Book a meeting** (`/bookings/new`) — visible to **setter + manager**. Embedded Cal.com
   scheduling widget + an inline, collapsible **setter guide**. If a lead was opened to start the
-  flow (`?leadId=…`), its CRM Lead ID is shown with a copy button to paste into Calendly's custom
+  flow (`?leadId=…`), its CRM Lead ID is shown with a copy button to paste into Cal.com's custom
   question.
 
 Gated by the `bookings` feature flag and the `bookings:view` / `bookings:create` permissions
 (role matrix + per-user overrides, like the rest of the app).
 
-### Free-plan limitation → polling
+### Freshness → webhooks (instant) + polling (fallback)
 
-Calendly's **Free plan has no webhooks and no programmatic booking**. So:
+Cal.com supports webhooks on every plan, so the Meetings list updates **instantly**:
 
-- the Meetings list is kept fresh by **polling** (`useBookingsSync`, default 2 min, mirrors
-  `useRunProgress`) — it pauses while the tab is hidden and refetches on focus. The transport is
-  abstracted so a future webhook/WebSocket swap needs no UI change;
-- booking happens through the **embedded widget**, not an API call. We listen for Calendly's
-  `invitee.scheduled` postMessage to confirm and trigger a refetch.
+- a Cal.com **webhook** (`POST /api/bookings/webhook`) fires on booking create/cancel/reschedule;
+  the serverless receiver pushes a lightweight "changed" ping to the browser via **Supabase
+  Realtime broadcast**, and the AE's page refetches immediately;
+- `useBookingsSync` also **polls** (default 2 min, mirrors `useRunProgress`) as a fallback — it
+  pauses while the tab is hidden and refetches on focus. The transport is abstracted so the
+  polling↔webhook swap needs no UI change;
+- booking happens through the **embedded Cal.com widget**, not an API call. We listen for Cal.com's
+  `bookingSuccessful` embed event to confirm and trigger a refetch.
 
-### Demo vs production (the PAT never reaches the browser)
+### Demo vs production (the API key never reaches the browser)
 
 The frontend only ever calls **our** endpoints under `/api/bookings/*`:
 
 - **Demo** (default, `npm run dev`): MSW (`src/mocks/bookings.ts`) answers with stateful fixtures —
   several upcoming meetings across two AEs, a canceled one, an unmatched lead, varied locations and
-  timezones. The booking page runs a *simulated* Calendly flow that actually creates a meeting which
-  then appears on the AE side after the next poll.
-- **Production**: thin Vercel serverless functions (`api/bookings/*`) hold each AE's **Personal
-  Access Token** server-side, call Calendly, normalize to our DTOs, and join to CRM leads. The PAT
-  is never bundled or sent to the client.
+  timezones. The booking page runs a *simulated* Cal.com flow that actually creates a meeting which
+  then appears on the AE side. (Bookings mocks are dev-only — production hits the real proxy.)
+- **Production**: thin Vercel serverless functions (`api/bookings/*`) hold each AE's **Cal.com API
+  key** server-side, call Cal.com, normalize to our DTOs, and join to CRM leads. The key is never
+  bundled or sent to the client.
 
-### Per-AE token setup
+### Per-AE setup
 
-Each AE has their own Calendly account + PAT. Configure server-side (see `.env.example`):
+Each AE has their own Cal.com account + API key. Configure server-side (see `.env.example`):
 
 ```
-CALENDLY_PAT__AE_NORTH=<token>        # keyed by AE id, uppercased
-CALENDLY_AE_AE_NORTH_NAME=Dana Whitfield
-CALENDLY_AE_AE_NORTH_URL=https://calendly.com/leadintel-north/30min
+CAL_API_KEY__HAMNA=<cal.com api key>       # short AE id, uppercased, as the suffix
+CAL_AE_HAMNA_NAME=Hamna
+CAL_AE_HAMNA_URL=https://cal.com/hamna/30min
+CAL_AE_HAMNA_EMAIL=hamna@yourcompany.com   # the closer's LeadIntel login email (the match key)
 ```
 
-The Calendly event type must define custom questions: **Setter name · Lead source · CRM Lead ID ·
-Short context** — these populate the setter prep block and drive lead matching (by CRM Lead ID
-first, falling back to invitee email; never email alone).
+The Cal.com event type must define custom booking questions: **Setter name · Lead source · CRM
+Lead ID · Short context** — these populate the setter prep block and drive lead matching (by CRM
+Lead ID first, falling back to invitee email; never email alone).
+
+### Webhook setup
+
+In each AE's Cal.com account → **Settings → Developer → Webhooks**, add a webhook:
+
+- **Subscriber URL**: `https://YOUR-APP.vercel.app/api/bookings/webhook?token=<CAL_WEBHOOK_SECRET>`
+- **Triggers**: Booking Created, Cancelled, Rescheduled
+
+Set `CAL_WEBHOOK_SECRET` (+ `SUPABASE_URL` and a Supabase key) in Vercel so the receiver is
+authenticated and can broadcast the instant refresh.
