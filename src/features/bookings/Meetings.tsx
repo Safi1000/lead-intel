@@ -1,13 +1,16 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { CalendarClock, RefreshCw, ExternalLink, StickyNote, Building2, Clock } from 'lucide-react'
 import { useAuth, useBookingsSync } from '../../hooks'
 import { normalizeError } from '../../api/client'
+import { bookingsApi } from '../../api/bookings'
 import { Button, Card } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, CardSkeleton } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { CopyButton, LocationBadge, MatchBadge } from './components'
 import { dayGroupLabel, fmtRange, relativeHint } from './util'
+import { cn } from '../../lib/utils'
 import type { MeetingWithLeadDTO } from '../../api/bookings'
 import type { ManualLead } from '../../api/types'
 
@@ -159,12 +162,27 @@ function MeetingCard({ row, tz }: { row: MeetingWithLeadDTO; tz: string }) {
 }
 
 export function MeetingsPage() {
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const tz = user?.timezone || browserTz
-  // The proxy matches a closer to their Calendly account by login email (falls
-  // back to the short AE id). In the demo the value is ignored — the mock always
-  // returns live-looking meetings.
-  const aeId = user?.email || user?.id
+
+  // A closer is an AE: they see their OWN meetings (matched by login email).
+  // A manager / super admin oversees: they pick which AE's meetings to view.
+  const isCloser = role === 'closer'
+  const isOverseer = role === 'manager' || role === 'superadmin' || role === 'admin'
+
+  const { data: aeConfigs } = useQuery({
+    queryKey: ['bookings', 'ae-configs'],
+    queryFn: bookingsApi.listAeConfigs,
+    enabled: isOverseer,
+  })
+  const [pickedAe, setPickedAe] = useState<string>('')
+  useEffect(() => {
+    if (isOverseer && !pickedAe && aeConfigs && aeConfigs.length > 0) setPickedAe(aeConfigs[0].aeId)
+  }, [isOverseer, aeConfigs, pickedAe])
+
+  // The proxy matches a closer by login email, or any AE by their short id.
+  const aeId = isCloser ? (user?.email || user?.id) : isOverseer ? pickedAe : undefined
+  const overseerNoAes = isOverseer && aeConfigs !== undefined && aeConfigs.length === 0
   const { meetings, lastSyncedAt, isLoading, isError, isFetching, error, refetch } = useBookingsSync(aeId)
 
   // Group meetings by day label, preserving ascending order.
@@ -183,13 +201,15 @@ export function MeetingsPage() {
     ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(lastSyncedAt)
     : '—'
 
+  const whoLabel = isCloser ? user?.name ?? '' : aeConfigs?.find((a) => a.aeId === pickedAe)?.aeName ?? ''
+
   return (
     <div className="reveal">
       <PageHeader
-        title="My upcoming meetings"
+        title={isCloser ? 'My upcoming meetings' : 'Upcoming meetings'}
         subtitle={
           <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span>{user?.name ? `${user.name} · ` : ''}{tz}</span>
+            <span>{whoLabel ? `${whoLabel} · ` : ''}{tz}</span>
             <span className="text-[var(--color-text-muted)]">·</span>
             <span className="inline-flex items-center gap-1 text-[var(--color-text-muted)]">
               <CalendarClock className="h-3.5 w-3.5" /> Last synced {syncedLabel} · auto-refreshes every 2 min
@@ -203,7 +223,34 @@ export function MeetingsPage() {
         }
       />
 
-      {isLoading ? (
+      {isOverseer && aeConfigs && aeConfigs.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-[13px] font-medium text-[var(--color-text-secondary)]">Viewing:</span>
+          {aeConfigs.map((a) => (
+            <button
+              key={a.aeId}
+              type="button"
+              onClick={() => setPickedAe(a.aeId)}
+              className={cn(
+                'rounded-[8px] border px-3 py-1.5 text-sm font-medium transition-colors',
+                a.aeId === pickedAe
+                  ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'
+                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50',
+              )}
+            >
+              {a.aeName}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {overseerNoAes ? (
+        <EmptyState
+          icon={CalendarClock}
+          title="No AEs configured"
+          message="Add a Cal.com AE in Vercel (CAL_API_KEY__<id> + CAL_AE_<id>_NAME/URL/EMAIL) and redeploy to see meetings here."
+        />
+      ) : isLoading || !aeId ? (
         <div className="space-y-4"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>
       ) : isError ? (
         <ErrorState onRetry={() => refetch()} message={normalizeError(error).message} />
