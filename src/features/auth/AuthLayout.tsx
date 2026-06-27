@@ -29,7 +29,13 @@ export function AuthLayout({
             <ShieldCheck className="h-4 w-4" /> SOC2-aligned · multi-tenant · audit-logged
           </div>
         </div>
-        <p className="text-[13px] text-slate-500">TechExcel · Lead Intelligence Platform v1.0</p>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="TechxServe" className="h-7 w-auto brightness-0 invert opacity-70" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[13px] text-slate-400">techxserve.com</span>
+            <span className="text-[12px] text-slate-500">info@techxserve.com</span>
+          </div>
+        </div>
       </div>
 
       {/* Form panel */}
