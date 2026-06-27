@@ -29,13 +29,7 @@ export function AuthLayout({
             <ShieldCheck className="h-4 w-4" /> SOC2-aligned · multi-tenant · audit-logged
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="TechxServe" className="h-7 w-auto brightness-0 invert opacity-70" />
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[13px] text-slate-400">techxserve.com</span>
-            <span className="text-[12px] text-slate-500">info@techxserve.com</span>
-          </div>
-        </div>
+        <p className="text-[13px] text-slate-500">Lead Intelligence Platform</p>
       </div>
 
       {/* Form panel */}
@@ -48,6 +42,24 @@ export function AuthLayout({
           <h1 className="text-[24px] font-bold text-[var(--color-text)]">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{subtitle}</p>}
           <div className="mt-6">{children}</div>
+
+          {/* TechxServe branding */}
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer" className="inline-block mb-3 hover:opacity-80 transition-opacity">
+              <img src="/logo.png" alt="TechxServe" className="h-8 w-auto" />
+            </a>
+            <p className="text-sm font-semibold text-slate-500 mb-2">A product by TechxServe</p>
+            <div className="flex flex-col gap-1.5">
+              <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer"
+                 className="text-sm font-bold text-[var(--color-primary)] hover:underline">
+                techxserve.com
+              </a>
+              <a href="mailto:info@techxserve.com"
+                 className="text-sm font-bold text-[var(--color-primary)] hover:underline">
+                info@techxserve.com
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
