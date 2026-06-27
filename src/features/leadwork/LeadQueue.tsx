@@ -14,7 +14,7 @@ import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isManagerRole } from './workflow'
-import type { LeadStage, ManualLead, ManagedUser } from '../../api/types'
+import type { LeadStage, ManualLead, ManagedUser, Paginated } from '../../api/types'
 
 interface Tab { key: string; label: string; filter: (l: ManualLead) => boolean }
 
@@ -73,12 +73,26 @@ export function LeadQueuePage() {
   })
   const doneM = useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => manualLeadsApi.markDone(id, done),
-    onSuccess: () => {
+    // Optimistic: flip the row instantly, reconcile in the background.
+    onMutate: async ({ id, done }) => {
+      await qc.cancelQueries({ queryKey: ['manual-leads'] })
+      const snapshots = qc.getQueriesData<Paginated<ManualLead>>({ queryKey: ['manual-leads'] })
+      const stamp = done ? new Date().toISOString() : null
+      for (const [key, val] of snapshots) {
+        if (!val) continue
+        qc.setQueryData(key, { ...val, data: val.data.map((l) => (l.id === id ? { ...l, done_at: stamp } : l)) })
+      }
+      return { snapshots }
+    },
+    onError: (e, _v, ctx) => {
+      ctx?.snapshots?.forEach(([key, val]) => qc.setQueryData(key, val))
+      toast.error(normalizeError(e).message)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['manual-leads'] })
       qc.invalidateQueries({ queryKey: ['my-progress'] })
       qc.invalidateQueries({ queryKey: ['setter-progress'] })
     },
-    onError: (e) => toast.error(normalizeError(e).message),
   })
 
   const tabs = useMemo(() => tabsFor(role), [role])
@@ -242,7 +256,7 @@ function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onTog
   onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
   return (
-    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+    <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-slate-50')}>
       {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <Link to={`/leads/manual/${l.id}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</Link>
