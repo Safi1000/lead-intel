@@ -49,6 +49,8 @@ const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').th
 const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
+const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
+const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
@@ -116,6 +118,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: 'home', element: <WorkHomePage /> },
                   { path: 'today', element: L(<DueTodayPage />) },
+                  { path: 'progress', element: L(<ProgressPage />) },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
@@ -183,6 +186,10 @@ export const router = createBrowserRouter([
                 children: [
                   { index: true, element: <Navigate to="/settings/profile" replace /> },
                   { path: 'profile', element: <ProfileSettingsPage /> },
+                  {
+                    element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
+                    children: [{ path: 'goals', element: L(<GoalsSettingsPage />) }],
+                  },
                   { path: 'notifications', element: <NotificationsSettingsPage /> },
                   { element: <SettingsGate flag="apiKeys" title="API Keys" />, children: [{ path: 'api-keys', element: L(<ApiKeysSettingsPage />) }, { path: 'api-keys/docs', element: L(<ApiDocsPage />) }] },
                   { element: <SettingsGate flag="webhooks" title="Webhooks" />, children: [{ path: 'webhooks', element: L(<WebhooksSettingsPage />) }] },

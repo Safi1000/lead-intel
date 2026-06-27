@@ -662,6 +662,8 @@ export interface ManualLead {
   stage: LeadStage // Feature 1 — user-facing sales pipeline stage
   next_follow_up: string | null // Feature 2 — ISO date (YYYY-MM-DD) or null
   call_at: string | null // Feature 4 — booked call date/time (ISO) or null
+  done_at: string | null // throughput tracking — when a setter marked it processed
+  done_by: string | null // who marked it done (profile id)
   temperature: Temperature // legacy; superseded by `stage`
   setter: string | null // claiming setter (name)
   closer: string | null // claiming closer (name)

@@ -154,6 +154,8 @@ export const leadworkHandlers = [
         stage: 'New',
         next_follow_up: null,
         call_at: null,
+        done_at: null,
+        done_by: null,
         temperature: null,
         setter: null,
         closer: null,

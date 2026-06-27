@@ -390,6 +390,7 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
   template_name: (l.template_name as string) ?? '', data: (l.data as Record<string, string>) ?? {},
   display_name: (l.display_name as string) ?? 'Untitled lead', status: l.status as ManualLead['status'],
   stage: (l.stage as ManualLead['stage']) ?? 'New', next_follow_up: (l.next_follow_up as string) ?? null, call_at: (l.call_at as string) ?? null,
+  done_at: (l.done_at as string) ?? null, done_by: (l.done_by as string) ?? null,
   temperature: (l.temperature as Temperature) ?? null, setter: (l.setter as string) ?? null, closer: (l.closer as string) ?? null,
   remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
 })
@@ -421,6 +422,11 @@ export const manualLeadsApi = {
     const { data, error } = await supabase.from('leads').update({ ...body, updated_at: new Date().toISOString() }).eq('id', id).select().single()
     if (error) throw new Error(error.message)
     return mapLead(data)
+  },
+  /** Mark a lead processed / un-processed (throughput tracking). */
+  markDone: async (id: string, done: boolean): Promise<void> => {
+    const { error } = await supabase.rpc('mark_lead_done', { p_lead: id, p_done: done })
+    if (error) throw new Error(error.message)
   },
   addRemark: async (id: string, body: { text: string; author: string; author_role: Role }): Promise<LeadRemark> => {
     const { data, error } = await supabase.from('lead_remarks').insert({ lead_id: id, author: body.author, author_role: body.author_role, text: body.text }).select().single()
@@ -524,6 +530,43 @@ export const assignmentApi = {
     const { data, error } = await supabase.rpc('assign_leads_to_closer', { p_batch: batchId, p_closer: closerId, p_lead_ids: leadIds })
     if (error) throw new Error(error.message)
     return Number(data ?? 0)
+  },
+}
+
+// ---- Daily goal + lead-throughput progress ----
+export interface DoneCounts { today: number; week: number; month: number }
+export interface SetterDoneStat { user_id: string; name: string; today: number; week: number; month: number }
+export interface Periods { day: string; week: string; month: string } // ISO period starts (client-local)
+
+export const progressApi = {
+  /** The org's daily lead goal (0 = unset). */
+  getGoal: async (): Promise<number> => {
+    const org = effectiveOrgId()
+    if (!org) return 0
+    const { data, error } = await supabase.rpc('get_daily_lead_goal', { p_org: org })
+    if (error) throw new Error(error.message)
+    return Number(data ?? 0)
+  },
+  setGoal: async (goal: number): Promise<void> => {
+    const org = effectiveOrgId()
+    if (!org) throw new Error('No organization selected.')
+    const { error } = await supabase.rpc('set_daily_lead_goal', { p_org: org, p_goal: Math.max(0, Math.floor(goal)) })
+    if (error) throw new Error(error.message)
+  },
+  /** The signed-in user's own done counts (a setter only ever sees their own). */
+  myCounts: async (p: Periods): Promise<DoneCounts> => {
+    const { data, error } = await supabase.rpc('my_done_counts', { p_day: p.day, p_week: p.week, p_month: p.month })
+    if (error) throw new Error(error.message)
+    const row = Array.isArray(data) ? data[0] : data
+    return { today: Number(row?.today ?? 0), week: Number(row?.week ?? 0), month: Number(row?.month ?? 0) }
+  },
+  /** Per-setter done counts (manager/SA only; setters get an empty list). */
+  setterStats: async (p: Periods): Promise<SetterDoneStat[]> => {
+    const org = effectiveOrgId()
+    if (!org) return []
+    const { data, error } = await supabase.rpc('setter_done_stats', { p_org: org, p_day: p.day, p_week: p.week, p_month: p.month })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as SetterDoneStat[]
   },
 }
 

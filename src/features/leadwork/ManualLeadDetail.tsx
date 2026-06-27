@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CalendarClock, Check, Copy, ExternalLink, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { ArrowLeft, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
 import { activitiesApi, manualLeadsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -86,6 +86,11 @@ export function ManualLeadDetailPage() {
     onSuccess: () => { setRemark(''); toast.success('Remark added'); invalidate() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
+  const markDone = useMutation({
+    mutationFn: (done: boolean) => manualLeadsApi.markDone(id as string, done),
+    onSuccess: (_d, done) => { toast.success(done ? 'Marked as done' : 'Reopened'); invalidate(); qc.invalidateQueries({ queryKey: ['my-progress'] }); qc.invalidateQueries({ queryKey: ['setter-progress'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
 
   if (isLoading) return <LoadingState />
   if (isError || !lead) return <ErrorState onRetry={() => refetch()} />
@@ -106,6 +111,17 @@ export function ManualLeadDetailPage() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">From template “{lead.template_name}”</p>
         </div>
         <div className="flex items-center gap-2">
+          {canWork && (
+            <Button
+              variant={lead.done_at ? 'secondary' : 'outline'}
+              size="sm"
+              loading={markDone.isPending}
+              onClick={() => markDone.mutate(!lead.done_at)}
+              title={lead.done_at ? 'Click to reopen' : 'Mark this lead as processed'}
+            >
+              <CheckCircle2 className={cn('h-4 w-4', lead.done_at && 'text-[var(--c-verified)]')} /> {lead.done_at ? 'Done' : 'Mark as done'}
+            </Button>
+          )}
           {canBook && (
             <Link to={`/bookings/new?leadId=${lead.id}`}>
               <Button variant="outline" size="sm"><CalendarClock className="h-4 w-4" /> Book a meeting</Button>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, Search, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Search, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { assignmentApi, leadBatchesApi, manualLeadsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
@@ -68,6 +68,15 @@ export function LeadQueuePage() {
       qc.invalidateQueries({ queryKey: ['lead-batch', batchId] })
       qc.invalidateQueries({ queryKey: ['lead-batches'] })
       qc.invalidateQueries({ queryKey: ['due-today'] })
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  const doneM = useMutation({
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => manualLeadsApi.markDone(id, done),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['manual-leads'] })
+      qc.invalidateQueries({ queryKey: ['my-progress'] })
+      qc.invalidateQueries({ queryKey: ['setter-progress'] })
     },
     onError: (e) => toast.error(normalizeError(e).message),
   })
@@ -197,6 +206,7 @@ export function LeadQueuePage() {
                   <th className="px-5 py-2.5 font-medium">Lead</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5 font-medium">Follow-up</th>
+                  <th className="px-3 py-2.5 font-medium">Done</th>
                   {isManager && <th className="px-3 py-2.5 font-medium">Setter</th>}
                   {isManager && <th className="px-3 py-2.5 font-medium">Closer</th>}
                   <th className="px-3 py-2.5 font-medium">Updated</th>
@@ -207,7 +217,8 @@ export function LeadQueuePage() {
                   <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit}
                     selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)}
                     onStage={(stage) => patch.mutate({ id: l.id, body: { stage } })}
-                    onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })} />
+                    onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })}
+                    onDone={(done) => doneM.mutate({ id: l.id, done })} />
                 ))}
               </tbody>
             </table>
@@ -225,10 +236,10 @@ export function LeadQueuePage() {
   )
 }
 
-function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onToggle, onStage, onFollowUp }: {
+function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onToggle, onStage, onFollowUp, onDone }: {
   lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean
   selectable: boolean; checked: boolean; onToggle: () => void
-  onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void
+  onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
   return (
     <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
@@ -238,6 +249,22 @@ function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onTog
       </td>
       <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={onStage} /></td>
       <td className="px-3 py-3"><FollowUpCell value={l.next_follow_up} disabled={!canEdit} onChange={onFollowUp} /></td>
+      <td className="px-3 py-3">
+        <button
+          type="button"
+          disabled={!canEdit}
+          onClick={() => onDone(!l.done_at)}
+          title={l.done_at ? 'Done — click to reopen' : 'Mark as done'}
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors disabled:opacity-40',
+            l.done_at
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50',
+          )}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" /> {l.done_at ? 'Done' : 'Mark'}
+        </button>
+      </td>
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.setter ?? '—'}</td>}
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.closer ?? '—'}</td>}
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}</td>

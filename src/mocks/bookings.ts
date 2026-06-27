@@ -44,6 +44,8 @@ function mkLead(id: string, data: Record<string, string>, stage: ManualLead['sta
     stage,
     next_follow_up: null,
     call_at: null,
+    done_at: null,
+    done_by: null,
     temperature: 'warm',
     setter: 'Priya Nair',
     closer: null,

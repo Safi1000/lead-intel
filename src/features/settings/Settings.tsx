@@ -4,23 +4,28 @@ import { useAuthStore } from '../../stores/authStore'
 import { PageHeader } from '../shared/bits'
 import { ComingSoon } from '../shared/ComingSoon'
 import type { FeatureFlagKey } from '../../config/featureFlags'
+import type { Role } from '../../api/types'
 
 interface Tab {
   to: string
   label: string
   flag?: FeatureFlagKey
   phase?: string
+  roles?: Role[] // when set, only these roles see the tab
 }
 const TABS: Tab[] = [
   { to: '/settings/profile', label: 'Profile' },
+  // Manager/SA set the org-wide daily lead goal here.
+  { to: '/settings/goals', label: 'Goals', roles: ['superadmin', 'admin', 'manager'] },
   // User management lives in the dedicated Users page now. Hidden until later
   // phases: Notifications, API Keys, Webhooks, Billing, Integrations, AI, Branding.
 ]
 
 export function SettingsLayout() {
   const flags = useAuthStore((s) => s.flags)
-  // Only show tabs whose flag is on (or have no flag).
-  const tabs = TABS.filter((t) => !t.flag || flags[t.flag])
+  const role = useAuthStore((s) => s.role)
+  // Show tabs whose flag is on (or none) and whose role gate passes (or none).
+  const tabs = TABS.filter((t) => (!t.flag || flags[t.flag]) && (!t.roles || (role !== null && t.roles.includes(role))))
   return (
     <div>
       <PageHeader title="Settings" subtitle="Manage your profile and team." />
