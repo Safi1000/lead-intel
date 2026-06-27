@@ -44,12 +44,12 @@ export function AuthLayout({
           <div className="mt-6">{children}</div>
 
           {/* TechxServe branding */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center text-center">
             <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer" className="inline-block mb-3 hover:opacity-80 transition-opacity">
-              <img src="/logo.png" alt="TechxServe" className="h-8 w-auto" />
+              <img src="/logo.png" alt="TechxServe" className="h-16 w-auto" />
             </a>
             <p className="text-sm font-semibold text-slate-500 mb-2">A product by TechxServe</p>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 items-center">
               <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer"
                  className="text-sm font-bold text-[var(--color-primary)] hover:underline">
                 techxserve.com
