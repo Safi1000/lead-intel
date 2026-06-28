@@ -103,10 +103,6 @@ export function AuthLayout({
 
           {/* TechxServe branding */}
           <div className="mt-10 flex flex-col items-center gap-3 border-t border-[var(--color-border)] pt-7 text-center">
-            <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer"
-               className="transition-opacity hover:opacity-80">
-              <img src="/logo.png" alt="TechxServe" className="h-16 w-auto" />
-            </a>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
               A TechxServe Product
             </p>
