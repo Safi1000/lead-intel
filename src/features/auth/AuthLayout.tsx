@@ -10,56 +10,119 @@ export function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between bg-slate-900 p-12 text-white lg:flex">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary)] font-bold">Li</div>
-          <span className="text-lg font-bold">LeadIntel</span>
+    <div className="grid min-h-dvh lg:grid-cols-[55%_45%]">
+
+      {/* ── Brand panel ── */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 text-white lg:flex">
+
+        {/* Ambient glow orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-32 -top-32 h-[500px] w-[500px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(20,102,255,0.28), transparent 65%)' }} />
+          <div className="absolute -bottom-24 right-0 h-[380px] w-[380px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(0,194,168,0.2), transparent 65%)' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full"
+               style={{ background: 'radial-gradient(circle, rgba(20,102,255,0.06), transparent 70%)' }} />
+          {/* Dot grid */}
+          <div className="absolute inset-0"
+               style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
         </div>
-        <div>
-          <h2 className="text-[28px] font-bold leading-tight">
-            Verified owner-level B2B leads for local-service trades.
-          </h2>
-          <p className="mt-4 max-w-md text-slate-300">
-            Discover, enrich, and deliver leads with per-field confidence scoring and full source
-            provenance. Launch a run, watch it enrich live, and export in minutes.
-          </p>
-          <div className="mt-8 flex items-center gap-2 text-sm text-slate-400">
-            <ShieldCheck className="h-4 w-4" /> SOC2-aligned · multi-tenant · audit-logged
+
+        {/* Logo */}
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-black text-white"
+               style={{ background: 'linear-gradient(135deg, #1466ff, #0b4fd9)', boxShadow: '0 0 28px rgba(20,102,255,0.5)' }}>
+            Li
+          </div>
+          <div>
+            <p className="text-lg font-bold leading-none tracking-tight">LeadIntel</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signal Intelligence Platform</p>
           </div>
         </div>
-        <p className="text-[13px] text-slate-500">Lead Intelligence Platform</p>
+
+        {/* Body copy */}
+        <div className="relative space-y-7">
+          {/* Live pulse badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    style={{ backgroundColor: '#00c2a8' }} />
+              <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: '#00c2a8' }} />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#00c2a8' }}>
+              Live Enrichment Active
+            </span>
+          </div>
+
+          <h2 className="text-[30px] font-bold leading-[1.25] tracking-tight">
+            Verified owner-level B2B leads<br />
+            <span style={{ color: '#1466ff' }}>for local-service trades.</span>
+          </h2>
+
+          <p className="max-w-[380px] text-[14.5px] leading-relaxed text-slate-400">
+            Discover, enrich, and deliver leads with per-field confidence scoring and full source provenance. Launch a run, watch it enrich live, and export in minutes.
+          </p>
+
+          {/* Feature pills */}
+          <div className="flex flex-wrap gap-2">
+            {['Per-field confidence', 'Live enrichment', 'Source provenance', 'CSV & JSON export'].map((f) => (
+              <span key={f} className="rounded-full px-3 py-1 text-[11px] font-semibold"
+                    style={{ background: 'rgba(20,102,255,0.12)', color: '#6ba3ff', border: '1px solid rgba(20,102,255,0.2)' }}>
+                {f}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <ShieldCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#00c2a8' }} />
+            SOC2-aligned · multi-tenant · audit-logged
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="relative text-[12px] text-slate-600">Lead Intelligence Platform v1.0</p>
       </div>
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center px-6 py-12">
+      {/* ── Form panel ── */}
+      <div className="flex items-center justify-center px-6 py-12" style={{ background: 'var(--color-bg)' }}>
         <div className="w-full max-w-sm">
-          <div className="mb-6 flex items-center gap-2 lg:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-bold text-white">Li</div>
-            <span className="font-bold">LeadIntel</span>
+
+          {/* Mobile brand */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-black text-white"
+                 style={{ background: 'linear-gradient(135deg, #1466ff, #0b4fd9)' }}>Li</div>
+            <div>
+              <p className="font-bold text-[var(--color-text)]">LeadIntel</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">Signal Intelligence</p>
+            </div>
           </div>
-          <h1 className="text-[24px] font-bold text-[var(--color-text)]">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{subtitle}</p>}
-          <div className="mt-6">{children}</div>
+
+          <h1 className="text-[26px] font-bold tracking-tight text-[var(--color-text)]">{title}</h1>
+          {subtitle && <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">{subtitle}</p>}
+          <div className="mt-7">{children}</div>
 
           {/* TechxServe branding */}
-          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center text-center">
-            <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer" className="inline-block mb-3 hover:opacity-80 transition-opacity">
+          <div className="mt-10 flex flex-col items-center gap-3 border-t border-[var(--color-border)] pt-7 text-center">
+            <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer"
+               className="transition-opacity hover:opacity-80">
               <img src="/logo.png" alt="TechxServe" className="h-16 w-auto" />
             </a>
-            <p className="text-sm font-semibold text-slate-500 mb-2">A product by TechxServe</p>
-            <div className="flex flex-col gap-1.5 items-center">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">
+              A TechxServe Product
+            </p>
+            <div className="flex items-center gap-3 text-sm font-semibold">
               <a href="https://techxserve.com" target="_blank" rel="noopener noreferrer"
-                 className="text-sm font-bold text-[var(--color-primary)] hover:underline">
+                 className="hover:underline" style={{ color: 'var(--color-primary)' }}>
                 techxserve.com
               </a>
+              <span style={{ color: 'var(--color-text-muted)' }}>·</span>
               <a href="mailto:info@techxserve.com"
-                 className="text-sm font-bold text-[var(--color-primary)] hover:underline">
+                 className="hover:underline" style={{ color: 'var(--color-primary)' }}>
                 info@techxserve.com
               </a>
             </div>
           </div>
+
         </div>
       </div>
     </div>
