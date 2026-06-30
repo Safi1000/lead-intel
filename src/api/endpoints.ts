@@ -641,25 +641,49 @@ export const exportsApi = {
 }
 
 // ---- Settings ----
-export const settingsApi = {
-  getProfile: () =>
-    api.get<ProfileSettings>('/settings/profile').then((r) => r.data),
-  updateProfile: (body: Partial<ProfileSettings>) =>
-    api.patch<ProfileSettings>('/settings/profile', body).then((r) => r.data),
-  changePassword: (body: { current: string; next: string }) =>
-    api.post('/settings/profile/password', body).then((r) => r.data),
-  getNotifications: () =>
-    api.get<NotificationPrefs>('/settings/notifications').then((r) => r.data),
-  updateNotifications: (body: NotificationPrefs) =>
-    api.patch<NotificationPrefs>('/settings/notifications', body).then((r) => r.data),
+const DEFAULT_NOTIF_PREFS: NotificationPrefs = {
+  batch_ready: { email: false, whatsapp: false },
+  hot_lead: { email: false, whatsapp: false },
+  run_failed: { email: false, whatsapp: false },
+  weekly_summary: { email: false, whatsapp: false },
 }
 
-// ---- Notifications (bell) ----
+export const settingsApi = {
+  /** Read the signed-in user's profile from Supabase. */
+  getProfile: async (): Promise<ProfileSettings> => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const profile = await fetchProfile(user.id)
+    if (!profile) throw new Error('No profile is linked to this account.')
+    return { name: profile.name, email: profile.email, timezone: profile.timezone || 'UTC', language: 'en', avatar_url: null }
+  },
+  /** Update name/timezone (RPC); changing email triggers Supabase re-verification. */
+  updateProfile: async (body: Partial<ProfileSettings>): Promise<ProfileSettings> => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const { error } = await supabase.rpc('update_my_profile', { p_name: body.name ?? '', p_timezone: body.timezone ?? '' })
+    if (error) throw new Error(error.message)
+    if (body.email && body.email !== user.email) {
+      const { error: e2 } = await supabase.auth.updateUser({ email: body.email })
+      if (e2) throw new Error(e2.message)
+    }
+    const profile = await fetchProfile(user.id)
+    return { name: profile?.name ?? body.name ?? '', email: body.email ?? profile?.email ?? user.email ?? '', timezone: profile?.timezone ?? body.timezone ?? 'UTC', language: body.language ?? 'en', avatar_url: null }
+  },
+  changePassword: async (body: { current: string; next: string }): Promise<{ ok: true }> => {
+    const { error } = await supabase.auth.updateUser({ password: body.next })
+    if (error) throw new Error(error.message)
+    return { ok: true }
+  },
+  // Email/WhatsApp notification prefs have no backend yet — return defaults / no-op.
+  getNotifications: async (): Promise<NotificationPrefs> => DEFAULT_NOTIF_PREFS,
+  updateNotifications: async (body: NotificationPrefs): Promise<NotificationPrefs> => body,
+}
+
+// ---- Notifications (bell) ---- no backend yet; empty so the bell never errors.
 export const notificationsApi = {
-  list: () =>
-    api.get<Paginated<NotificationItem>>('/notifications').then((r) => r.data),
-  markRead: (id: string) =>
-    api.post(`/notifications/${id}/read`).then((r) => r.data),
+  list: async (): Promise<Paginated<NotificationItem>> => ({ data: [], page: 1, page_size: 0, total: 0 }),
+  markRead: async (_id: string): Promise<void> => { void _id },
 }
 
 // ---- Admin ----
