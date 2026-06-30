@@ -27,109 +27,73 @@ interface Prefill {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/** Cal.com's embed API, attached to window by the embed snippet. */
-function getCal(): any | null {
-  return (window as any).Cal ?? null
+/** Build the Cal.com booking URL with prefilled query params. Cal reads these
+ *  from the URL (overriding the logged-in session), so name/email/custom fields
+ *  come pre-filled. Returns null if the AE has no valid scheduling URL. */
+function buildCalUrl(url: string, prefill: Prefill): string | null {
+  let parsed: URL | null = null
+  try { parsed = url ? new URL(url) : null } catch { parsed = null }
+  if (!parsed) return null
+  const p = parsed.searchParams
+  p.set('embed', 'true')
+  p.set('layout', 'month_view')
+  if (prefill.name) p.set('name', prefill.name)
+  // Explicit (possibly blank) email so Cal doesn't fall back to the booker's session.
+  p.set('email', prefill.email ?? '')
+  if (prefill.setterName) p.set('setter-name', prefill.setterName)
+  if (prefill.leadSource) p.set('lead-source', prefill.leadSource)
+  if (prefill.crmLeadId) p.set('crm-lead-id', prefill.crmLeadId)
+  return parsed.toString()
 }
 
-/** Load Cal.com's embed script once (the official inline snippet). */
-function ensureCalLoaded(origin: string): Promise<any> {
-  return new Promise((resolve) => {
-    if (getCal()) {
-      resolve(getCal())
-      return
-    }
-    // Official Cal.com embed loader (canonical snippet, typed loosely).
-    ;(function (C: any, A: string, L: string) {
-      const p = (a: any, ar: any) => { a.q.push(ar) }
-      const d = C.document
-      C.Cal = C.Cal || function () {
-        const cal = C.Cal
-        const ar = arguments
-        if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true }
-        if (ar[0] === L) {
-          const api: any = function () { p(api, arguments) }
-          const namespace = ar[1]
-          api.q = api.q || []
-          if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]) } else p(cal, ar)
-          return
-        }
-        p(cal, ar)
-      }
-    })(window, 'https://app.cal.com/embed/embed.js', 'init')
-    const cal = getCal()
-    cal('init', { origin })
-    resolve(cal)
-  })
-}
-
-/** Real inline Cal.com embed (production). */
+/**
+ * Real Cal.com embed (production) as a plain cross-origin iframe.
+ *
+ * We deliberately do NOT use Cal's embed.js: that script is fetched from our
+ * own origin and is intercepted by the MSW service worker (which mocks the
+ * legacy demo API), and its passthrough of the cross-origin script can fail.
+ * A cross-origin iframe document load is never intercepted by our service
+ * worker, so the calendar always renders.
+ */
 function CalInlineEmbed({ url, prefill, onScheduled }: { url: string; prefill: Prefill; onScheduled: () => void }) {
-  const [ready, setReady] = useState(false)
-  const [configError, setConfigError] = useState<string | null>(null)
-  const containerId = 'cal-inline-embed'
+  const src = useMemo(() => buildCalUrl(url, prefill), [url, prefill])
 
+  // Cal.com posts a message to the parent when a booking completes.
   useEffect(() => {
-    let cancelled = false
-    let parsed: URL | null = null
-    try { parsed = url ? new URL(url) : null } catch { parsed = null }
-    if (!parsed) {
-      setConfigError('This AE has no scheduling URL configured. Set CAL_AE_<ID>_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.')
-      return
+    const onMsg = (e: MessageEvent) => {
+      if (!e.origin.includes('cal.com')) return
+      const d: any = e.data
+      const tag = typeof d === 'object' ? String(d?.type ?? d?.event ?? d?.action ?? '') : String(d ?? '')
+      if (/booking[_-]?successful|event[_-]?scheduled|scheduled/i.test(tag)) onScheduled()
     }
-    const origin = parsed.origin
-    const calLink = parsed.pathname.replace(/^\//, '') + parsed.search // e.g. "hamna/30min"
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [onScheduled])
 
-    // Prefill the booking form. `name`/`email` are Cal.com's built-in fields;
-    // the rest prefill custom questions by their Cal.com field identifier.
-    const config: Record<string, string> = {}
-    if (prefill.name) config.name = prefill.name
-    // Only prefill the email if the lead has a valid one; otherwise send an
-    // explicit blank so Cal.com doesn't auto-fill the booker's own session email.
-    config.email = prefill.email ?? ''
-    if (prefill.setterName) config['setter-name'] = prefill.setterName
-    if (prefill.leadSource) config['lead-source'] = prefill.leadSource
-    if (prefill.crmLeadId) config['crm-lead-id'] = prefill.crmLeadId
-
-    ensureCalLoaded(origin)
-      .then((cal) => {
-        if (cancelled || !cal) return
-        try {
-          cal('inline', { elementOrSelector: `#${containerId}`, calLink, config })
-          cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
-        } catch {
-          /* the fallback link below still lets the setter book */
-        }
-        setReady(true) // clear the spinner once we've attempted to mount
-      })
-      .catch(() => setReady(true))
-    return () => { cancelled = true }
-  }, [url, prefill, onScheduled])
-
-  if (configError) {
+  if (!src) {
     return (
       <div className="rounded-[10px] border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800">
         <p className="font-medium">Scheduling widget unavailable</p>
-        <p className="mt-1">{configError}</p>
+        <p className="mt-1">This AE has no scheduling URL configured. Set CAL_AE_&lt;ID&gt;_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.</p>
       </div>
     )
   }
 
   return (
     <div className="relative">
-      {!ready && <LoadingState label="Loading scheduling widget…" />}
-      {/* No fixed height — let Cal.com auto-resize the iframe to its content so
-          the calendar / time slots / booking form are never clipped and the
-          page scrolls naturally. */}
-      <div id={containerId} className="w-full" style={{ minWidth: 320, minHeight: ready ? 600 : 0 }} />
-      {url && (
-        <p className="mt-2 text-center text-[12px] text-[var(--color-text-muted)]">
-          Trouble loading?{' '}
-          <a className="text-[var(--color-primary)] hover:underline" href={url} target="_blank" rel="noreferrer">
-            Open the scheduling page
-          </a>
-        </p>
-      )}
+      <iframe
+        title="Cal.com scheduling"
+        src={src}
+        className="w-full rounded-[8px]"
+        style={{ minWidth: 320, height: 700, border: 0 }}
+        allow="camera; microphone; fullscreen; clipboard-read; clipboard-write"
+      />
+      <p className="mt-2 text-center text-[12px] text-[var(--color-text-muted)]">
+        Trouble loading?{' '}
+        <a className="text-[var(--color-primary)] hover:underline" href={url} target="_blank" rel="noreferrer">
+          Open the scheduling page in a new tab
+        </a>
+      </p>
     </div>
   )
 }
