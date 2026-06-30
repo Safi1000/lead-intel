@@ -11,12 +11,20 @@ async function bootstrap() {
     // Dev only: MSW mocks the legacy demo API so the full MVP is demoable.
     await startMockServer()
   } else if ('serviceWorker' in navigator) {
-    // Production has a real backend (Supabase + serverless). Make sure no stale
-    // MSW service worker (the build was previously always-on) keeps intercepting
-    // requests — that was breaking the cross-origin Cal.com embed.
+    // Production has a real backend (Supabase + serverless). Remove any stale
+    // MSW service worker (the build was previously always-on) — it was breaking
+    // the cross-origin Cal.com embed. Unregistering only takes effect once the
+    // page is no longer controlled, so reload once (guarded) to drop it.
     try {
       const regs = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(regs.map((r) => r.unregister()))
+      if (regs.length) {
+        await Promise.all(regs.map((r) => r.unregister()))
+        if (navigator.serviceWorker.controller && !sessionStorage.getItem('li-sw-cleared')) {
+          sessionStorage.setItem('li-sw-cleared', '1')
+          window.location.reload()
+          return
+        }
+      }
     } catch {
       /* ignore */
     }
