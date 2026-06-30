@@ -17,16 +17,18 @@ async function bootstrap() {
     // page is no longer controlled, so reload once (guarded) to drop it.
     try {
       const regs = await navigator.serviceWorker.getRegistrations()
-      if (regs.length) {
-        await Promise.all(regs.map((r) => r.unregister()))
-        if (navigator.serviceWorker.controller && !sessionStorage.getItem('li-sw-cleared')) {
-          sessionStorage.setItem('li-sw-cleared', '1')
-          window.location.reload()
-          return
-        }
-      }
+      await Promise.all(regs.map((r) => r.unregister()))
     } catch {
       /* ignore */
+    }
+    // A worker can still CONTROL this page even after unregister returns / when
+    // getRegistrations() is already empty (a "zombie" controller). If anything
+    // still controls the page, reload once (guarded) to drop it so cross-origin
+    // resources like the Cal.com embed script aren't intercepted.
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem('li-sw-cleared')) {
+      sessionStorage.setItem('li-sw-cleared', '1')
+      window.location.reload()
+      return
     }
   }
   createRoot(document.getElementById('root')!).render(
