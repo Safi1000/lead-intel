@@ -154,14 +154,38 @@ export async function createSignedUrl(bucketId: string, path: string, expiresIn 
 }
 
 // ---------------------------------------------------------------------------
-// Edge function trigger (fire-and-forget)
+// Edge function trigger (fire-and-forget with error surfacing)
 // ---------------------------------------------------------------------------
 
 export function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean, maxPlaces?: number): void {
   const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
+  console.log(`[pipeline/run] firing edge function: ${url} run_id=${runId}`)
+
   fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ run_id: runId, org_id: orgId, dry_run: dryRun, ...(maxPlaces != null ? { max_places: maxPlaces } : {}) }),
-  }).catch(() => { /* errors surface in pipeline_runs.error */ })
+  }).then(async (res) => {
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      const msg = `Edge function HTTP ${res.status}: ${text}`
+      console.error(`[pipeline/run] edge function failed for run ${runId}: ${msg}`)
+      // Mark the run as failed so the UI surfaces the error
+      await fetch(`${SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${runId}`, {
+        method: 'PATCH',
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ status: 'failed', completed_at: new Date().toISOString(), error: msg }),
+      }).catch(() => {})
+    } else {
+      console.log(`[pipeline/run] edge function acknowledged run ${runId}: ${res.status}`)
+    }
+  }).catch(async (err) => {
+    const msg = `Could not reach edge function: ${err?.message ?? err}`
+    console.error(`[pipeline/run] fetch error for run ${runId}: ${msg}`)
+    await fetch(`${SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${runId}`, {
+      method: 'PATCH',
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'failed', completed_at: new Date().toISOString(), error: msg }),
+    }).catch(() => {})
+  })
 }
