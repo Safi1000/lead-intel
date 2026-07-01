@@ -317,10 +317,24 @@ function RunHistory({ orgId }: { orgId: string }) {
   )
 }
 
+const EDGE_FUNCTION_TIMEOUT_MS = 5 * 60 * 1000 // 5 min — safe margin above 150s hard limit
+
 function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
   const qc = useQueryClient()
   const [xlsxUrl, setXlsxUrl] = useState<string | null>(null)
   const [loadingXlsx, setLoadingXlsx] = useState(false)
+
+  // If a run looks stuck (status=running but started >5 min ago), call getStatus which
+  // auto-marks it failed server-side, then refresh the list.
+  useEffect(() => {
+    if (run.status !== 'running') return
+    const age = Date.now() - new Date(run.started_at).getTime()
+    if (age < EDGE_FUNCTION_TIMEOUT_MS) return
+    pipelineApi.getStatus(orgId, run.id)
+      .then(() => qc.invalidateQueries({ queryKey: ['pipeline-runs', orgId] }))
+      .catch(() => {/* ignore */})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run.id, run.status])
 
   const downloadXlsx = async () => {
     if (xlsxUrl) { window.open(xlsxUrl, '_blank'); return }
