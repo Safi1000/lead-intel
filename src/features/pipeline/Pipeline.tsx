@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Download, Info, Play, RefreshCw } from 'lucide-react'
+import { Download, Info, Play, RefreshCw, Square } from 'lucide-react'
 import { format } from 'date-fns'
 import { pipelineApi, pipelineOrgId } from '../../api/pipeline'
 import type { PipelineConfig, PipelineRun } from '../../api/pipeline'
@@ -118,9 +118,10 @@ function ConfigPanel({ orgId }: { orgId: string }) {
 
 function StatusBadge({ status }: { status: PipelineRun['status'] }) {
   const styles: Record<PipelineRun['status'], string> = {
-    running: 'bg-blue-100 text-blue-700',
+    running:   'bg-blue-100 text-blue-700',
     completed: 'bg-green-100 text-green-700',
-    failed: 'bg-red-100 text-red-700',
+    failed:    'bg-red-100 text-red-700',
+    stopped:   'bg-amber-100 text-amber-700',
   }
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status])}>
@@ -183,6 +184,12 @@ function RunTrigger({ orgId }: { orgId: string }) {
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
+  const stop = useMutation({
+    mutationFn: () => pipelineApi.stopRun({ run_id: activeRunId!, org_id: orgId }),
+    onSuccess: () => toast.info('Stop signal sent — the run will finish its current lead then exit.'),
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
   const isRunning = liveRun?.status === 'running' || trigger.isPending
 
   return (
@@ -214,11 +221,22 @@ function RunTrigger({ orgId }: { orgId: string }) {
           <span className="text-sm text-[var(--color-text)]">Dry run</span>
           <span className="text-[11px] text-[var(--color-text-muted)]">(score and filter, but do not import)</span>
         </label>
-        <div className="pb-5">
-          <Button onClick={() => trigger.mutate()} loading={isRunning} disabled={isRunning}>
+        <div className="pb-5 flex gap-2">
+          <Button onClick={() => trigger.mutate()} loading={trigger.isPending} disabled={isRunning}>
             <Play className="h-4 w-4 mr-1.5" />
             {isRunning ? 'Running…' : 'Start run'}
           </Button>
+          {isRunning && activeRunId && (
+            <Button
+              onClick={() => stop.mutate()}
+              loading={stop.isPending}
+              disabled={stop.isPending || liveRun?.status !== 'running'}
+              className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+            >
+              <Square className="h-3.5 w-3.5 mr-1.5 fill-current" />
+              Stop
+            </Button>
+          )}
         </div>
       </div>
 

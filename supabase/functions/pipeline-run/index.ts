@@ -326,8 +326,20 @@ Deno.serve(async (req: Request) => {
     // Phases 3-6: Per-lead enrichment (each in its own try/catch)
     // -------------------------------------------------------------------------
     const leadsToInsert: Record<string, unknown>[] = []
+    let stopped = false
 
-    for (const result of newResults) {
+    for (let idx = 0; idx < newResults.length; idx++) {
+      const result = newResults[idx]
+
+      // Check stop_requested every 5 leads to avoid a DB call on every iteration
+      if (idx > 0 && idx % 5 === 0) {
+        const runRows = await dbSelect<{ stop_requested: boolean }>('pipeline_runs', `id=eq.${runId}&select=stop_requested`)
+        if (runRows[0]?.stop_requested) {
+          console.log(`[pipeline-run] stop requested at lead ${idx}, exiting cleanly`)
+          stopped = true
+          break
+        }
+      }
       const placeId = result.id
       let details: PlaceDetails | null = null
       let aiScore: AiScore | null = null
@@ -558,12 +570,12 @@ Deno.serve(async (req: Request) => {
       if (batchId) await dbUpdate('batches', { imported_count: totalImported }, `id=eq.${batchId}`)
     }
 
-    // Phase 7: XLSX audit log
+    // Phase 7: XLSX audit log (upload even on partial/stopped runs)
     let xlsxPath: string | null = null
     if (xlsxRows.length > 0) xlsxPath = await buildAndUploadXlsx(orgId, runId, xlsxRows)
 
     await dbUpdate('pipeline_runs', {
-      status: 'completed',
+      status: stopped ? 'stopped' : 'completed',
       completed_at: new Date().toISOString(),
       total_searched: totalSearched,
       total_new: totalNew,

@@ -28,7 +28,7 @@ export interface PipelineRun {
   org_id: string
   started_at: string
   completed_at: string | null
-  status: 'running' | 'completed' | 'failed'
+  status: 'running' | 'completed' | 'failed' | 'stopped'
   dry_run: boolean
   total_searched: number
   total_new: number
@@ -104,6 +104,9 @@ export const pipelineApi = {
 
   getStatus: (orgId: string, runId: string) =>
     call<PipelineRun>(`/status?orgId=${encodeURIComponent(orgId)}&runId=${encodeURIComponent(runId)}`),
+
+  stopRun: (body: { run_id: string; org_id: string }) =>
+    call<{ ok: boolean }>('/stop', { method: 'POST', body: JSON.stringify(body) }),
 
   // Run history via Supabase client (RLS scoped to the user's org)
   listRuns: async (orgId: string): Promise<PipelineRun[]> => {
