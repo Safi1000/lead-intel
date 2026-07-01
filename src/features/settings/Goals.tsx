@@ -36,7 +36,8 @@ export function GoalsSettingsPage() {
       </div>
       <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
         How many leads each setter should mark as <span className="font-medium">done</span> per day. Used to track
-        daily / weekly / monthly progress on the Progress page. Weekly target = goal × 7, monthly target = goal × days in the month.
+        daily / weekly / monthly progress on the Progress page. Working week is Mon–Sat, so weekly target = goal × 6
+        and monthly target = goal × the working days (Mon–Sat) in the month.
       </p>
       <Label htmlFor="goal">Leads per setter per day</Label>
       <div className="flex items-center gap-2">

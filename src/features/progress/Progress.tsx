@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getDaysInMonth, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
+import { eachDayOfInterval, endOfMonth, getDay, startOfDay, startOfMonth, startOfWeek } from 'date-fns'
 import { Target } from 'lucide-react'
 import { progressApi, type DoneCounts, type Periods, type SetterDoneStat } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
@@ -9,22 +9,27 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
-interface PeriodInfo extends Periods { daysInMonth: number }
+// Working week is Monday–Saturday (Sunday off).
+const WORK_DAYS_PER_WEEK = 6
+
+interface PeriodInfo extends Periods { workingDaysInMonth: number }
 
 function usePeriods(): PeriodInfo {
   return useMemo(() => {
     const now = new Date()
+    const monthDays = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) })
+    const workingDaysInMonth = monthDays.filter((d) => getDay(d) !== 0).length // exclude Sundays
     return {
       day: startOfDay(now).toISOString(),
       week: startOfWeek(now, { weekStartsOn: 1 }).toISOString(),
       month: startOfMonth(now).toISOString(),
-      daysInMonth: getDaysInMonth(now),
+      workingDaysInMonth,
     }
   }, [])
 }
 
 function targetsFor(goal: number, p: PeriodInfo) {
-  return { today: goal, week: goal * 7, month: goal * p.daysInMonth }
+  return { today: goal, week: goal * WORK_DAYS_PER_WEEK, month: goal * p.workingDaysInMonth }
 }
 
 /** A count vs target with a progress bar. */

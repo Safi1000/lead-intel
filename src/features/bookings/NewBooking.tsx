@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  CalendarCheck, ChevronDown, ChevronRight, CircleCheck, CircleX, Hash, Loader2, ArrowRight,
+  CalendarCheck, ChevronDown, ChevronRight, CircleCheck, CircleX, ExternalLink, Hash, Loader2, ArrowRight,
 } from 'lucide-react'
 import { bookingsApi, type AeBookingConfig } from '../../api/bookings'
 import { manualLeadsApi, leadBatchesApi } from '../../api/endpoints'
@@ -26,101 +26,61 @@ interface Prefill {
   crmLeadId?: string
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function getCal(): any | null {
-  return (window as any).Cal ?? null
+/** Build the Cal.com booking URL with the lead's details prefilled as query
+ *  params. Cal reads these from the URL and they override the booker's session.
+ *  Returns null if the AE has no valid scheduling URL. */
+function buildCalUrl(url: string, prefill: Prefill): string | null {
+  let parsed: URL | null = null
+  try { parsed = url ? new URL(url) : null } catch { parsed = null }
+  if (!parsed) return null
+  const p = parsed.searchParams
+  if (prefill.name) p.set('name', prefill.name)
+  p.set('email', prefill.email ?? '') // explicit blank so Cal doesn't use the booker's session email
+  if (prefill.setterName) p.set('setter-name', prefill.setterName)
+  if (prefill.leadSource) p.set('lead-source', prefill.leadSource)
+  if (prefill.crmLeadId) p.set('crm-lead-id', prefill.crmLeadId)
+  return parsed.toString()
 }
 
-/** Load Cal.com's official embed script once. cal.com sets X-Frame-Options on
- *  its public pages, so a raw iframe is refused — embed.js loads the embeddable
- *  endpoint Cal allows. (Safe now that MSW no longer runs in production and
- *  can't intercept this cross-origin script.) */
-function ensureCalLoaded(origin: string): Promise<any> {
-  return new Promise((resolve) => {
-    if (getCal()?.loaded) { resolve(getCal()); return }
-    ;(function (C: any, A: string, L: string) {
-      const p = (a: any, ar: any) => { a.q.push(ar) }
-      const d = C.document
-      C.Cal = C.Cal || function () {
-        const cal = C.Cal
-        const ar = arguments
-        if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement('script')).src = A; cal.loaded = true }
-        if (ar[0] === L) {
-          const api: any = function () { p(api, arguments) }
-          const namespace = ar[1]
-          api.q = api.q || []
-          if (typeof namespace === 'string') { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ['initNamespace', namespace]) } else p(cal, ar)
-          return
-        }
-        p(cal, ar)
-      }
-    })(window, 'https://app.cal.com/embed/embed.js', 'init')
-    const cal = getCal()
-    try { cal('init', { origin }) } catch { /* queued */ }
-    resolve(cal)
-  })
-}
+/**
+ * Booking launcher (production). Opens the AE's Cal.com page in a NEW TAB rather
+ * than embedding it. Inline embedding (embed.js / iframe) is blocked in some
+ * regions by Cal's Cloudflare bot-challenge on the embed script — a top-level
+ * navigation can solve that challenge, a subresource embed cannot. The booked
+ * meeting still flows back to the AE via the webhook.
+ */
+function CalBookingLauncher({ url, prefill, onScheduled }: { url: string; prefill: Prefill; onScheduled: () => void }) {
+  const [opened, setOpened] = useState(false)
+  const bookingUrl = buildCalUrl(url, prefill)
 
-/** Real inline Cal.com embed (production) via embed.js. */
-function CalInlineEmbed({ url, prefill, onScheduled }: { url: string; prefill: Prefill; onScheduled: () => void }) {
-  const [ready, setReady] = useState(false)
-  const [configError, setConfigError] = useState<string | null>(null)
-  const containerId = 'cal-inline-embed'
-
-  useEffect(() => {
-    let cancelled = false
-    let parsed: URL | null = null
-    try { parsed = url ? new URL(url) : null } catch { parsed = null }
-    if (!parsed) {
-      setConfigError('This AE has no scheduling URL configured. Set CAL_AE_<ID>_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.')
-      return
-    }
-    const origin = parsed.origin
-    const calLink = parsed.pathname.replace(/^\//, '') + parsed.search // e.g. "hamna/30min"
-
-    // Prefill: name/email are built-in; the rest target custom-question identifiers.
-    const config: Record<string, string> = {}
-    if (prefill.name) config.name = prefill.name
-    // Explicit (possibly blank) email so Cal doesn't fall back to the booker's session.
-    config.email = prefill.email ?? ''
-    if (prefill.setterName) config['setter-name'] = prefill.setterName
-    if (prefill.leadSource) config['lead-source'] = prefill.leadSource
-    if (prefill.crmLeadId) config['crm-lead-id'] = prefill.crmLeadId
-
-    ensureCalLoaded(origin)
-      .then((cal) => {
-        if (cancelled || !cal) return
-        try {
-          cal('inline', { elementOrSelector: `#${containerId}`, calLink, config })
-          cal('on', { action: 'bookingSuccessful', callback: () => onScheduled() })
-        } catch {
-          /* the fallback link below still lets the setter book */
-        }
-        setReady(true)
-      })
-      .catch(() => setReady(true))
-    return () => { cancelled = true }
-  }, [url, prefill, onScheduled])
-
-  if (configError) {
+  if (!bookingUrl) {
     return (
       <div className="rounded-[10px] border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800">
-        <p className="font-medium">Scheduling widget unavailable</p>
-        <p className="mt-1">{configError}</p>
+        <p className="font-medium">Scheduling unavailable</p>
+        <p className="mt-1">This AE has no scheduling URL configured. Set CAL_AE_&lt;ID&gt;_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.</p>
       </div>
     )
   }
 
   return (
-    <div className="relative">
-      {!ready && <LoadingState label="Loading scheduling widget…" />}
-      <div id={containerId} className="w-full" style={{ minWidth: 320, minHeight: ready ? 600 : 0 }} />
-      <p className="mt-2 text-center text-[12px] text-[var(--color-text-muted)]">
-        Trouble loading?{' '}
-        <a className="text-[var(--color-primary)] hover:underline" href={url} target="_blank" rel="noreferrer">
-          Open the scheduling page in a new tab
-        </a>
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--color-text-secondary)]">
+        Click below to open the calendar in a new tab. The client’s details are pre-filled — just pick a time the
+        client confirmed and submit.
       </p>
+      <a href={bookingUrl} target="_blank" rel="noreferrer" onClick={() => setOpened(true)}>
+        <Button size="lg"><CalendarCheck className="h-5 w-5" /> Open booking page <ExternalLink className="h-4 w-4" /></Button>
+      </a>
+
+      {opened && (
+        <div className="rounded-[10px] border border-[var(--color-border)] bg-slate-50/60 p-4">
+          <p className="text-sm text-[var(--color-text)]">Once you’ve booked the meeting in the other tab, confirm here:</p>
+          <Button className="mt-3" variant="outline" onClick={onScheduled}>
+            <CircleCheck className="h-4 w-4 text-[var(--c-verified)]" /> I’ve booked it
+          </Button>
+          <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">It’ll appear on the AE’s Meetings page shortly either way.</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -397,7 +357,7 @@ export function NewBookingPage() {
               ) : ae.demo ? (
                 <DemoEmbed key={crmLeadId ?? 'none'} ae={ae} prefill={prefill} onScheduled={onScheduled} />
               ) : (
-                <CalInlineEmbed url={ae.schedulingUrl} prefill={prefill} onScheduled={onScheduled} />
+                <CalBookingLauncher url={ae.schedulingUrl} prefill={prefill} onScheduled={onScheduled} />
               )}
             </Card>
           </div>
