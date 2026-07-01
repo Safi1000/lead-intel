@@ -169,17 +169,17 @@ const GUIDE_SECTIONS = [
   {
     title: 'Booking steps',
     steps: [
-      'In the widget, choose a slot the client confirmed.',
-      'Enter the client’s name and email — paste the email from the CRM, don’t type it.',
-      'Fill the custom questions: Setter name · Lead source · CRM Lead ID (paste) · 1-line context.',
-      'Submit and wait for the confirmation before closing.',
+      'Click “Open booking page” — the calendar opens in a new tab with the client’s name, email, lead source and CRM Lead ID already filled in.',
+      'Double-check the pre-filled client email is correct — it’s how the meeting links to the lead.',
+      'Add the 1-line context (the pain + what you promised) if it’s empty.',
+      'Pick the slot the client confirmed and submit, then come back and click “I’ve booked it”.',
     ],
   },
   {
     title: 'After booking',
     steps: [
-      'The meeting appears on the AE’s Meetings page automatically after the next sync (up to ~2 min).',
-      'Mark the lead Meeting Booked in the CRM if your workflow still requires it.',
+      'The meeting shows up on the AE’s Meetings page automatically within a few seconds.',
+      'Mark the lead as done / Booked in the CRM if your workflow requires it.',
     ],
   },
 ]
@@ -212,10 +212,10 @@ function SetterGuide() {
           <div className="rounded-[10px] bg-slate-50 p-3">
             <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Quick do / don’t</p>
             <ul className="space-y-1 text-[13px]">
-              {['Paste the client’s real email', 'Always include the CRM Lead ID', 'Write one line of context'].map((t) => (
+              {['Verify the pre-filled client email', 'Keep the CRM Lead ID as-is', 'Add one line of context'].map((t) => (
                 <li key={t} className="flex items-center gap-1.5 text-[var(--color-text)]"><CircleCheck className="h-3.5 w-3.5 text-[var(--c-verified)]" /> {t}</li>
               ))}
-              {['Don’t use your own email', 'Don’t book without consent', 'Don’t leave the context blank'].map((t) => (
+              {['Don’t change the email to your own', 'Don’t book without consent', 'Don’t leave the context blank'].map((t) => (
                 <li key={t} className="flex items-center gap-1.5 text-[var(--color-text)]"><CircleX className="h-3.5 w-3.5 text-[var(--c-unverified)]" /> {t}</li>
               ))}
             </ul>
@@ -342,7 +342,7 @@ export function NewBookingPage() {
                   <div>
                     <h3 className="text-[16px] font-semibold text-[var(--color-text)]">Meeting booked</h3>
                     <p className="mt-1 max-w-sm text-sm text-[var(--color-text-secondary)]">
-                      It will appear on {ae?.aeName ?? 'the AE'}’s Meetings page after the next sync (~2 min).
+                      It will appear on {ae?.aeName ?? 'the AE'}’s Meetings page within a few seconds.
                     </p>
                   </div>
                   <div className="flex gap-2">

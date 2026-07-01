@@ -214,7 +214,7 @@ export function MeetingsPage() {
             <span>{whoLabel ? `${whoLabel} · ` : ''}{tz}</span>
             <span className="text-[var(--color-text-muted)]">·</span>
             <span className="inline-flex items-center gap-1 text-[var(--color-text-muted)]">
-              <CalendarClock className="h-3.5 w-3.5" /> Last synced {syncedLabel} · auto-refreshes every 2 min
+              <CalendarClock className="h-3.5 w-3.5" /> Last synced {syncedLabel} · updates automatically
             </span>
           </span>
         }
