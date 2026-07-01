@@ -14,7 +14,7 @@ through all four states; there are no Coming-Soon shells.
 
 **Design:** "Signal Intelligence" system — Space Grotesk (display) + JetBrains Mono (data) +
 Inter (body), electric-cobalt / mint-cyan identity, orchestrated page-load motion, atmospheric
-auth backgrounds.
+auth backgrounds
 
 **Phase 2:** multi-trade, signup + team/RBAC, billing + market locks, usage, enhanced enrichment
 (LinkedIn / tech-stack / sentiment / business-age), AI scoring + hot flags + outreach angle +
