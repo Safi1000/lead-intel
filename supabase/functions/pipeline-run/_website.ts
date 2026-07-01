@@ -30,7 +30,7 @@ export interface WebsiteResult {
 // ---------------------------------------------------------------------------
 
 const MAX_PAGES = 3
-const FETCH_TIMEOUT_MS = 7000
+const FETCH_TIMEOUT_MS = 4000
 
 const ROLE_PREFIXES = ['info', 'contact', 'sales', 'hello', 'support', 'admin', 'enquiries', 'enquiry', 'office', 'mail', 'booking', 'appointments']
 const DISCARD_PREFIXES = ['noreply', 'no-reply', 'donotreply', 'do-not-reply', 'bounce', 'mailer-daemon', 'postmaster', 'unsubscribe']
