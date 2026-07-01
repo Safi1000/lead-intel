@@ -25,7 +25,7 @@ export default async function handler(req: any, res: any) {
     const runId: string = Array.isArray(rows) ? rows[0]?.id : rows?.id
     if (!runId) return sendJson(res, 500, { error: { code: 'db', message: 'Could not create run record.' } })
 
-    fireEdgeFunction(runId, orgId, dryRun, maxPlaces)
+    await fireEdgeFunction(runId, orgId, dryRun, maxPlaces)
 
     return sendJson(res, 202, { run_id: runId, dry_run: dryRun, status: 'running' })
   } catch (e: any) {

@@ -77,7 +77,8 @@ export async function requireAuth(req: any, res: any): Promise<boolean> {
       headers: { apikey: key, Authorization: `Bearer ${token}` },
     })
     if (authRes.ok) {
-      const user = await authRes.json()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const user = await authRes.json() as any
       if (user?.id) return false // valid session
     }
   } catch {
@@ -124,7 +125,8 @@ async function pgRest(method: string, table: string, body?: unknown, opts?: Quer
     throw new Error(`PostgREST ${method} ${table}: ${res.status} ${text}`)
   }
   if (res.status === 204) return null
-  return res.json()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return res.json() as Promise<any>
 }
 
 export const db = {
@@ -146,7 +148,8 @@ export async function createSignedUrl(bucketId: string, path: string, expiresIn 
       body: JSON.stringify({ expiresIn }),
     })
     if (!res.ok) return null
-    const data = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await res.json() as any
     return data?.signedURL ? `${SUPABASE_URL}/storage/v1${data.signedURL}` : (data?.signedUrl ?? null)
   } catch {
     return null
@@ -154,38 +157,52 @@ export async function createSignedUrl(bucketId: string, path: string, expiresIn 
 }
 
 // ---------------------------------------------------------------------------
-// Edge function trigger (fire-and-forget with error surfacing)
+// Edge function trigger
+// Vercel kills the process immediately after res.end(), so fire-and-forget
+// never sends the request. We must await before returning the response.
+// We race against a 6s timeout — enough for TCP + HTTP send, not the full 150s run.
 // ---------------------------------------------------------------------------
 
-export function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean, maxPlaces?: number): void {
-  const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
-  console.log(`[pipeline/run] firing edge function: ${url} run_id=${runId}`)
+async function markRunFailed(runId: string, msg: string): Promise<void> {
+  await fetch(`${SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${runId}`, {
+    method: 'PATCH',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ status: 'failed', completed_at: new Date().toISOString(), error: msg }),
+  }).catch(() => {})
+}
 
-  fetch(url, {
+export async function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean, maxPlaces?: number): Promise<void> {
+  const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
+  console.log(`[pipeline/run] calling edge function: ${url} run_id=${runId}`)
+
+  const fetchPromise = fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ run_id: runId, org_id: orgId, dry_run: dryRun, ...(maxPlaces != null ? { max_places: maxPlaces } : {}) }),
-  }).then(async (res) => {
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      const msg = `Edge function HTTP ${res.status}: ${text}`
-      console.error(`[pipeline/run] edge function failed for run ${runId}: ${msg}`)
-      // Mark the run as failed so the UI surfaces the error
-      await fetch(`${SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${runId}`, {
-        method: 'PATCH',
-        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ status: 'failed', completed_at: new Date().toISOString(), error: msg }),
-      }).catch(() => {})
-    } else {
-      console.log(`[pipeline/run] edge function acknowledged run ${runId}: ${res.status}`)
-    }
-  }).catch(async (err) => {
-    const msg = `Could not reach edge function: ${err?.message ?? err}`
-    console.error(`[pipeline/run] fetch error for run ${runId}: ${msg}`)
-    await fetch(`${SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${runId}`, {
-      method: 'PATCH',
-      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ status: 'failed', completed_at: new Date().toISOString(), error: msg }),
-    }).catch(() => {})
   })
+
+  // Race: if the edge function responds before 6s it's an immediate error (auth/404).
+  // If it times out, the request is in-flight and the 150s run is underway — that's correct.
+  const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 6000))
+
+  try {
+    const result = await Promise.race([fetchPromise, timeout])
+    if (result === 'timeout') {
+      console.log(`[pipeline/run] edge function in-flight for run ${runId} (expected — returns after full run)`)
+    } else {
+      const res = result as Response
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        const msg = `Edge function HTTP ${res.status}: ${text}`
+        console.error(`[pipeline/run] ${msg}`)
+        await markRunFailed(runId, msg)
+      } else {
+        console.log(`[pipeline/run] edge function completed synchronously for run ${runId}`)
+      }
+    }
+  } catch (err: any) {
+    const msg = `Could not reach edge function: ${err?.message ?? String(err)}`
+    console.error(`[pipeline/run] ${msg}`)
+    await markRunFailed(runId, msg)
+  }
 }

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": false,
+    "noImplicitAny": false
+  }
+}

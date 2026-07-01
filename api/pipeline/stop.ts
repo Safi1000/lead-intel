@@ -32,7 +32,8 @@ export default async function handler(req: any, res: any) {
       return sendJson(res, 500, { error: { code: 'db', message: text } })
     }
 
-    const rows = await patchRes.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = await patchRes.json() as any[]
     if (!rows.length) return sendJson(res, 404, { error: { code: 'not_found', message: 'No running run found with that id + org' } })
 
     return sendJson(res, 200, { ok: true })
