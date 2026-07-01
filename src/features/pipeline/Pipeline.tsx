@@ -230,7 +230,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
             <Button
               onClick={() => stop.mutate()}
               loading={stop.isPending}
-              disabled={stop.isPending || liveRun?.status !== 'running'}
+              disabled={stop.isPending}
               className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
             >
               <Square className="h-3.5 w-3.5 mr-1.5 fill-current" />
@@ -368,21 +368,21 @@ function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
       <td className="px-3 py-3 tabular-nums font-medium">{run.total_imported}</td>
       <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{run.total_no_website ?? 0}</td>
       <td className="px-3 py-3">
-        {run.status === 'running' ? (
+        <div className="flex items-center gap-2">
           <button onClick={() => stop.mutate()} disabled={stop.isPending}
-            className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 text-[12px] disabled:opacity-50">
+            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-[12px] disabled:opacity-40"
+            title="Force stop">
             <Square className="h-3 w-3 fill-current" />
-            {stop.isPending ? 'Stopping…' : 'Stop'}
+            {stop.isPending ? '…' : 'Stop'}
           </button>
-        ) : run.xlsx_path ? (
-          <button onClick={downloadXlsx} disabled={loadingXlsx}
-            className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:underline text-[12px] disabled:opacity-50">
-            <Download className="h-3.5 w-3.5" />
-            {loadingXlsx ? 'Loading…' : 'Download'}
-          </button>
-        ) : (
-          <span className="text-[var(--color-text-muted)] text-[12px]">—</span>
-        )}
+          {run.xlsx_path && (
+            <button onClick={downloadXlsx} disabled={loadingXlsx}
+              className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:underline text-[12px] disabled:opacity-50">
+              <Download className="h-3.5 w-3.5" />
+              {loadingXlsx ? '…' : 'XLSX'}
+            </button>
+          )}
+        </div>
       </td>
     </tr>
   )

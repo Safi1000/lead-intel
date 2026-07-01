@@ -14,7 +14,7 @@ export default async function handler(req: any, res: any) {
     if (!run_id || !org_id) return sendJson(res, 400, { error: { code: 'invalid', message: 'run_id and org_id are required' } })
 
     const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const url = `${process.env.SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${run_id}&org_id=eq.${org_id}&status=eq.running`
+    const url = `${process.env.SUPABASE_URL}/rest/v1/pipeline_runs?id=eq.${run_id}&org_id=eq.${org_id}`
 
     const patchRes = await fetch(url, {
       method: 'PATCH',
@@ -22,7 +22,7 @@ export default async function handler(req: any, res: any) {
         apikey: svcKey,
         Authorization: `Bearer ${svcKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'return=representation',
+        Prefer: 'return=minimal',
       },
       body: JSON.stringify({ stop_requested: true }),
     })
@@ -31,10 +31,6 @@ export default async function handler(req: any, res: any) {
       const text = await patchRes.text()
       return sendJson(res, 500, { error: { code: 'db', message: text } })
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = await patchRes.json() as any[]
-    if (!rows.length) return sendJson(res, 404, { error: { code: 'not_found', message: 'No running run found with that id + org' } })
 
     return sendJson(res, 200, { ok: true })
   } catch (e: any) {
