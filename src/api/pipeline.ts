@@ -35,6 +35,7 @@ export interface PipelineRun {
   total_enriched: number
   total_emailed: number
   total_imported: number
+  total_no_website: number
   error: string | null
   xlsx_path: string | null
   xlsx_url?: string | null
