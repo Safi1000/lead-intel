@@ -52,6 +52,7 @@ const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
+const PipelinePage = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.PipelinePage })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
 const UsagePage = lazyPage(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
@@ -133,6 +134,10 @@ export const router = createBrowserRouter([
                   {
                     element: <RequirePermission resource="users" action="manage" />,
                     children: [{ path: 'users', element: L(<UsersPage />) }],
+                  },
+                  {
+                    element: <RequirePermission resource="pipeline" action="view" />,
+                    children: [{ path: 'pipeline', element: L(<PipelinePage />) }],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.
                   {

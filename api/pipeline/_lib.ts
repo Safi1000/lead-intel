@@ -2,12 +2,16 @@
  * Shared helpers for the pipeline serverless endpoints.
  * Mirrors the pattern in api/bookings/_lib.ts — raw Node req/res,
  * no framework dependency, PostgREST for Supabase access.
+ *
+ * Auth: accepts EITHER a PIPELINE_SECRET token (for external/routine callers)
+ * OR a valid Supabase JWT (for the frontend — verified via Supabase Auth).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const SUPABASE_URL = process.env.SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
 const PIPELINE_SECRET = process.env.PIPELINE_SECRET || ''
 
 // ---------------------------------------------------------------------------
@@ -46,13 +50,41 @@ export function readBody(req: any): Promise<any> {
   })
 }
 
-/** Returns true and sends 401 if the request lacks a valid PIPELINE_SECRET token. */
-export function requireToken(req: any, res: any): boolean {
-  if (!PIPELINE_SECRET) return false // misconfigured — let it through so it fails loudly elsewhere
+/**
+ * Auth check. Returns true (and sends 401) if the request is not authorized.
+ * Accepts either:
+ *   - ?token=PIPELINE_SECRET  or  Authorization: Bearer PIPELINE_SECRET  (external callers)
+ *   - Authorization: Bearer <supabase-jwt>  (frontend — verified via Supabase Auth)
+ */
+export async function requireAuth(req: any, res: any): Promise<boolean> {
   const fromQuery = readQuery(req, 'token')
-  const fromHeader = (req.headers?.authorization ?? '').replace(/^Bearer\s+/i, '')
-  if (fromQuery === PIPELINE_SECRET || fromHeader === PIPELINE_SECRET) return false
-  sendJson(res, 401, { error: { code: 'unauthorized', message: 'Missing or invalid token.' } })
+  const authHeader: string = req.headers?.authorization ?? ''
+  const fromHeader = authHeader.replace(/^Bearer\s+/i, '')
+  const token = fromQuery || fromHeader
+
+  if (!token) {
+    sendJson(res, 401, { error: { code: 'unauthorized', message: 'Missing token or Authorization header.' } })
+    return true
+  }
+
+  // 1. Secret token (Claude Code Routine / direct curl)
+  if (PIPELINE_SECRET && (token === PIPELINE_SECRET)) return false
+
+  // 2. Supabase JWT (frontend — verify against Supabase Auth API)
+  try {
+    const key = ANON_KEY || SERVICE_KEY
+    const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: key, Authorization: `Bearer ${token}` },
+    })
+    if (authRes.ok) {
+      const user = await authRes.json()
+      if (user?.id) return false // valid session
+    }
+  } catch {
+    /* fall through to 401 */
+  }
+
+  sendJson(res, 401, { error: { code: 'unauthorized', message: 'Invalid or expired token.' } })
   return true
 }
 
@@ -62,7 +94,7 @@ export function requireToken(req: any, res: any): boolean {
 
 export interface QueryOptions {
   select?: string
-  filters?: string  // e.g. 'org_id=eq.xxx&status=eq.running'
+  filters?: string
   order?: string
   limit?: number
   single?: boolean
@@ -99,14 +131,7 @@ export const db = {
   select: (table: string, opts?: QueryOptions) => pgRest('GET', table, undefined, opts),
   insert: (table: string, body: unknown, opts?: QueryOptions) => pgRest('POST', table, body, opts),
   update: (table: string, body: unknown, opts?: QueryOptions) => pgRest('PATCH', table, body, opts),
-  upsert: (table: string, body: unknown, opts?: QueryOptions) => pgRest('POST', table, body, { ...opts }),
   delete: (table: string, opts?: QueryOptions) => pgRest('DELETE', table, undefined, opts),
-  rpc: (fn: string, args: unknown) =>
-    fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(args),
-    }).then((r) => r.json()),
 }
 
 // ---------------------------------------------------------------------------
@@ -132,15 +157,11 @@ export async function createSignedUrl(bucketId: string, path: string, expiresIn 
 // Edge function trigger (fire-and-forget)
 // ---------------------------------------------------------------------------
 
-export function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean): void {
+export function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean, maxPlaces?: number): void {
   const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
-  // Not awaited — returns 202 immediately, edge function runs independently
   fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${PIPELINE_SECRET}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ run_id: runId, org_id: orgId, dry_run: dryRun }),
-  }).catch(() => { /* edge function errors surface in pipeline_runs.error */ })
+    headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ run_id: runId, org_id: orgId, dry_run: dryRun, ...(maxPlaces != null ? { max_places: maxPlaces } : {}) }),
+  }).catch(() => { /* errors surface in pipeline_runs.error */ })
 }

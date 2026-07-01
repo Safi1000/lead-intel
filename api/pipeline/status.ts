@@ -2,12 +2,12 @@
 // GET /api/pipeline/status?runId=...&orgId=...
 // Returns the pipeline_runs row. If completed and xlsx_path is set, attaches a
 // 1-hour signed download URL for the XLSX audit log.
-import { createSignedUrl, db, readQuery, requireToken, sendJson } from './_lib.js'
+import { createSignedUrl, db, readQuery, requireAuth, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {
     if (req.method !== 'GET') return sendJson(res, 405, { error: { code: 'method', message: 'GET only' } })
-    if (requireToken(req, res)) return
+    if (await requireAuth(req, res)) return
 
     const runId = readQuery(req, 'runId')
     const orgId = readQuery(req, 'orgId')

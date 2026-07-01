@@ -1,18 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // POST /api/pipeline/run — creates a pipeline_runs row then fires the
 // Supabase Edge Function (non-awaited). Returns 202 + run_id immediately.
-import { db, fireEdgeFunction, readBody, requireToken, sendJson } from './_lib.js'
+import { db, fireEdgeFunction, readBody, requireAuth, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {
     if (req.method !== 'POST') return sendJson(res, 405, { error: { code: 'method', message: 'POST only' } })
-    if (requireToken(req, res)) return
+    if (await requireAuth(req, res)) return
 
     const body = await readBody(req)
     const orgId: string = body?.org_id ?? ''
     const dryRun: boolean = body?.dry_run === true
+    const maxPlaces: number | undefined = body?.max_places != null ? Number(body.max_places) : undefined
 
     if (!orgId) return sendJson(res, 400, { error: { code: 'invalid', message: 'org_id is required' } })
+    if (maxPlaces !== undefined && (isNaN(maxPlaces) || maxPlaces < 1))
+      return sendJson(res, 400, { error: { code: 'invalid', message: 'max_places must be a positive integer' } })
 
     const rows = await db.insert(
       'pipeline_runs',
@@ -22,7 +25,7 @@ export default async function handler(req: any, res: any) {
     const runId: string = Array.isArray(rows) ? rows[0]?.id : rows?.id
     if (!runId) return sendJson(res, 500, { error: { code: 'db', message: 'Could not create run record.' } })
 
-    fireEdgeFunction(runId, orgId, dryRun)
+    fireEdgeFunction(runId, orgId, dryRun, maxPlaces)
 
     return sendJson(res, 202, { run_id: runId, dry_run: dryRun, status: 'running' })
   } catch (e: any) {

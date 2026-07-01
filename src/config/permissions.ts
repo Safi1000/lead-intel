@@ -9,6 +9,7 @@ export type Resource =
   | 'bookings' // AE meetings + setter booking (Calendly)
   | 'users' // team / user management
   | 'account' // tenant account settings
+  | 'pipeline' // automated Google Maps lead sourcing
   // Legacy resources referenced only by hidden (flag-gated) pages. Kept in the
   // type so those screens compile; intentionally absent from MATRIX → denied
   // for tenant roles until their phase is re-enabled.
@@ -34,6 +35,8 @@ const MATRIX: Partial<Record<Resource, Partial<Record<Action, Role[]>>>> = {
   // Only managers manage users and the account.
   users: { view: ['manager'], manage: ['manager'] },
   account: { view: TENANT_ALL, manage: ['manager'] },
+  // Pipeline: managers and lead generators can view and trigger runs.
+  pipeline: { view: GENERATOR, create: GENERATOR },
 }
 
 export const permKey = (resource: Resource, action: Action) => `${resource}:${action}`

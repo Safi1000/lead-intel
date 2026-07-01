@@ -3,11 +3,11 @@
 // POST   /api/pipeline/searches                    — create { org_id, search_term, location }
 // PATCH  /api/pipeline/searches?id=...             — update { enabled }
 // DELETE /api/pipeline/searches?id=...             — delete by id
-import { db, readBody, readQuery, requireToken, sendJson } from './_lib.js'
+import { db, readBody, readQuery, requireAuth, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {
-    if (requireToken(req, res)) return
+    if (await requireAuth(req, res)) return
 
     if (req.method === 'GET') {
       const orgId = readQuery(req, 'orgId')

@@ -2,12 +2,12 @@
 // GET /api/pipeline/backlog?orgId=...
 // Returns count of google_maps leads that have not yet been marked done (done_at IS NULL).
 // Intended to feed a dashboard without a UI for now — just a queryable number.
-import { db, readQuery, requireToken, sendJson } from './_lib.js'
+import { db, readQuery, requireAuth, sendJson } from './_lib.js'
 
 export default async function handler(req: any, res: any) {
   try {
     if (req.method !== 'GET') return sendJson(res, 405, { error: { code: 'method', message: 'GET only' } })
-    if (requireToken(req, res)) return
+    if (await requireAuth(req, res)) return
 
     const orgId = readQuery(req, 'orgId')
     if (!orgId) return sendJson(res, 400, { error: { code: 'invalid', message: 'orgId is required' } })

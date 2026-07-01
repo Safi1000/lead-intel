@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // GET /api/pipeline/config?orgId=...       — fetch org's pipeline config (returns defaults if not yet set)
 // PUT /api/pipeline/config                 — upsert { org_id, icp_rubric, quality_threshold, max_places_per_run, openai_model }
-import { db, readBody, readQuery, requireToken, sendJson } from './_lib.js'
+import { db, readBody, readQuery, requireAuth, sendJson } from './_lib.js'
 
 const DEFAULTS = {
   icp_rubric: '',
@@ -12,7 +12,7 @@ const DEFAULTS = {
 
 export default async function handler(req: any, res: any) {
   try {
-    if (requireToken(req, res)) return
+    if (await requireAuth(req, res)) return
 
     if (req.method === 'GET') {
       const orgId = readQuery(req, 'orgId')

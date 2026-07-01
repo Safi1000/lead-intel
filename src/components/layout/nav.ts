@@ -25,6 +25,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Book a meeting', to: '/bookings/new', icon: 'CalendarPlus', flag: 'bookings', perm: { resource: 'bookings', action: 'create' }, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
+  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', perm: { resource: 'pipeline', action: 'view' }, orgContext: true },
   { label: 'Users', to: '/users', icon: 'UserCog', perm: { resource: 'users', action: 'manage' }, orgContext: true },
   { label: 'Organizations', to: '/organizations', icon: 'Building2', roles: ['superadmin', 'admin'] },
 ]
