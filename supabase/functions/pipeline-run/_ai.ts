@@ -62,8 +62,8 @@ Our scanner reads raw HTML only and frequently MISSES online booking that is inj
 - Do NOT mark a site 'weak' when missing booking is the ONLY supposed issue. Require at least one OTHER corroborated problem (no mobile viewport, slow load, or dated design).
 - If booking is reported present, that is reliable — lean toward 'good'.
 
-CHAINS / MULTI-LOCATION (out of ICP):
-We sell to owner-operated clinics (1–3 locations) where the owner decides. If you see chain/franchise signals — 3+ locations, multi-city "Book at <city>" options, franchise or corporate language, an "our locations" nav, or a training school — set low_fit = true and cap quality_score at 4. Chains close slowly or route to committees.
+CHAINS / MULTI-LOCATION (HARD RULE — overrides the quality rubric):
+We sell ONLY to owner-operated clinics (1–3 locations) where the owner makes the buying decision. Read the "Chain / multi-location signals" line in the data below. If it is anything OTHER than "none detected", the business is a chain / multi-location and is OUT OF ICP: you MUST set low_fit = true and quality_score to 4 or lower — no matter how good the website, reviews, or rating are. A polished chain site is still a bad lead; do not score it above 4.
 
 SITE ISSUE NOTE (mandatory for weak websites):
 Write ONE crisp sentence a setter can use to open the call — reference the SPECIFIC corroborated problem (mobile, speed, or dated design). Do NOT lead with "no online booking" as the issue unless another problem confirms the site is weak.
@@ -152,6 +152,7 @@ Website load time: ${ws.loadTimeMs}ms
 Mobile viewport present: ${ws.hasMobileViewport ? 'YES' : 'NO'}
 Online booking widget detected: ${ws.hasBookingWidget ? `YES (${ws.bookingPlatform})` : 'NO'}
 Copyright year in HTML: ${ws.copyrightYear ?? 'not found'}
+Chain / multi-location signals: ${ws.chainSignals.length > 0 ? ws.chainSignals.join('; ') : 'none detected (looks single-site)'}
 Auto-detected issues:
 ${issues}`
   }
@@ -209,6 +210,15 @@ export async function scorePlace(
   // Clamp score to valid range (Structured Outputs enforces schema, not value ranges)
   score.quality_score = Math.max(1, Math.min(10, Math.round(score.quality_score)))
   score.low_fit = score.quality_score < qualityThreshold
+
+  // Deterministic chain cap. gpt-4o-mini treats the prompt's "cap at 4" as a soft suggestion
+  // and routinely scores polished chains 8–10, so we enforce the business rule in code: if the
+  // scraper found multi-location signals, this is out of ICP — hard-cap the score and mark low_fit.
+  const chainSignals = place.websiteSignals?.chainSignals ?? []
+  if (chainSignals.length > 0) {
+    score.quality_score = Math.min(score.quality_score, 4)
+    score.low_fit = true
+  }
 
   return { score, raw: data }
 }

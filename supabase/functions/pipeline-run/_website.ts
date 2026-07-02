@@ -23,6 +23,7 @@ export interface WebsiteResult {
   bookingPlatform: string | null
   copyrightYear: number | null
   detectedIssues: string[] // human-readable sentences, pasted into the AI prompt
+  chainSignals: string[] // multi-location / chain evidence, pasted into the AI prompt (empty = looks single-site)
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,60 @@ const BOOKING_PLATFORMS: Array<{ name: string; pattern: string }> = [
 // markup. Kept deliberately narrow (hyphenated slugs / path segments) so it does not fire on
 // prose like "book now" text or on facebook.com links.
 const BOOKING_LINK_RE = /(?:href|src|data-href)\s*=\s*["'][^"']*(?:\/book|book-|online-booking|\/appointment|-appointment|\/schedul|\/widget\/form|acuityscheduling|calendly\.com|book\.[a-z0-9-]+\.)[^"']*["']/i
+
+// ---------------------------------------------------------------------------
+// Chain / multi-location signals
+// Our ICP is owner-operated clinics (1–3 locations). Chains close slowly / route to
+// committees, so we down-rank them. These signals are extracted from raw HTML and passed
+// to the AI, which caps quality_score. Ground-truth run (2026-07-02) found chains (SkinSpirit,
+// Advanced Aesthetics) were scored high because the AI had no chain signal to act on.
+// ---------------------------------------------------------------------------
+const CHAIN_NAV_RE = /\b(?:our|all|other|more|view all) locations\b|\bchoose (?:a |your )?location\b|\bselect (?:a |your )?location\b|\ball (?:our )?(?:clinics|offices|studios)\b/i
+const FRANCHISE_RE = /\bfranchis(?:e|ing|es)\b/i
+// A training school/academy alongside the clinic signals a larger operation — matched either in
+// visible text or in a link (e.g. href=".../the-school-educational-courses/").
+const SCHOOL_RE = /\b(?:training school|aesthetics? (?:school|academy)|school of aesthetic|our academy|explore the school|education center)\b/i
+const SCHOOL_LINK_RE = /(?:href|src)\s*=\s*["'][^"']*(?:the-school|school-educational|educational-courses|aesthetics?-(?:school|academy)|\/academy\b)[^"']*["']/i
+// A link to a plural /locations directory (a chain lists its sites there; a single clinic uses a
+// singular "location"/"contact" page).
+const LOCATIONS_DIR_RE = /(?:href|src)\s*=\s*["'][^"']*\/locations\/?["']/i
+// Per-CITY booking CTAs: "Book at Seattle", "Book in Miami". The "at/in <City>" connector is
+// the precision guard — a single clinic has many "Book Now" / "Book <Treatment>" buttons but
+// never "Book at <City>". (These signals deterministically cap the score, so precision > recall.)
+const BOOK_CITY_G = /\bbook\s+(?:at|in)\s+([A-Z][a-z]{2,})/g
+const BOOK_STOPWORDS = new Set(['advance', 'person', 'store', 'minutes', 'seconds', 'time', 'the', 'your', 'our', 'a', 'an'])
+// Links to 2+ distinct /locations/<city> pages — the highest-precision chain signal (a
+// single-location clinic has at most one). Matches on raw HTML (hrefs live inside tags).
+const LOCATION_LINK_G = /(?:href|src)\s*=\s*["'][^"']*\/locations?\/([a-z0-9][a-z0-9-]{2,})[^"']*["']/gi
+
+function detectChainSignals(html: string, url: string): string[] {
+  const signals: string[] = []
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') // normalize whitespace so phrases split across tags still match
+  // The URL itself is a per-location sub-page of a multi-location brand, e.g. /locations/seattle-university-village
+  try {
+    if (/\/locations?\/[a-z0-9]/i.test(new URL(url).pathname)) signals.push('URL is a per-location page of a multi-location brand (/locations/<city>)')
+  } catch { /* ignore bad URL */ }
+  // Links to 2+ distinct /locations/<city> pages.
+  const locSlugs = new Set<string>()
+  for (const m of html.matchAll(LOCATION_LINK_G)) locSlugs.add(m[1].toLowerCase())
+  for (const generic of ['index', 'all', 'map', 'near-me', 'find']) locSlugs.delete(generic)
+  if (locSlugs.size >= 2) signals.push(`Links to ${locSlugs.size} location pages (/locations/<city>)`)
+  else if (LOCATIONS_DIR_RE.test(html)) signals.push('Links to a /locations directory (multi-location listing)')
+  if (CHAIN_NAV_RE.test(text)) signals.push('Multi-location navigation present ("our/all/select location")')
+  if (FRANCHISE_RE.test(text)) signals.push('Franchise language present')
+  if (SCHOOL_RE.test(text) || SCHOOL_LINK_RE.test(html)) signals.push('Runs a training school/academy (larger operation)')
+  // Per-city "Book at <City>" CTAs → the clinic books multiple locations separately.
+  const cities = new Set<string>()
+  for (const m of text.matchAll(BOOK_CITY_G)) {
+    const tok = m[1].toLowerCase()
+    if (!BOOK_STOPWORDS.has(tok)) cities.add(tok)
+  }
+  if (cities.size >= 2) signals.push(`Per-city booking CTAs (${cities.size} cities) — multi-location`)
+  // Corroborating only (never fires alone): many "location" mentions on the homepage.
+  const locCount = (text.match(/\blocations?\b/gi) ?? []).length
+  if (locCount >= 8 && signals.length > 0) signals.push(`"location" mentioned ${locCount}× on the homepage`)
+  return signals
+}
 
 // ---------------------------------------------------------------------------
 // Utility helpers
@@ -223,7 +278,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     email: null, emailSource: 'none', emailConfidence: 'none',
     reachable: false, loadTimeMs: 0,
     hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null,
-    copyrightYear: null, detectedIssues: [],
+    copyrightYear: null, detectedIssues: [], chainSignals: [],
   }
 
   if (!websiteUri) return noResult
@@ -246,7 +301,13 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     if (pagesChecked >= MAX_PAGES) break
     const { html, loadTimeMs } = await fetchPage(pageUrl)
     pagesChecked++
-    if (!html) continue
+    if (!html) {
+      // If the homepage itself is unreachable, the whole domain is down/blocked — don't burn
+      // more timeouts probing contact/about pages on the same dead host. Bounds a dead domain
+      // to a single timeout, which keeps a generous FETCH_TIMEOUT_MS safe for batch runs.
+      if (pagesChecked === 1) break
+      continue
+    }
 
     reachable = true
     if (pagesChecked === 1) {
@@ -276,10 +337,11 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     if (emailConfidence === 'high' && homepageHtml) break
   }
 
-  // Quality signals come from the homepage only
+  // Quality + chain signals come from the homepage only
   const qualitySignals = homepageHtml
     ? detectQualitySignals(homepageHtml, homepageLoadMs)
     : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [] }
+  const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
 
   return {
     email,
@@ -288,5 +350,6 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     reachable,
     loadTimeMs: homepageLoadMs,
     ...qualitySignals,
+    chainSignals,
   }
 }
