@@ -1,0 +1,615 @@
+- generic [active] [ref=f34e1]:
+  - link "Skip to content" [ref=f34e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f34e3]:
+    - banner [ref=f34e4]:
+      - generic [ref=f34e5]:
+        - generic [ref=f34e6]:
+          - link "July Specials Huge Savings Book Now" [ref=f34e10] [cursor=pointer]:
+            - /url: https://charettecosmetics.com/specials/
+            - generic [ref=f34e12]: July Specials Huge Savings Book Now
+          - link [ref=f34e13] [cursor=pointer]:
+            - /url: https://charettecosmetics.com/specials/
+        - generic [ref=f34e14]:
+          - link "Charette Cosmetics Logo" [ref=f34e18] [cursor=pointer]:
+            - /url: https://charettecosmetics.com
+            - img "Charette Cosmetics Logo" [ref=f34e19]
+          - navigation [ref=f34e24]:
+            - list [ref=f34e25]:
+              - listitem [ref=f34e26]:
+                - link "About Us" [ref=f34e27] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/about-us/
+              - listitem [ref=f34e28]:
+                - link "Before & After" [ref=f34e29] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/gallery/
+              - listitem [ref=f34e30]:
+                - link "Treatments " [ref=f34e32] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments
+                  - text: Treatments
+                  - generic [ref=f34e34]: 
+              - listitem [ref=f34e35]:
+                - link "Specials" [ref=f34e36] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/specials/
+              - listitem [ref=f34e37]:
+                - link "Membership" [ref=f34e38] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/membership/
+              - listitem [ref=f34e39]:
+                - link "Payment Plans" [ref=f34e40] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/financing/
+              - listitem [ref=f34e41]:
+                - link "Resources " [ref=f34e43] [cursor=pointer]:
+                  - /url: "#"
+                  - text: Resources
+                  - generic [ref=f34e45]: 
+              - listitem [ref=f34e46]:
+                - link "(877) 873-0515" [ref=f34e47] [cursor=pointer]:
+                  - /url: tel:877-873-0515
+              - listitem [ref=f34e48]:
+                - link "Shop Now" [ref=f34e49] [cursor=pointer]:
+                  - /url: https://charettecosmetics.shop/
+    - main [ref=f34e50]:
+      - generic [ref=f34e51]:
+        - generic [ref=f34e55]:
+          - generic [ref=f34e59]:
+            - heading "Transform your skin" [level=2] [ref=f34e73]
+            - 'heading "Miami''s Highest Rated #1 Premier Celebrity Medical Spa" [level=1] [ref=f34e76]':
+              - text: "Miami's Highest Rated #1 Premier"
+              - text: Celebrity Medical Spa
+            - link "Book Now" [ref=f34e80] [cursor=pointer]:
+              - /url: https://charettecosmetic.zenoti.com/webstoreNew/services
+              - generic [ref=f34e82]: Book Now
+            - link "Shop Now" [ref=f34e86] [cursor=pointer]:
+              - /url: https://charettecosmetics.shop/
+              - generic [ref=f34e88]: Shop Now
+          - generic [ref=f34e101]:
+            - link "Miami" [ref=f34e103] [cursor=pointer]:
+              - /url: https://www.google.com/maps/place/Charette+Cosmetics+Medical+Spa/@25.8134756,-80.1279414,15z/data=!4m6!3m5!1s0x88d9b31b860d59f9:0xde37609b210dd8de!8m2!3d25.8134756!4d-80.1279414!16s%2Fg%2F11l5ssq978?entry=ttu
+              - img [ref=f34e104]
+            - generic [ref=f34e107]:
+              - heading "Miami" [level=3] [ref=f34e108]:
+                - link "Miami" [ref=f34e109] [cursor=pointer]:
+                  - /url: https://www.google.com/maps/place/Charette+Cosmetics+Medical+Spa/@25.8134756,-80.1279414,15z/data=!4m6!3m5!1s0x88d9b31b860d59f9:0xde37609b210dd8de!8m2!3d25.8134756!4d-80.1279414!16s%2Fg%2F11l5ssq978?entry=ttu
+              - paragraph [ref=f34e110]:
+                - link "400 West 41st Street, Suite 201, Miami Beach, FL 33140" [ref=f34e111] [cursor=pointer]:
+                  - /url: https://www.google.com/maps/place/Charette+Cosmetics+Medical+Spa/@25.8134756,-80.1279414,15z/data=!4m6!3m5!1s0x88d9b31b860d59f9:0xde37609b210dd8de!8m2!3d25.8134756!4d-80.1279414!16s%2Fg%2F11l5ssq978?entry=ttu
+                  - text: 400 West 41st Street, Suite 201,
+                  - text: Miami Beach, FL 33140
+        - region "Image Carousel" [ref=f34e120]:
+          - generic [ref=f34e121]:
+            - group [ref=f34e122]:
+              - figure [ref=f34e123]:
+                - img [ref=f34e124]
+            - group [ref=f34e125]:
+              - figure [ref=f34e126]:
+                - img [ref=f34e127]
+            - group [ref=f34e128]:
+              - figure [ref=f34e129]:
+                - img [ref=f34e130]
+            - group [ref=f34e131]:
+              - figure [ref=f34e132]:
+                - img [ref=f34e133]
+            - group [ref=f34e134]:
+              - figure [ref=f34e135]:
+                - img [ref=f34e136]
+            - group [ref=f34e137]:
+              - figure [ref=f34e138]:
+                - img [ref=f34e139]
+            - group [ref=f34e140]:
+              - figure [ref=f34e141]:
+                - img [ref=f34e142]
+            - group [ref=f34e143]:
+              - figure [ref=f34e144]:
+                - img [ref=f34e145]
+            - group [ref=f34e146]:
+              - figure [ref=f34e147]:
+                - img [ref=f34e148]
+            - group [ref=f34e149]:
+              - figure [ref=f34e150]:
+                - img [ref=f34e151]
+            - group "2 / 9" [ref=f34e152]:
+              - figure [ref=f34e153]:
+                - img "bravo logo white" [ref=f34e154]
+            - group "3 / 9" [ref=f34e155]:
+              - figure [ref=f34e156]:
+                - img "byrdie_logo_white" [ref=f34e157]
+            - group "4 / 9" [ref=f34e158]:
+              - figure [ref=f34e159]:
+                - img "forbes-logo-black-and-white" [ref=f34e160]
+            - group "5 / 9" [ref=f34e161]:
+              - figure [ref=f34e162]:
+                - img "Medium - white" [ref=f34e163]
+            - group "6 / 9" [ref=f34e164]:
+              - figure [ref=f34e165]:
+                - img "SkinCareIinc white logo" [ref=f34e166]
+            - group "7 / 9" [ref=f34e167]:
+              - figure [ref=f34e168]:
+                - img "TheAmericanReport logo white" [ref=f34e169]
+            - group "8 / 9" [ref=f34e170]:
+              - figure [ref=f34e171]:
+                - img "Valient CEO - white logo" [ref=f34e172]
+            - group "9 / 9" [ref=f34e173]:
+              - figure [ref=f34e174]:
+                - img "Womens Health - white logo" [ref=f34e175]
+            - group "1 / 9" [ref=f34e176]:
+              - figure [ref=f34e177]:
+                - img "New You1" [ref=f34e178]
+            - group "2 / 9" [ref=f34e179]:
+              - figure [ref=f34e180]:
+                - img "bravo logo white" [ref=f34e181]
+            - group [ref=f34e182]:
+              - figure [ref=f34e183]:
+                - img [ref=f34e184]
+            - group [ref=f34e185]:
+              - figure [ref=f34e186]:
+                - img [ref=f34e187]
+            - group [ref=f34e188]:
+              - figure [ref=f34e189]:
+                - img [ref=f34e190]
+            - group [ref=f34e191]:
+              - figure [ref=f34e192]:
+                - img [ref=f34e193]
+            - group [ref=f34e194]:
+              - figure [ref=f34e195]:
+                - img [ref=f34e196]
+            - group [ref=f34e197]:
+              - figure [ref=f34e198]:
+                - img [ref=f34e199]
+            - group [ref=f34e200]:
+              - figure [ref=f34e201]:
+                - img [ref=f34e202]
+        - generic [ref=f34e204]:
+          - generic [ref=f34e206]:
+            - heading "Our Approach" [level=2] [ref=f34e209]
+            - generic [ref=f34e215]: Charette Cosmetics Medical Spas feature the most scientifically advanced beauty, anti-aging, and skin treatments to address every concern while enhancing your self-confidence and commitment to self-care.
+            - generic [ref=f34e217]:
+              - paragraph [ref=f34e218]: We offer various popular aesthetic services ranging from fillers and injectables to chemical peels, lasers, microneedling, customized facials, body contouring, and more.
+              - paragraph [ref=f34e219]: Charette Cosmetics has your skincare needs covered head to toe. We strongly believe in the benefit of customizing aesthetic treatments since each client’s skin care needs are different. Tailoring our treatments to your precise needs allows for the best results possible.
+              - paragraph [ref=f34e220]: At the helm of Charette Cosmetics is Paul Charette, a master medical aesthetician, and cosmetic practitioner. Paul’s extensive aesthetic education, unparalleled techniques, and attention to detail are evident in every aspect of Charette Cosmetics. A skin rejuvenation expert dedicated to finding the most advanced and effective skincare products and protocols, Paul is passionate about helping his clients achieve their goals so they feel confident and beautiful in their skin.
+            - link "Schedule Consultation" [ref=f34e224] [cursor=pointer]:
+              - /url: "#schedule-consultation"
+              - generic [ref=f34e226]: Schedule Consultation
+          - img "Pauls-Favorite-Headshot-5" [ref=f34e231]
+        - generic [ref=f34e233]:
+          - img "Logo - Black" [ref=f34e238]
+          - generic [ref=f34e242]:
+            - generic [ref=f34e244]:
+              - generic [ref=f34e249]:
+                - generic [ref=f34e250]: Google
+                - generic [ref=f34e251]: 
+              - heading "1,480" [level=2] [ref=f34e254]
+              - heading "Google Reviews" [level=2] [ref=f34e261]
+            - generic [ref=f34e263]:
+              - generic [ref=f34e268]:
+                - generic [ref=f34e269]: Instagram
+                - generic [ref=f34e270]: 
+              - heading "474K" [level=2] [ref=f34e273]
+              - heading "@Porestar" [level=2] [ref=f34e280]:
+                - link "@Porestar" [ref=f34e281] [cursor=pointer]:
+                  - /url: https://www.instagram.com/porestar/
+            - generic [ref=f34e283]:
+              - generic [ref=f34e288]:
+                - generic [ref=f34e289]: Instagram
+                - generic [ref=f34e290]: 
+              - heading "173.9K" [level=2] [ref=f34e293]
+              - heading "@CharetteCosmetics" [level=2] [ref=f34e300]:
+                - link "@CharetteCosmetics" [ref=f34e301] [cursor=pointer]:
+                  - /url: https://www.instagram.com/charettecosmetics/
+            - generic [ref=f34e303]:
+              - generic [ref=f34e308]:
+                - generic [ref=f34e309]: Tiktok
+                - generic [ref=f34e310]: 
+              - heading "16.4K" [level=2] [ref=f34e313]
+              - heading "@CharetteCosmetics" [level=2] [ref=f34e320]:
+                - link "@CharetteCosmetics" [ref=f34e321] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@charettecosmetics
+        - generic [ref=f34e326]:
+          - heading "Treatments" [level=2] [ref=f34e329]
+          - generic [ref=f34e335]:
+            - generic [ref=f34e340]:
+              - heading "LASERS" [level=3] [ref=f34e344]
+              - generic [ref=f34e348]:
+                - link "Carbon Laser Treatment" [ref=f34e349] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-carbon-laser-facial/
+                - link "Celebrity Laser Facial" [ref=f34e350] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-celebrity-laser-facial/
+                - link "CO2 Laser Skin Resurfacing" [ref=f34e351] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-co2-laser-skin-resurfacing/
+                - link "IPL Laser Facial" [ref=f34e352] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-ipl-laser-facial/
+                - link "Laser Hair Removal" [ref=f34e353] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-laser-hair-removal/
+                - link "Laser Tattoo Removal" [ref=f34e354] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-laser-tattoo-removal/
+                - link "Pico Laser" [ref=f34e355] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-pico-laser/
+            - generic [ref=f34e360]:
+              - heading "Skin Treatments" [level=3] [ref=f34e364]
+              - generic [ref=f34e368]:
+                - link "Dermaplaning" [ref=f34e369] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-dermaplaning/
+                - link "DiamondGlow Facial" [ref=f34e370] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-diamondglow-facial/
+                - link "Liquid Gold Cocktail (Mesotherapy)" [ref=f34e371] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-liquid-gold-cocktail-mesotherapy/
+                - link "SkinPen Microneedling" [ref=f34e372] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-skinpen-microneedling/
+                - link "Morpheus8" [ref=f34e373] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-morpheus8-rf-microneedling/
+                - link "Morpheus8 Face" [ref=f34e374] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-morpheus8-face/
+                - link "RF Microneedling" [ref=f34e375] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-rf-microneedling/
+                - link "Platelet Rich Plasma (PRP)" [ref=f34e376] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-platelet-rich-plasma-prp/
+                - link "Self-Care Facial" [ref=f34e377] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-self-care-facial/
+                - link "Skinwave Facial" [ref=f34e378] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-skinwave-facial/
+            - generic [ref=f34e383]:
+              - heading "CHEMICAL PEELS" [level=3] [ref=f34e387]
+              - generic [ref=f34e391]:
+                - link "Chemical Peel Level I" [ref=f34e392] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-chemical-peel-level-1/
+                - link "Chemical Peel Level II" [ref=f34e393] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-chemical-peel-level-ii-melanx/
+                - link "Body Peel" [ref=f34e394] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-body-chemical-peel/
+                - link "Lip Chemical Peels" [ref=f34e395] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-lip-chemical-peels/
+                - link "Peach Peel" [ref=f34e396] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-peach-peel/
+                - link "Private Peel" [ref=f34e397] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-private-peel/
+            - generic [ref=f34e402]:
+              - heading "Body" [level=3] [ref=f34e406]
+              - generic [ref=f34e410]:
+                - link "Mole Removal" [ref=f34e411] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-mole-removal/
+                - link "Morpheus8 Body" [ref=f34e412] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-morpheus8-body/
+                - link "P-Shot" [ref=f34e413] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-priapus-p-shot/
+                - link "Penis Enlargement" [ref=f34e414] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-penis-enlargement/
+                - link "Physiq Body Sculpting" [ref=f34e415] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-physiq-body-sculpting/
+                - link "Plasma Pen" [ref=f34e416] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-plasma-pen/
+                - link "Weight Loss Program" [ref=f34e417] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-semaglutide-tirzepatide-medical-weight-loss-injections/
+                - link "Vaginal Rejuvenation" [ref=f34e418] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-vaginal-rejuvenation/
+                - link "Venus Graft 2.0 Hair Transplant" [ref=f34e419] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-hair-transplant/
+                - link "Vitamin Shots Treatment" [ref=f34e420] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-vitamin-c-b12-glutathione-shots/
+            - generic [ref=f34e425]:
+              - heading "Injectables" [level=3] [ref=f34e429]
+              - generic [ref=f34e433]:
+                - link "Botox" [ref=f34e434] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-botox/
+                - link "Dermal Fillers" [ref=f34e435] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-dermal-injectable-fillers/
+                - link "Instant BBL" [ref=f34e436] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-instant-bbl/
+                - link "Kybella" [ref=f34e437] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/maimi-fl-kybella-injections/
+                - link "PRF Injections" [ref=f34e438] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-prf-injections/
+                - link "PRP Hair Restoration" [ref=f34e439] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/miami-fl-prp-hair-treatment/
+                - link "Salmon DNA Injections" [ref=f34e440] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/salmon-dna-injections-miami/
+        - generic [ref=f34e444]:
+          - heading "Real Results" [level=2] [ref=f34e447]
+          - paragraph [ref=f34e450]: Healthy skin inspires confidence and radiates a natural, beautiful, youthful glow.
+          - paragraph [ref=f34e457]: Our skin goes through a myriad of changes. But when a clear, glowy, youthful complexion is your goal, the team at Charette Cosmetics can help you obtain the results you want. Healthy skin is more than skin deep; a well-rounded approach to self-care and overall health is key to good results.
+          - generic [ref=f34e459]:
+            - heading "Explore Our Stunning Transformations" [level=4] [ref=f34e460]
+            - heading "Before & After" [level=3] [ref=f34e461]
+          - region "Slides" [ref=f34e465]:
+            - generic [ref=f34e466]:
+              - group "8 / 11" [ref=f34e467]:
+                - img "4" [ref=f34e468]
+              - group "9 / 11" [ref=f34e469]:
+                - img "3" [ref=f34e470]
+              - group "10 / 11" [ref=f34e471]:
+                - img "2" [ref=f34e472]
+              - group "11 / 11" [ref=f34e473]:
+                - img "1" [ref=f34e474]
+              - group "1 / 11" [ref=f34e475]:
+                - img "12" [ref=f34e476]
+              - group "2 / 11" [ref=f34e477]:
+                - img "11" [ref=f34e478]
+              - group "3 / 11" [ref=f34e479]:
+                - img "10" [ref=f34e480]
+              - group "4 / 11" [ref=f34e481]:
+                - img "9" [ref=f34e482]
+              - group "5 / 11" [ref=f34e483]:
+                - img "7" [ref=f34e484]
+              - group "6 / 11" [ref=f34e485]:
+                - img "6" [ref=f34e486]
+              - group "7 / 11" [ref=f34e487]:
+                - img "5" [ref=f34e488]
+              - group "8 / 11" [ref=f34e489]:
+                - img "4" [ref=f34e490]
+              - group "9 / 11" [ref=f34e491]:
+                - img "3" [ref=f34e492]
+              - group "10 / 11" [ref=f34e493]:
+                - img "2" [ref=f34e494]
+              - group "11 / 11" [ref=f34e495]:
+                - img "1" [ref=f34e496]
+              - group "1 / 11" [ref=f34e497]:
+                - img "12" [ref=f34e498]
+              - group "2 / 11" [ref=f34e499]:
+                - img "11" [ref=f34e500]
+              - group "3 / 11" [ref=f34e501]:
+                - img "10" [ref=f34e502]
+              - group "4 / 11" [ref=f34e503]:
+                - img "9" [ref=f34e504]
+            - button "Previous slide" [ref=f34e505] [cursor=pointer]:
+              - generic [ref=f34e506]: 
+            - button "Next slide" [ref=f34e507] [cursor=pointer]:
+              - generic [ref=f34e508]: 
+            - generic [ref=f34e509]:
+              - button "Go to slide 1" [ref=f34e510] [cursor=pointer]
+              - button "Go to slide 2" [ref=f34e511] [cursor=pointer]
+              - button "Go to slide 3" [ref=f34e512] [cursor=pointer]
+              - button "Go to slide 4" [ref=f34e513] [cursor=pointer]
+              - button "Go to slide 5" [ref=f34e514] [cursor=pointer]
+              - button "Go to slide 6" [ref=f34e515] [cursor=pointer]
+              - button "Go to slide 7" [ref=f34e516] [cursor=pointer]
+              - button "Go to slide 8" [ref=f34e517] [cursor=pointer]
+              - button "Go to slide 9" [ref=f34e518] [cursor=pointer]
+              - button "Go to slide 10" [ref=f34e519] [cursor=pointer]
+              - button "Go to slide 11" [ref=f34e520] [cursor=pointer]
+          - link "Schedule Consultation" [ref=f34e524] [cursor=pointer]:
+            - /url: "#schedule-consultation"
+            - generic [ref=f34e526]: Schedule Consultation
+        - generic [ref=f34e541]:
+          - generic [ref=f34e543]:
+            - img "Charette Cosmetics Logo" [ref=f34e547]
+            - heading "Services & Pricing Guide" [level=2] [ref=f34e550]
+            - paragraph [ref=f34e553]: Download our exclusive Charette Cosmetics Services & Pricing Guide and learn more about our service menu and treatment costs.
+            - link "Download Our Guide" [ref=f34e557] [cursor=pointer]:
+              - /url: https://charettecosmetics.com/ebooks/charette-cosmetics-services-guide/
+              - generic [ref=f34e559]: Download Our Guide
+          - generic [ref=f34e561]:
+            - img "logo_icon_wht.png" [ref=f34e564]
+            - img "Group-1" [ref=f34e567]
+        - generic [ref=f34e573]:
+          - iframe [ref=f34e579]:
+            
+          - generic [ref=f34e581]:
+            - heading "Complimentary valet parking" [level=4] [ref=f34e584]
+            - heading "Visit Miami's Premiere Celebrity Medical Spa" [level=2] [ref=f34e587]
+            - paragraph [ref=f34e594]: Indulge in a transformative journey at Miami's leading medical spa. Discover results-oriented treatments designed to unlock your inner glow and rejuvenate your skin.
+            - heading "Address" [level=2] [ref=f34e597]
+            - link "400 West 41st Street, Suite 201 Miami Beach, FL 33140" [ref=f34e600] [cursor=pointer]:
+              - /url: https://maps.app.goo.gl/1ttbZuJkapRyA4jq6
+            - heading "Email" [level=2] [ref=f34e603]
+            - paragraph [ref=f34e606]:
+              - link "customerservice@charettecosmetics.com" [ref=f34e607] [cursor=pointer]:
+                - /url: mailto:customerservice@charettecosmetics.com
+            - heading "Phone" [level=2] [ref=f34e610]
+            - paragraph [ref=f34e613]:
+              - link "(877) 873-0515" [ref=f34e614] [cursor=pointer]:
+                - /url: tel:(877) 873-0515
+            - link "Book Now" [ref=f34e618] [cursor=pointer]:
+              - /url: https://charettecosmetic.zenoti.com/webstoreNew/services/402e16f2-d324-4fcd-b78f-bbda73cb9e31
+              - generic [ref=f34e620]: Book Now
+        - generic [ref=f34e630]:
+          - heading "Schedule Consultation" [level=2] [ref=f34e633]
+          - generic [ref=f34e636]: We are here to help, feel free to contact us!
+          - text:    
+    - contentinfo [ref=f34e637]:
+      - generic [ref=f34e643]:
+        - link "Charette Cosmetics Logo" [ref=f34e648] [cursor=pointer]:
+          - /url: https://charettecosmetics.com
+          - img "Charette Cosmetics Logo" [ref=f34e649]
+        - generic [ref=f34e651]:
+          - heading "Visit Our Shop" [level=5] [ref=f34e654]
+          - paragraph [ref=f34e657]:
+            - link "Charette Cosmetics" [ref=f34e658] [cursor=pointer]:
+              - /url: https://charettecosmetics.shop/
+            - link "Resellers / Wholesalers" [ref=f34e659] [cursor=pointer]:
+              - /url: https://charettecosmetics.com/reseller/
+          - heading "Follow Us" [level=5] [ref=f34e662]
+          - list [ref=f34e665]:
+            - listitem [ref=f34e666]:
+              - link "Facebook" [ref=f34e667] [cursor=pointer]:
+                - /url: https://www.facebook.com/CharetteCosmetics
+                - generic [ref=f34e668]: Facebook
+                - generic [ref=f34e669]: 
+            - listitem [ref=f34e670]:
+              - link "Instagram" [ref=f34e671] [cursor=pointer]:
+                - /url: https://www.instagram.com/charettecosmetics/
+                - generic [ref=f34e672]: Instagram
+                - generic [ref=f34e673]: 
+            - listitem [ref=f34e674]:
+              - link "Youtube" [ref=f34e675] [cursor=pointer]:
+                - /url: https://www.youtube.com/@CharetteCosmetics
+                - generic [ref=f34e676]: Youtube
+                - generic [ref=f34e677]: 
+            - listitem [ref=f34e678]:
+              - link "X-twitter" [ref=f34e679] [cursor=pointer]:
+                - /url: https://x.com/pore_star
+                - generic [ref=f34e680]: X-twitter
+                - generic [ref=f34e681]: 
+            - listitem [ref=f34e682]:
+              - link "Tiktok" [ref=f34e683] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@charettecosmetics
+                - generic [ref=f34e684]: Tiktok
+                - generic [ref=f34e685]: 
+        - generic [ref=f34e687]:
+          - heading "Our Locations" [level=5] [ref=f34e690]
+          - list [ref=f34e693]:
+            - listitem [ref=f34e694]:
+              - link "Charette Cosmetics – Atlanta" [ref=f34e695] [cursor=pointer]:
+                - /url: https://charettecosmetics.com/atlanta/
+            - listitem [ref=f34e696]:
+              - link "Charette Cosmetics – Dallas" [ref=f34e697] [cursor=pointer]:
+                - /url: https://charettecosmetics.com/dallas/
+            - listitem [ref=f34e698]:
+              - link "Charette Cosmetics – Miami" [ref=f34e699] [cursor=pointer]:
+                - /url: https://charettecosmetics.com/miami/
+        - generic [ref=f34e701]:
+          - heading "Contact Us" [level=5] [ref=f34e704]
+          - generic [ref=f34e707]:
+            - link "(877) 873-0515" [ref=f34e709] [cursor=pointer]:
+              - /url: tel:8778730515
+            - link "customerservice@charettecosmetics.com" [ref=f34e711] [cursor=pointer]:
+              - /url: mailto:customerservice@charettecosmetics.com
+            - generic [ref=f34e712]: 201 Allen Rd NE Suite 302 Atlanta, GA 30328
+            - generic [ref=f34e713]: 5445 La Sierra Dr, Suite 425, Dallas, TX 75231
+            - generic [ref=f34e714]: 400 West 41st Street, Suite 201 Miami Beach, FL 33140
+      - text:    
+      - generic [ref=f34e720]:
+        - generic [ref=f34e722]:
+          - heading "Lasers" [level=5] [ref=f34e725]
+          - navigation "Menu" [ref=f34e728]:
+            - list [ref=f34e729]:
+              - listitem [ref=f34e730]:
+                - link "Carbon Laser Facial" [ref=f34e731] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/carbon-laser-facial/
+              - listitem [ref=f34e732]:
+                - link "Celebrity Laser Treatment" [ref=f34e733] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/celebrity-laser-treatment/
+              - listitem [ref=f34e734]:
+                - link "CO2 Laser Skin Resurfacing" [ref=f34e735] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/co2-laser-skin-resurfacing/
+              - listitem [ref=f34e736]:
+                - link "IPL Laser Facial" [ref=f34e737] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/ipl-laser-facial/
+              - listitem [ref=f34e738]:
+                - link "Laser Hair Removal" [ref=f34e739] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/laser-hair-removal/
+              - listitem [ref=f34e740]:
+                - link "Laser Tattoo Removal" [ref=f34e741] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/laser-tattoo-removal/
+              - listitem [ref=f34e742]:
+                - link "Pico Laser" [ref=f34e743] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/pico-laser/
+        - generic [ref=f34e745]:
+          - heading "Skin Treatments" [level=5] [ref=f34e748]
+          - navigation "Menu" [ref=f34e751]:
+            - list [ref=f34e752]:
+              - listitem [ref=f34e753]:
+                - link "Dermaplaning" [ref=f34e754] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/dermaplaning/
+              - listitem [ref=f34e755]:
+                - link "DiamondGlow Facial" [ref=f34e756] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/diamondglow-facial/
+              - listitem [ref=f34e757]:
+                - link "Liquid Gold Cocktail (Mesotherapy)" [ref=f34e758] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/liquid-gold-cocktail-mesotherapy/
+              - listitem [ref=f34e759]:
+                - link "SkinPen Microneedling" [ref=f34e760] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/skinpen-microneedling/
+              - listitem [ref=f34e761]:
+                - link "Morpheus8 RF Microneedling" [ref=f34e762] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/morpheus8/
+              - listitem [ref=f34e763]:
+                - link "Platelet Rich Plasma (PRP) Injections" [ref=f34e764] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/platelet-rich-plasma-prp/
+              - listitem [ref=f34e765]:
+                - link "RF Microneedling" [ref=f34e766] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/rf-microneedling/
+              - listitem [ref=f34e767]:
+                - link "Salmon DNA Treament" [ref=f34e768] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/salmon-dna-injections/
+              - listitem [ref=f34e769]:
+                - link "Self-Care Facials" [ref=f34e770] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/self-care-facial/
+              - listitem [ref=f34e771]:
+                - link "Skinwave Facial" [ref=f34e772] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/skinwave-facial/
+        - generic [ref=f34e774]:
+          - heading "Chemical Peels" [level=5] [ref=f34e777]
+          - navigation "Menu" [ref=f34e780]:
+            - list [ref=f34e781]:
+              - listitem [ref=f34e782]:
+                - link "Chemical Peel Level I" [ref=f34e783] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/chemical-peels/
+              - listitem [ref=f34e784]:
+                - link "Chemical Peel Level II (MelanX)" [ref=f34e785] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/chemical-peel-melanx/
+              - listitem [ref=f34e786]:
+                - link "Body Chemical Peel" [ref=f34e787] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/body-peel/
+              - listitem [ref=f34e788]:
+                - link "Lip Chemical Peels" [ref=f34e789] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/lip-chemical-peels/
+              - listitem [ref=f34e790]:
+                - link "Peach Peel" [ref=f34e791] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/peach-peel/
+              - listitem [ref=f34e792]:
+                - link "Private Peel" [ref=f34e793] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/private-peel/
+        - generic [ref=f34e795]:
+          - heading "Body" [level=5] [ref=f34e798]
+          - navigation "Menu" [ref=f34e801]:
+            - list [ref=f34e802]:
+              - listitem [ref=f34e803]:
+                - link "Hair Transplant" [ref=f34e804] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/venus-concept-neograft-2-0-hair-transplant/
+              - listitem [ref=f34e805]:
+                - link "Mole Removal" [ref=f34e806] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/mole-removal/
+              - listitem [ref=f34e807]:
+                - link "Morpheus8 Body RF Microneedling" [ref=f34e808] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/morpheus8-body/
+              - listitem [ref=f34e809]:
+                - link "(Priapus) P-Shot" [ref=f34e810] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/p-shot/
+              - listitem [ref=f34e811]:
+                - link "Penis Enlargement" [ref=f34e812] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/penis-enlargement/
+              - listitem [ref=f34e813]:
+                - link "Physiq Body Sculpting" [ref=f34e814] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/physiq-body-sculpting/
+              - listitem [ref=f34e815]:
+                - link "Plasma Pen" [ref=f34e816] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/plasma-pen/
+              - listitem [ref=f34e817]:
+                - link "Weight Loss Program" [ref=f34e818] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/semaglutide-tirzepatide-weight-loss-injections/
+              - listitem [ref=f34e819]:
+                - link "Vaginal Rejuvenation" [ref=f34e820] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/vaginal-rejuvenation/
+              - listitem [ref=f34e821]:
+                - link "Vitamin C, B12, & Glutathione Shots" [ref=f34e822] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/vitamin-shots-treatment/
+        - generic [ref=f34e824]:
+          - heading "Injectables" [level=5] [ref=f34e827]
+          - navigation "Menu" [ref=f34e830]:
+            - list [ref=f34e831]:
+              - listitem [ref=f34e832]:
+                - link "BOTOX® Cosmetic Injections" [ref=f34e833] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/botox/
+              - listitem [ref=f34e834]:
+                - link "Dermal & Injectable Fillers" [ref=f34e835] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/dermal-fillers/
+              - listitem [ref=f34e836]:
+                - link "Instant and Liquid BBL" [ref=f34e837] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/instant-bbl/
+              - listitem [ref=f34e838]:
+                - link "Kybella Injections" [ref=f34e839] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/kybella/
+              - listitem [ref=f34e840]:
+                - link "PRF Injections" [ref=f34e841] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/prf-injections/
+              - listitem [ref=f34e842]:
+                - link "PRP Hair Treatment" [ref=f34e843] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/prp-hair-restoration/
+              - listitem [ref=f34e844]:
+                - link "Salmon DNA Injections" [ref=f34e845] [cursor=pointer]:
+                  - /url: https://charettecosmetics.com/treatments/salmon-dna-injections/
+      - heading "Sitemap" [level=2] [ref=f34e850]:
+        - link "Sitemap" [ref=f34e851] [cursor=pointer]:
+          - /url: https://charettecosmetics.com/site-map/
+      - generic [ref=f34e859]:
+        - generic [ref=f34e861]: © 2026 Charette Cosmetics. All Rights Reserved.
+        - link "Company Policies" [ref=f34e864] [cursor=pointer]:
+          - /url: https://charettecosmetics.com/company-policies/
+  - generic [ref=f34e865]: desktop

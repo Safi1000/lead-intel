@@ -1,0 +1,620 @@
+- generic [active] [ref=f89e1]:
+  - generic [ref=f89e2]:
+    - link "June Specials are here Save up to $950 on glow, lips & body — book before June 30" [ref=f89e3] [cursor=pointer]:
+      - /url: /specials/
+      - text: June Specials are here ·
+      - generic [ref=f89e4]: Save up to $950 on glow, lips & body — book before June 30 →
+    - button "Dismiss banner" [ref=f89e5] [cursor=pointer]: ×
+  - banner [ref=f89e6]:
+    - generic [ref=f89e7]:
+      - link "Miami Skin Spa home" [ref=f89e8] [cursor=pointer]:
+        - /url: /
+        - text: Miami
+        - emphasis [ref=f89e9]: Skin Spa.
+      - navigation "Main navigation" [ref=f89e10]:
+        - link "Services" [ref=f89e12] [cursor=pointer]:
+          - /url: /services/
+          - text: Services
+          - img [ref=f89e13]
+        - link "Concerns" [ref=f89e15] [cursor=pointer]:
+          - /url: /concerns/
+        - link "Results" [ref=f89e16] [cursor=pointer]:
+          - /url: /results/
+        - link "Resources" [ref=f89e18] [cursor=pointer]:
+          - /url: /pricing/
+          - text: Resources
+          - img [ref=f89e19]
+      - generic [ref=f89e21]:
+        - link "305-557-1615" [ref=f89e22] [cursor=pointer]:
+          - /url: tel:+13055571615
+        - button "Book a Consultation" [ref=f89e23] [cursor=pointer]
+  - main [ref=f89e24]:
+    - generic [ref=f89e25]:
+      - img "Miami Skin Spa — med spa in Brickell, Downtown Miami" [ref=f89e27]
+      - generic [ref=f89e30]:
+        - generic [ref=f89e31]: Brickell, Miami · Medical Aesthetics · Since 2019
+        - heading "The Miami med spa built around you." [level=1] [ref=f89e32]:
+          - text: The Miami med spa built around
+          - emphasis [ref=f89e33]: you.
+        - paragraph [ref=f89e34]: Every visit starts with one person — you. Injectables, Morpheus8, HydraFacial, lasers, and body contouring from licensed providers at our med spa in Brickell, Miami — trusted by 10,000+ patients, 4.9 stars, since 2019.
+        - generic [ref=f89e35]:
+          - button "Book a Consultation" [ref=f89e36] [cursor=pointer]
+          - link "Explore treatments" [ref=f89e37] [cursor=pointer]:
+            - /url: /services/
+      - generic [ref=f89e39]:
+        - generic [ref=f89e40]:
+          - generic [ref=f89e41]: 01 / FACE & SKIN
+          - generic [ref=f89e42]: Morpheus8 · IPL · HydraFacial
+        - generic [ref=f89e43]:
+          - generic [ref=f89e44]: 02 / INJECTABLES
+          - generic [ref=f89e45]: Wrinkle relaxers · Fillers
+        - generic [ref=f89e46]:
+          - generic [ref=f89e47]: 03 / BODY
+          - generic [ref=f89e48]: Emsculpt Neo · TruSculpt
+        - generic [ref=f89e49]:
+          - generic [ref=f89e50]: 04 / WELLNESS
+          - generic [ref=f89e51]: Weight loss · IV therapy
+    - generic [ref=f89e52]:
+      - generic [ref=f89e53]:
+        - generic [ref=f89e54]: As featured in
+        - emphasis [ref=f89e56]: Brickell Magazine
+        - emphasis [ref=f89e58]: Allure 2024
+        - emphasis [ref=f89e60]: Miami Living
+        - generic [ref=f89e61]: 4.9 ★ Google
+      - generic [ref=f89e62]:
+        - generic [ref=f89e63]: Popular treatments
+        - link "Morpheus8" [ref=f89e64] [cursor=pointer]:
+          - /url: /services/morpheus8/
+        - link "HydraFacial" [ref=f89e65] [cursor=pointer]:
+          - /url: /services/hydrafacials/
+        - link "Wrinkle relaxers" [ref=f89e66] [cursor=pointer]:
+          - /url: /services/wrinkle-relaxers/
+        - link "Dermal fillers" [ref=f89e67] [cursor=pointer]:
+          - /url: /services/dermal-fillers/
+        - link "Emsculpt Neo" [ref=f89e68] [cursor=pointer]:
+          - /url: /services/emsculpt-neo/
+        - link "Tattoo removal" [ref=f89e69] [cursor=pointer]:
+          - /url: /services/tattoo-removal/
+        - link "Medical weight loss" [ref=f89e70] [cursor=pointer]:
+          - /url: /services/medical-weight-loss/
+    - generic [ref=f89e72]:
+      - generic [ref=f89e73]:
+        - generic [ref=f89e74]:
+          - generic [ref=f89e75]: 01 / 05 — OUR SPECIALTIES
+          - heading "Medical aesthetics, skin treatments, and body care in one Brickell med spa." [level=2] [ref=f89e76]:
+            - text: Medical aesthetics, skin treatments, and body care in
+            - emphasis [ref=f89e77]: one Brickell med spa.
+        - generic [ref=f89e78]:
+          - paragraph [ref=f89e79]: You do not need to know exactly which treatment to book. During your consultation, we look at your skin, facial balance, body goals, and timeline before recommending options.
+          - paragraph [ref=f89e80]: Some patients need one treatment. Others get better results by combining treatments, such as improving skin quality before injectables or pairing body contouring with wellness support.
+      - generic [ref=f89e81]:
+        - article [ref=f89e82]:
+          - link "F·01 Face and skin health treatments at Miami Skin Spa Face & Skin Health Better skin starts with understanding what is causing the change. Facials, HydraFacial, peels, lasers, SkinPen, and Morpheus8 for texture, tone, pigment, acne scars, and skin laxity." [ref=f89e83] [cursor=pointer]:
+            - /url: /services/
+            - generic [ref=f89e84]:
+              - generic [ref=f89e85]: F·01
+              - img "Face and skin health treatments at Miami Skin Spa" [ref=f89e86]
+            - heading "Face & Skin Health" [level=3] [ref=f89e87]:
+              - text: Face &
+              - emphasis [ref=f89e88]: Skin Health
+            - paragraph [ref=f89e89]: Better skin starts with understanding what is causing the change. Facials, HydraFacial, peels, lasers, SkinPen, and Morpheus8 for texture, tone, pigment, acne scars, and skin laxity.
+          - generic [ref=f89e90]:
+            - generic [ref=f89e91]: 11 treatments
+            - generic [ref=f89e92]: From $250
+          - group [ref=f89e93]:
+            - generic "Treatments 6 +" [ref=f89e94] [cursor=pointer]:
+              - generic [ref=f89e95]: Treatments
+              - generic [ref=f89e96]: 6 +
+        - article [ref=f89e97]:
+          - link "I·02 Injectable treatments at Miami Skin Spa Injectables Soft, balanced changes — never overdone. Wrinkle relaxers, dermal fillers, Sculptra, and SkinVive placed with restraint by licensed medical providers." [ref=f89e98] [cursor=pointer]:
+            - /url: /services/
+            - generic [ref=f89e99]:
+              - generic [ref=f89e100]: I·02
+              - img "Injectable treatments at Miami Skin Spa" [ref=f89e101]
+            - heading "Injectables" [level=3] [ref=f89e102]:
+              - emphasis [ref=f89e103]: Injectables
+            - paragraph [ref=f89e104]: Soft, balanced changes — never overdone. Wrinkle relaxers, dermal fillers, Sculptra, and SkinVive placed with restraint by licensed medical providers.
+          - generic [ref=f89e105]:
+            - generic [ref=f89e106]: Facial smoothing neurotoxin · Filler
+            - generic [ref=f89e107]: From $14/unit
+          - group [ref=f89e108]:
+            - generic "Treatments 4 +" [ref=f89e109] [cursor=pointer]:
+              - generic [ref=f89e110]: Treatments
+              - generic [ref=f89e111]: 4 +
+        - article [ref=f89e112]:
+          - link "B·03 Body Sculpting Non-surgical contouring for shape, tone, and skin quality. Emsculpt Neo, TruSculpt, Morpheus8 Body, cellulite treatments, and laser services matched to your goals." [ref=f89e113] [cursor=pointer]:
+            - /url: /services/
+            - generic [ref=f89e115]: B·03
+            - heading "Body Sculpting" [level=3] [ref=f89e117]:
+              - text: Body
+              - emphasis [ref=f89e118]: Sculpting
+            - paragraph [ref=f89e119]: Non-surgical contouring for shape, tone, and skin quality. Emsculpt Neo, TruSculpt, Morpheus8 Body, cellulite treatments, and laser services matched to your goals.
+          - generic [ref=f89e120]:
+            - generic [ref=f89e121]: 3 devices
+            - generic [ref=f89e122]: From $650
+          - group [ref=f89e123]:
+            - generic "Treatments 7 +" [ref=f89e124] [cursor=pointer]:
+              - generic [ref=f89e125]: Treatments
+              - generic [ref=f89e126]: 7 +
+    - generic [ref=f89e128]:
+      - generic [ref=f89e129]:
+        - generic [ref=f89e130]:
+          - generic [ref=f89e131]: 02 / 05 — EVERY CONCERN
+          - heading "Find the right treatment for your concern." [level=2] [ref=f89e132]:
+            - text: Find the right treatment for your
+            - emphasis [ref=f89e133]: concern.
+        - paragraph [ref=f89e134]: Start with what you want to improve — acne scars, dark spots, loose skin, fine lines, stubborn fat, or changes in how your face or body feels. From there, our team can help match you with the right treatment or combination of treatments.
+      - generic [ref=f89e135]:
+        - link "01 Acne, scars & texture SkinPen VI Peels Pico Genesis HydraFacial For breakouts, post-acne marks, enlarged pores, rough texture, and scarring. →" [ref=f89e136] [cursor=pointer]:
+          - /url: /concerns/acne-scars/
+          - generic [ref=f89e137]: "01"
+          - generic [ref=f89e138]:
+            - heading "Acne, scars & texture" [level=3] [ref=f89e139]:
+              - text: Acne, scars &
+              - emphasis [ref=f89e140]: texture
+            - generic [ref=f89e141]:
+              - generic [ref=f89e142]: SkinPen
+              - generic [ref=f89e143]: VI Peels
+              - generic [ref=f89e144]: Pico Genesis
+              - generic [ref=f89e145]: HydraFacial
+          - generic [ref=f89e146]: For breakouts, post-acne marks, enlarged pores, rough texture, and scarring.
+          - generic [ref=f89e147]: →
+        - link "02 Fine lines & facial aging Wrinkle Relaxers Dermal Fillers Sculptra Morpheus8 For expression lines, volume loss, dullness, and changes in facial balance. →" [ref=f89e148] [cursor=pointer]:
+          - /url: /concerns/wrinkles-anti-aging/
+          - generic [ref=f89e149]: "02"
+          - generic [ref=f89e150]:
+            - heading "Fine lines & facial aging" [level=3] [ref=f89e151]:
+              - text: Fine lines &
+              - emphasis [ref=f89e152]: facial aging
+            - generic [ref=f89e153]:
+              - generic [ref=f89e154]: Wrinkle Relaxers
+              - generic [ref=f89e155]: Dermal Fillers
+              - generic [ref=f89e156]: Sculptra
+              - generic [ref=f89e157]: Morpheus8
+          - generic [ref=f89e158]: For expression lines, volume loss, dullness, and changes in facial balance.
+          - generic [ref=f89e159]: →
+        - link "03 Skin tightening Morpheus8 Forma Emsculpt Neo For laxity, crepey skin, jawline softness, and collagen loss. →" [ref=f89e160] [cursor=pointer]:
+          - /url: /concerns/skin-tightening/
+          - generic [ref=f89e161]: "03"
+          - generic [ref=f89e162]:
+            - heading "Skin tightening" [level=3] [ref=f89e163]:
+              - text: Skin
+              - emphasis [ref=f89e164]: tightening
+            - generic [ref=f89e165]:
+              - generic [ref=f89e166]: Morpheus8
+              - generic [ref=f89e167]: Forma
+              - generic [ref=f89e168]: Emsculpt Neo
+          - generic [ref=f89e169]: For laxity, crepey skin, jawline softness, and collagen loss.
+          - generic [ref=f89e170]: →
+        - link "04 Pigment & sun damage IPL Pico Genesis VI Peels For dark spots, melasma-prone discoloration, redness, and uneven tone. →" [ref=f89e171] [cursor=pointer]:
+          - /url: /concerns/hyperpigmentation/
+          - generic [ref=f89e172]: "04"
+          - generic [ref=f89e173]:
+            - heading "Pigment & sun damage" [level=3] [ref=f89e174]:
+              - text: Pigment &
+              - emphasis [ref=f89e175]: sun damage
+            - generic [ref=f89e176]:
+              - generic [ref=f89e177]: IPL
+              - generic [ref=f89e178]: Pico Genesis
+              - generic [ref=f89e179]: VI Peels
+          - generic [ref=f89e180]: For dark spots, melasma-prone discoloration, redness, and uneven tone.
+          - generic [ref=f89e181]: →
+        - link "05 Body sculpting Emsculpt Neo TruSculpt Morpheus8 Body Cellutone For stubborn fat, muscle tone, cellulite, and skin quality on the body. →" [ref=f89e182] [cursor=pointer]:
+          - /url: /concerns/body-contouring/
+          - generic [ref=f89e183]: "05"
+          - generic [ref=f89e184]:
+            - heading "Body sculpting" [level=3] [ref=f89e185]:
+              - text: Body
+              - emphasis [ref=f89e186]: sculpting
+            - generic [ref=f89e187]:
+              - generic [ref=f89e188]: Emsculpt Neo
+              - generic [ref=f89e189]: TruSculpt
+              - generic [ref=f89e190]: Morpheus8 Body
+              - generic [ref=f89e191]: Cellutone
+          - generic [ref=f89e192]: For stubborn fat, muscle tone, cellulite, and skin quality on the body.
+          - generic [ref=f89e193]: →
+        - link "06 Weight loss & wellness Medical Weight Loss IV Therapy Body Contouring For patients who want aesthetic goals supported by metabolic and wellness care. →" [ref=f89e194] [cursor=pointer]:
+          - /url: /services/medical-weight-loss/
+          - generic [ref=f89e195]: "06"
+          - generic [ref=f89e196]:
+            - heading "Weight loss & wellness" [level=3] [ref=f89e197]:
+              - text: Weight loss &
+              - emphasis [ref=f89e198]: wellness
+            - generic [ref=f89e199]:
+              - generic [ref=f89e200]: Medical Weight Loss
+              - generic [ref=f89e201]: IV Therapy
+              - generic [ref=f89e202]: Body Contouring
+          - generic [ref=f89e203]: For patients who want aesthetic goals supported by metabolic and wellness care.
+          - generic [ref=f89e204]: →
+      - generic [ref=f89e205]:
+        - link "Browse all services →" [ref=f89e206] [cursor=pointer]:
+          - /url: /services/
+        - link "Read treatment articles →" [ref=f89e207] [cursor=pointer]:
+          - /url: /blog/
+    - generic [ref=f89e210]:
+      - generic [ref=f89e211]:
+        - generic [ref=f89e212]:
+          - text: "6"
+          - emphasis [ref=f89e213]: +
+        - generic [ref=f89e214]: Years in Brickell
+      - generic [ref=f89e215]:
+        - generic [ref=f89e216]:
+          - text: "4.9"
+          - emphasis [ref=f89e217]: ★
+        - generic [ref=f89e218]: Google rating
+      - generic [ref=f89e219]:
+        - generic [ref=f89e220]: "25"
+        - generic [ref=f89e221]: Treatments offered
+      - generic [ref=f89e222]:
+        - generic [ref=f89e223]:
+          - text: 10,000
+          - emphasis [ref=f89e224]: +
+        - generic [ref=f89e225]: Patients served
+    - generic [ref=f89e227]:
+      - generic [ref=f89e228]:
+        - generic [ref=f89e229]:
+          - generic [ref=f89e230]: 03 / 05 — THE APPROACH
+          - heading "What to expect at Miami Skin Spa." [level=2] [ref=f89e231]:
+            - text: What to expect at
+            - emphasis [ref=f89e232]: Miami Skin Spa.
+        - paragraph [ref=f89e233]: Your visit starts with a consultation. We talk through your goals, review your options, explain what each treatment can and cannot do, and help you choose a plan that feels realistic.
+      - generic [ref=f89e234]:
+        - generic [ref=f89e235]:
+          - generic [ref=f89e236]: 01 / 04
+          - heading "Complimentary consultation" [level=3] [ref=f89e237]:
+            - text: Complimentary
+            - emphasis [ref=f89e238]: consultation
+          - paragraph [ref=f89e239]: We listen first. Your provider reviews your goals, skin history, comfort level, and timeline before recommending treatment.
+        - generic [ref=f89e240]:
+          - generic [ref=f89e241]: 02 / 04
+          - heading "Custom plan" [level=3] [ref=f89e242]:
+            - text: Custom
+            - emphasis [ref=f89e243]: plan
+          - paragraph [ref=f89e244]: You receive a custom plan that may include one treatment or a thoughtful sequence of services.
+        - generic [ref=f89e245]:
+          - generic [ref=f89e246]: 03 / 04
+          - heading "Expert treatment" [level=3] [ref=f89e247]:
+            - text: Expert
+            - emphasis [ref=f89e248]: treatment
+          - paragraph [ref=f89e249]: Your care is performed by trained medical aesthetics providers using clinical technology and medical-grade products.
+        - generic [ref=f89e250]:
+          - generic [ref=f89e251]: 04 / 04
+          - heading "Follow-through" [level=3] [ref=f89e252]:
+            - emphasis [ref=f89e253]: Follow-through
+          - paragraph [ref=f89e254]: We track your progress, adjust when needed, and help you maintain the result over time.
+    - generic [ref=f89e256]:
+      - generic [ref=f89e257]:
+        - generic [ref=f89e258]:
+          - generic [ref=f89e259]: 04 / 05 — OUR TEAM
+          - heading "Licensed providers. Natural-looking results." [level=2] [ref=f89e260]:
+            - text: Licensed providers.
+            - emphasis [ref=f89e261]: Natural-looking results.
+        - paragraph [ref=f89e262]: Your treatment is performed by trained medical aesthetics providers with experience in facial anatomy, skin health, injectables, lasers, and energy-based devices.
+      - generic [ref=f89e263]:
+        - link "Mariana Tolosa, PA-C at Miami Skin Spa Mariana Tolosa, PA-C Physician Assistant | Advanced Aesthetic & Laser Specialist Board-certified aesthetic PA specializing in injectables, laser treatments, and skin-rejuvenation plans designed for balanced, natural-looking results." [ref=f89e264] [cursor=pointer]:
+          - /url: /providers/mariana-tolosa-pa-c/
+          - img "Mariana Tolosa, PA-C at Miami Skin Spa" [ref=f89e266]
+          - heading "Mariana Tolosa, PA-C" [level=3] [ref=f89e267]:
+            - text: Mariana
+            - emphasis [ref=f89e268]: Tolosa,
+            - text: PA-C
+          - paragraph [ref=f89e269]: Physician Assistant | Advanced Aesthetic & Laser Specialist
+          - paragraph [ref=f89e270]: Board-certified aesthetic PA specializing in injectables, laser treatments, and skin-rejuvenation plans designed for balanced, natural-looking results.
+        - link "Morgan Winters, FNP-C at Miami Skin Spa Morgan Winters, FNP-C Nurse Practitioner | Aesthetic Medicine & Facial Rejuvenation Family nurse practitioner focused on facial rejuvenation, injectables, lasers, and skin-health treatment plans designed to look polished, balanced, and natural." [ref=f89e271] [cursor=pointer]:
+          - /url: /providers/morgan-winters-aprn-fnp-c/
+          - img "Morgan Winters, FNP-C at Miami Skin Spa" [ref=f89e273]
+          - heading "Morgan Winters, FNP-C" [level=3] [ref=f89e274]:
+            - text: Morgan
+            - emphasis [ref=f89e275]: Winters,
+            - text: FNP-C
+          - paragraph [ref=f89e276]: Nurse Practitioner | Aesthetic Medicine & Facial Rejuvenation
+          - paragraph [ref=f89e277]: Family nurse practitioner focused on facial rejuvenation, injectables, lasers, and skin-health treatment plans designed to look polished, balanced, and natural.
+        - link "Amy Betancourt, MA at Miami Skin Spa Amy Betancourt, MA Licensed Medical Aesthetician | Skin Health & Body Sculpting Specialist Licensed medical aesthetician with 13+ years of experience in professional facials, peels, radiofrequency skin tightening, and non-invasive body contouring." [ref=f89e278] [cursor=pointer]:
+          - /url: /providers/amy-betancourt-ma/
+          - img "Amy Betancourt, MA at Miami Skin Spa" [ref=f89e280]
+          - heading "Amy Betancourt, MA" [level=3] [ref=f89e281]:
+            - text: Amy
+            - emphasis [ref=f89e282]: Betancourt,
+            - text: MA
+          - paragraph [ref=f89e283]: Licensed Medical Aesthetician | Skin Health & Body Sculpting Specialist
+          - paragraph [ref=f89e284]: Licensed medical aesthetician with 13+ years of experience in professional facials, peels, radiofrequency skin tightening, and non-invasive body contouring.
+    - generic [ref=f89e286]:
+      - generic [ref=f89e287]:
+        - generic [ref=f89e288]:
+          - generic [ref=f89e289]: 05 / 05 — TRUSTED IN BRICKELL
+          - heading "Why patients come back." [level=2] [ref=f89e290]:
+            - text: Why patients
+            - emphasis [ref=f89e291]: come back.
+        - paragraph [ref=f89e292]: "Patients choose Miami Skin Spa for the treatment options. They return because the experience feels personal: clear guidance, thoughtful recommendations, natural-looking results, and a team that remembers the plan."
+      - generic [ref=f89e293]:
+        - generic [ref=f89e294]:
+          - generic [ref=f89e295]: “
+          - paragraph [ref=f89e296]: The team at Miami Skin Spa truly transformed my skin. After years of struggling with hyperpigmentation, I finally have the even, glowing complexion I always wanted.
+          - generic [ref=f89e297]:
+            - generic [ref=f89e298]: Sarah M.
+            - generic [ref=f89e299]: Morpheus8 + Chemical Peels
+        - generic [ref=f89e300]:
+          - generic [ref=f89e301]: “
+          - paragraph [ref=f89e302]: I love coming here — the environment is so luxurious and the results speak for themselves. My HydraFacials have become a non-negotiable in my routine.
+          - generic [ref=f89e303]:
+            - generic [ref=f89e304]: Jessica R.
+            - generic [ref=f89e305]: HydraFacial
+        - generic [ref=f89e306]:
+          - generic [ref=f89e307]: “
+          - paragraph [ref=f89e308]: The Emsculpt Neo results were incredible. I can actually see definition I never thought possible without surgery. The whole team made me feel so comfortable.
+          - generic [ref=f89e309]:
+            - generic [ref=f89e310]: Ana L.
+            - generic [ref=f89e311]: Emsculpt Neo
+    - generic [ref=f89e313]:
+      - generic [ref=f89e314]:
+        - generic [ref=f89e315]:
+          - generic [ref=f89e316]: FAQ — COMMON QUESTIONS
+          - heading "Questions, answered." [level=2] [ref=f89e317]:
+            - text: Questions,
+            - emphasis [ref=f89e318]: answered.
+        - paragraph [ref=f89e319]: Everything most patients ask before their first visit to our Brickell med spa — location, parking, consultations, and how to pay over time.
+      - generic [ref=f89e320]:
+        - group [ref=f89e321]:
+          - generic "Where is Miami Skin Spa located?" [ref=f89e322] [cursor=pointer]:
+            - generic [ref=f89e323]: Where is Miami Skin Spa located?
+            - generic [ref=f89e324]: –
+          - generic [ref=f89e325]:
+            - text: "Miami Skin Spa is located at 1501 South Miami Avenue #201 in Brickell, minutes from Brickell City Centre, Downtown Miami, and the Financial District. Free on-site parking is available. Directions and hours are on our"
+            - link "contact page" [ref=f89e326] [cursor=pointer]:
+              - /url: /contact/
+            - text: .
+        - group [ref=f89e327]:
+          - generic "Do you offer free consultations?" [ref=f89e328] [cursor=pointer]:
+            - generic [ref=f89e329]: Do you offer free consultations?
+            - generic [ref=f89e330]: +
+        - group [ref=f89e331]:
+          - generic "What treatments does your med spa offer?" [ref=f89e332] [cursor=pointer]:
+            - generic [ref=f89e333]: What treatments does your med spa offer?
+            - generic [ref=f89e334]: +
+        - group [ref=f89e335]:
+          - generic "Is Miami Skin Spa a med spa or a skin spa?" [ref=f89e336] [cursor=pointer]:
+            - generic [ref=f89e337]: Is Miami Skin Spa a med spa or a skin spa?
+            - generic [ref=f89e338]: +
+        - group [ref=f89e339]:
+          - generic "Is there parking in Brickell?" [ref=f89e340] [cursor=pointer]:
+            - generic [ref=f89e341]: Is there parking in Brickell?
+            - generic [ref=f89e342]: +
+        - group [ref=f89e343]:
+          - generic "How do I choose the right treatment?" [ref=f89e344] [cursor=pointer]:
+            - generic [ref=f89e345]: How do I choose the right treatment?
+            - generic [ref=f89e346]: +
+        - group [ref=f89e347]:
+          - generic "Do you offer financing?" [ref=f89e348] [cursor=pointer]:
+            - generic [ref=f89e349]: Do you offer financing?
+            - generic [ref=f89e350]: +
+    - generic [ref=f89e353]:
+      - generic [ref=f89e354]:
+        - generic [ref=f89e355]: Ready to talk with a provider?
+        - heading "Book your consultation in Brickell." [level=3] [ref=f89e356]:
+          - text: Book your
+          - emphasis [ref=f89e357]: consultation
+          - text: in Brickell.
+      - generic [ref=f89e358]:
+        - generic [ref=f89e359]:
+          - strong [ref=f89e361]: Call or text
+          - link "305-557-1615" [ref=f89e363] [cursor=pointer]:
+            - /url: tel:+13055571615
+          - strong [ref=f89e365]: Visit
+          - generic [ref=f89e366]:
+            - text: "1501 South Miami Avenue #201"
+            - text: Miami, FL 33129
+          - strong [ref=f89e368]: Hours
+          - generic [ref=f89e369]: "Mon: 9AM-6PM · Tue-Wed: 9AM-7PM · Fri: 8AM-5PM · Thu, Sat-Sun: Closed"
+        - generic [ref=f89e370]:
+          - button "Book Consultation" [ref=f89e371] [cursor=pointer]
+          - link "Send a message" [ref=f89e372] [cursor=pointer]:
+            - /url: /contact/
+    - generic [ref=f89e374]:
+      - generic [ref=f89e375]:
+        - generic [ref=f89e376]:
+          - generic [ref=f89e377]: GET IN TOUCH
+          - heading "Book your visit." [level=2] [ref=f89e378]:
+            - text: Book your
+            - emphasis [ref=f89e379]: visit.
+        - paragraph [ref=f89e380]: Tell us what you are considering, and our team will help you book the right consultation — or call/text us directly. Located in the heart of Brickell with free on-site parking.
+      - generic [ref=f89e382]:
+        - generic [ref=f89e383]:
+          - generic [ref=f89e384]: Prefer to talk?
+          - generic [ref=f89e385]:
+            - link "Call 305-557-1615" [ref=f89e386] [cursor=pointer]:
+              - /url: tel:+13055571615
+              - img [ref=f89e387]
+              - text: Call 305-557-1615
+            - link "Text Us" [ref=f89e389] [cursor=pointer]:
+              - /url: sms:+13055571615
+              - img [ref=f89e390]
+              - text: Text Us
+        - generic [ref=f89e392]:
+          - button "Book now" [ref=f89e393] [cursor=pointer]
+          - button "Get in touch" [ref=f89e394] [cursor=pointer]
+        - generic [ref=f89e397]:
+          - generic [ref=f89e398]:
+            - generic [ref=f89e399]:
+              - heading "Book now." [level=4] [ref=f89e400]:
+                - text: Book
+                - emphasis [ref=f89e401]: now.
+              - paragraph [ref=f89e402]:
+                - text: Pick your consultation and continue to our booking page — or
+                - button "send us a question" [ref=f89e403] [cursor=pointer]
+                - text: and we'll help you choose.
+            - generic [ref=f89e405]:
+              - generic [ref=f89e407]:
+                - generic [ref=f89e408]: Consultation type
+                - combobox "Consultation type" [ref=f89e409]:
+                  - option "Beauty Consultation" [selected]
+                  - option "Chemical Peel Consultation"
+                  - option "IPL Consultation"
+                  - option "Morpheus8 Consultation"
+                  - option "Pico Genesis Consultation"
+                  - option "SkinPen Microneedling Consultation"
+                  - option "Tattoo Removal Consultation"
+                  - option "Injectables Consultation"
+                  - option "Body Sculpting Consultation"
+                  - option "Laser Hair Removal Consultation"
+                  - option "Wellness Discovery Consultation"
+                  - option "Weightloss Consultation"
+              - generic [ref=f89e410]:
+                - paragraph [ref=f89e411]: Selected
+                - heading "Beauty Consultation" [level=5] [ref=f89e412]
+                - paragraph [ref=f89e413]: Learn about all of our services — our provider will recommend a personalized plan that's right for you.
+                - link "Continue to booking" [ref=f89e414] [cursor=pointer]:
+                  - /url: https://na02.patientnow.com/a/MIAMISKINSPA/OnlineBooking.aspx?SID=L3pYWHRiL1JYOVE9
+                  - text: Continue to booking
+                  - img [ref=f89e415]
+          - complementary [ref=f89e418]:
+            - iframe [ref=f89e420]
+            - generic [ref=f89e421]:
+              - paragraph [ref=f89e422]: Miami Skin Spa
+              - 'link "1501 South Miami Avenue #201, Miami, FL 33129" [ref=f89e423] [cursor=pointer]':
+                - /url: https://g.page/miami-skin-spa?share
+              - paragraph [ref=f89e424]: Free parking on site.
+  - contentinfo [ref=f89e425]:
+    - generic [ref=f89e426]:
+      - generic [ref=f89e427]:
+        - generic [ref=f89e428]:
+          - heading "Miami Skin Spa" [level=4] [ref=f89e429]
+          - heading "Miami Skin Spa." [level=3] [ref=f89e430]:
+            - text: Miami
+            - emphasis [ref=f89e431]: Skin Spa.
+          - paragraph [ref=f89e432]:
+            - text: A
+            - link "med spa in Brickell, Miami" [ref=f89e433] [cursor=pointer]:
+              - /url: /
+            - text: — your skin, body & wellness oasis, with personalized aesthetic treatments backed by medical expertise and state-of-the-art technology.
+          - generic [ref=f89e434]:
+            - link "Miami Skin Spa on Instagram" [ref=f89e435] [cursor=pointer]:
+              - /url: https://www.instagram.com/miaskinspa/
+              - img [ref=f89e436]
+            - link "Miami Skin Spa on Facebook" [ref=f89e438] [cursor=pointer]:
+              - /url: https://www.facebook.com/MiamiSkinSpa/
+              - img [ref=f89e439]
+        - generic [ref=f89e441]:
+          - heading "Popular treatments" [level=4] [ref=f89e442]
+          - list [ref=f89e443]:
+            - listitem [ref=f89e444]:
+              - link "Injectables & Fillers" [ref=f89e445] [cursor=pointer]:
+                - /url: /services/injectable-services-miami/
+            - listitem [ref=f89e446]:
+              - link "Wrinkle Relaxers" [ref=f89e447] [cursor=pointer]:
+                - /url: /services/wrinkle-relaxers/
+            - listitem [ref=f89e448]:
+              - link "Morpheus8" [ref=f89e449] [cursor=pointer]:
+                - /url: /services/morpheus8/
+            - listitem [ref=f89e450]:
+              - link "Emsculpt Neo" [ref=f89e451] [cursor=pointer]:
+                - /url: /services/emsculpt-neo/
+            - listitem [ref=f89e452]:
+              - link "SkinPen" [ref=f89e453] [cursor=pointer]:
+                - /url: /services/skinpen/
+            - listitem [ref=f89e454]:
+              - link "HydraFacials" [ref=f89e455] [cursor=pointer]:
+                - /url: /services/hydrafacials/
+            - listitem [ref=f89e456]:
+              - link "VI Peels" [ref=f89e457] [cursor=pointer]:
+                - /url: /services/chemical-peels/
+            - listitem [ref=f89e458]:
+              - link "Pico Genesis" [ref=f89e459] [cursor=pointer]:
+                - /url: /services/pico-genesis/
+            - listitem [ref=f89e460]:
+              - link "IPL" [ref=f89e461] [cursor=pointer]:
+                - /url: /services/ipl/
+            - listitem [ref=f89e462]:
+              - link "All services →" [ref=f89e463] [cursor=pointer]:
+                - /url: /services/
+            - listitem [ref=f89e464]:
+              - link "Blog →" [ref=f89e465] [cursor=pointer]:
+                - /url: /blog/
+        - generic [ref=f89e466]:
+          - heading "Concerns we treat" [level=4] [ref=f89e467]
+          - list [ref=f89e468]:
+            - listitem [ref=f89e469]:
+              - link "Acne Scars" [ref=f89e470] [cursor=pointer]:
+                - /url: /concerns/acne-scars/
+            - listitem [ref=f89e471]:
+              - link "Wrinkles & Anti-Aging" [ref=f89e472] [cursor=pointer]:
+                - /url: /concerns/wrinkles-anti-aging/
+            - listitem [ref=f89e473]:
+              - link "Skin Tightening" [ref=f89e474] [cursor=pointer]:
+                - /url: /concerns/skin-tightening/
+            - listitem [ref=f89e475]:
+              - link "Body Contouring" [ref=f89e476] [cursor=pointer]:
+                - /url: /concerns/body-contouring/
+            - listitem [ref=f89e477]:
+              - link "Double Chin" [ref=f89e478] [cursor=pointer]:
+                - /url: /concerns/double-chin/
+            - listitem [ref=f89e479]:
+              - link "Cellulite" [ref=f89e480] [cursor=pointer]:
+                - /url: /concerns/cellulite/
+            - listitem [ref=f89e481]:
+              - link "Melasma" [ref=f89e482] [cursor=pointer]:
+                - /url: /concerns/melasma/
+            - listitem [ref=f89e483]:
+              - link "Scar Removal" [ref=f89e484] [cursor=pointer]:
+                - /url: /concerns/scar-removal/
+            - listitem [ref=f89e485]:
+              - link "All concerns →" [ref=f89e486] [cursor=pointer]:
+                - /url: /concerns/
+        - generic [ref=f89e487]:
+          - heading "Meet the team" [level=4] [ref=f89e488]
+          - list [ref=f89e489]:
+            - listitem [ref=f89e490]:
+              - link "Mariana Tolosa, PA-C" [ref=f89e491] [cursor=pointer]:
+                - /url: /providers/mariana-tolosa-pa-c/
+            - listitem [ref=f89e492]:
+              - link "Morgan Winters, FNP-C" [ref=f89e493] [cursor=pointer]:
+                - /url: /providers/morgan-winters-aprn-fnp-c/
+            - listitem [ref=f89e494]:
+              - link "Amy Betancourt, MA" [ref=f89e495] [cursor=pointer]:
+                - /url: /providers/amy-betancourt-ma/
+            - listitem [ref=f89e496]:
+              - link "Jasmine Vazquez-Mack, APRN-C" [ref=f89e497] [cursor=pointer]:
+                - /url: /providers/jasmine-vazquez-mack-aprn-c/
+        - generic [ref=f89e498]:
+          - heading "Get in touch" [level=4] [ref=f89e499]
+          - list [ref=f89e500]:
+            - listitem [ref=f89e501]:
+              - link "305-557-1615" [ref=f89e502] [cursor=pointer]:
+                - /url: tel:+13055571615
+            - listitem [ref=f89e503]:
+              - link "Text us" [ref=f89e504] [cursor=pointer]:
+                - /url: sms:+13055571615
+            - listitem [ref=f89e505]:
+              - 'link "1501 South Miami Avenue #201, Miami, FL 33129" [ref=f89e506] [cursor=pointer]':
+                - /url: https://g.page/miami-skin-spa?share
+          - paragraph [ref=f89e507]:
+            - generic [ref=f89e508]: "Mon: 9AM-6PM"
+            - generic [ref=f89e509]: "Tue-Wed: 9AM-7PM"
+            - generic [ref=f89e510]: "Fri: 8AM-5PM"
+            - generic [ref=f89e511]: "Thu, Sat-Sun: Closed"
+      - paragraph [ref=f89e512]:
+        - strong [ref=f89e513]: "Accessibility:"
+        - text: If you are vision-impaired or have some other impairment covered by the Americans with Disabilities Act or a similar law, and you wish to discuss potential accommodations related to using this website, please contact our Accessibility Manager at
+        - link "305-557-1615" [ref=f89e514] [cursor=pointer]:
+          - /url: tel:+13055571615
+        - text: .
+      - generic [ref=f89e515]:
+        - generic [ref=f89e516]:
+          - text: A
+          - strong [ref=f89e517]: Medquest
+          - text: practice · Brickell, Miami
+        - generic [ref=f89e518]: © 2026 Miami Skin Spa. All rights reserved.
+        - generic [ref=f89e519]:
+          - link "Privacy" [ref=f89e520] [cursor=pointer]:
+            - /url: /privacy-policy/
+          - link "Terms" [ref=f89e521] [cursor=pointer]:
+            - /url: /terms/
+          - link "Cancellation" [ref=f89e522] [cursor=pointer]:
+            - /url: /cancellation-policy/
+          - link "Financing" [ref=f89e523] [cursor=pointer]:
+            - /url: /financing/
+          - link "Accessibility" [ref=f89e524] [cursor=pointer]:
+            - /url: /accessibility/
+          - link "Sitemap" [ref=f89e525] [cursor=pointer]:
+            - /url: /sitemap/
+  - button "Open accessibility menu" [ref=f89e527] [cursor=pointer]:
+    - img [ref=f89e528]

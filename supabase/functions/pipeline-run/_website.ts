@@ -30,7 +30,10 @@ export interface WebsiteResult {
 // ---------------------------------------------------------------------------
 
 const MAX_PAGES = 3
-const FETCH_TIMEOUT_MS = 4000
+// Med spa sites are heavy (hero video, tracking, chat widgets) and routinely take
+// 5–17s to fully respond. A 4s cap produced false "unreachable" → 'unknown' → lost
+// leads. Ground-truth run (2026-07-02): 5/6 'unknown' leads were live at 5–17s.
+const FETCH_TIMEOUT_MS = 12000
 
 const ROLE_PREFIXES = ['info', 'contact', 'sales', 'hello', 'support', 'admin', 'enquiries', 'enquiry', 'office', 'mail', 'booking', 'appointments']
 const DISCARD_PREFIXES = ['noreply', 'no-reply', 'donotreply', 'do-not-reply', 'bounce', 'mailer-daemon', 'postmaster', 'unsubscribe']
@@ -58,7 +61,24 @@ const BOOKING_PLATFORMS: Array<{ name: string; pattern: string }> = [
   { name: 'Treatwell', pattern: 'treatwell.com' },
   { name: 'Timely', pattern: 'gettimely.com' },
   { name: 'SimplePractice', pattern: 'simplepractice.com' },
+  // Added 2026-07-02 after ground-truth run found these on "no booking" false positives.
+  { name: 'AestheticRecord', pattern: 'aestheticrecord' }, // covers myaestheticrecord.com + aestheticrecord.com
+  { name: 'Growth99', pattern: 'growth99' },
+  { name: 'RepeatMD', pattern: 'repeatmd' },
+  { name: 'GlossGenius', pattern: 'glossgenius' },
+  { name: 'Moxie', pattern: 'joinmoxie' },
+  { name: 'PatientNow', pattern: 'patientnow' }, // covers mypatientnow.com + book.mypatientnow.com
+  { name: 'Booksy', pattern: 'booksy.com' },
+  { name: 'Setmore', pattern: 'setmore.com' },
+  { name: 'Boulevard', pattern: 'blvd.co' },
+  { name: 'GoHighLevel', pattern: 'leadconnectorhq' }, // GHL booking widget host
 ]
+
+// Custom / self-hosted booking is common (GoHighLevel /widget/form, PatientNow, in-house
+// booking pages). These won't match a platform host, so also look for booking LINKS in the
+// markup. Kept deliberately narrow (hyphenated slugs / path segments) so it does not fire on
+// prose like "book now" text or on facebook.com links.
+const BOOKING_LINK_RE = /(?:href|src|data-href)\s*=\s*["'][^"']*(?:\/book|book-|online-booking|\/appointment|-appointment|\/schedul|\/widget\/form|acuityscheduling|calendly\.com|book\.[a-z0-9-]+\.)[^"']*["']/i
 
 // ---------------------------------------------------------------------------
 // Utility helpers
@@ -125,6 +145,12 @@ async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs
     const ct = res.headers.get('content-type') ?? ''
     if (!ct.includes('text/html') && !ct.includes('text/plain')) return { html: null, loadTimeMs }
     const html = await res.text()
+    // Bot-challenge / JS-gate guard: some sites (Cloudflare-style JS challenges) answer any
+    // non-browser client with HTTP 202 + a tiny stub (~170 bytes). res.ok is true, so without
+    // this guard we'd score the stub as a real page and emit bogus "not mobile / no booking"
+    // issues → a false 'weak'. Treat these as unreachable (→ 'unknown') instead.
+    // Ground-truth run (2026-07-02): 4/17 sites were JS-gated this way and need a real browser.
+    if (res.status === 202 || html.length < 600) return { html: null, loadTimeMs }
     return { html, loadTimeMs }
   } catch {
     return { html: null, loadTimeMs: Date.now() - start }
@@ -148,7 +174,7 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   const hasMobileViewport = /<meta[^>]+name=["']viewport["']/i.test(html)
   if (!hasMobileViewport) issues.push('No mobile viewport — site is not mobile-friendly (text will be tiny on phones)')
 
-  // 2. Online booking platform — if present, business already has booking sorted
+  // 2. Online booking — a named platform host, OR a booking link/widget in the markup.
   let bookingPlatform: string | null = null
   const htmlLower = html.toLowerCase()
   for (const { name, pattern } of BOOKING_PLATFORMS) {
@@ -157,8 +183,13 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
       break
     }
   }
+  if (!bookingPlatform && BOOKING_LINK_RE.test(html)) {
+    bookingPlatform = 'Embedded/custom booking'
+  }
   const hasBookingWidget = bookingPlatform !== null
-  if (!hasBookingWidget) issues.push('No online booking widget detected — patients likely have to call or DM to book')
+  // NOTE: booking is frequently injected by JavaScript and invisible to this raw-HTML scan.
+  // We therefore flag a *possible* gap for the AI to weigh — never as a confirmed weakness.
+  if (!hasBookingWidget) issues.push('No online booking detected in page source — UNCERTAIN: may be a JS-injected widget, verify before treating as a weakness')
 
   // 3. Slow load time (>4s = definitely slow; 2-4s = borderline)
   if (loadTimeMs > 4000) issues.push(`Very slow load time (${loadTimeMs}ms) — Google penalises slow sites and visitors bounce`)

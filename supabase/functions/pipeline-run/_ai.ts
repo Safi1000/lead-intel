@@ -51,18 +51,27 @@ WHAT TO SKIP:
 - Too new / too few reviews — not yet a proven money-making business
 
 WEBSITE STATUS RULES (set this based on the technical signals provided below):
-- 'weak': Has a website WITH at least one clear problem (not mobile-friendly, no booking widget, slow, or dated design). THIS IS OUR IDEAL TARGET.
+- 'weak': Has a website WITH at least one clear, CORROBORATED problem: not mobile-friendly, slow to load, or dated design (old copyright year, table-based layout). THIS IS OUR IDEAL TARGET.
 - 'good': Website is modern, mobile-friendly, and already has online booking. Skip — nothing to sell.
 - 'none': No website URL provided. These go into a separate list; do not import as a CRM lead.
-- 'unknown': Cannot determine from the available signals (e.g., website was unreachable).
+- 'unknown': The site could not be fetched (timeout, bot-challenge, or geo-block). This is OFTEN a false negative for slow-but-real sites — do not lower quality_score for unreachability alone.
+
+BOOKING SIGNAL IS UNRELIABLE — READ CAREFULLY:
+Our scanner reads raw HTML only and frequently MISSES online booking that is injected by JavaScript (Vagaro, Mindbody, AestheticRecord, GoHighLevel, RepeatMD, custom widgets). Therefore:
+- Treat "No online booking detected" as UNCERTAIN, never as a confirmed problem.
+- Do NOT mark a site 'weak' when missing booking is the ONLY supposed issue. Require at least one OTHER corroborated problem (no mobile viewport, slow load, or dated design).
+- If booking is reported present, that is reliable — lean toward 'good'.
+
+CHAINS / MULTI-LOCATION (out of ICP):
+We sell to owner-operated clinics (1–3 locations) where the owner decides. If you see chain/franchise signals — 3+ locations, multi-city "Book at <city>" options, franchise or corporate language, an "our locations" nav, or a training school — set low_fit = true and cap quality_score at 4. Chains close slowly or route to committees.
 
 SITE ISSUE NOTE (mandatory for weak websites):
-Write ONE crisp sentence a setter can use to open the call — reference the SPECIFIC problem we detected.
+Write ONE crisp sentence a setter can use to open the call — reference the SPECIFIC corroborated problem (mobile, speed, or dated design). Do NOT lead with "no online booking" as the issue unless another problem confirms the site is weak.
 Examples:
-  "Site isn't mobile-friendly and has no way for patients to book online."
+  "Site isn't mobile-friendly — text is tiny and hard to use on a phone."
   "Website loaded very slowly and looks visually dated."
-  "No online booking detected — patients would have to call."
-  "No mobile viewport and copyright year suggests site hasn't been updated in years."
+  "Copyright year and layout suggest the site hasn't been updated in years."
+  "No mobile viewport and an old copyright year — the site looks neglected."
 If website_status is NOT 'weak', set site_issue_note to "N/A".
 
 QUALITY SCORE (1-10):
@@ -162,10 +171,10 @@ ${reviewSection}
 
 SCORING RULES — follow exactly:
 1. is_correct_niche: true only for med spas / aesthetic / botox / skin clinics. false otherwise.
-2. website_status: use the technical signals above. 'weak' = has problems. 'good' = modern + has booking. 'none' = no website. 'unknown' = unreachable.
-3. site_issue_note: ONE sentence referencing the actual problem if website_status is 'weak'. Otherwise "N/A".
-4. quality_score: integer 1-10 per rubric.
-5. low_fit: true if quality_score < ${qualityThreshold}.
+2. website_status: use the technical signals above. 'weak' = has a CORROBORATED problem (mobile/slow/dated). 'good' = modern + has booking. 'none' = no website. 'unknown' = could not fetch. Missing-booking alone is NOT enough to call 'weak' — the scanner misses JS booking widgets. Do not penalize quality_score for 'unknown'/unreachable.
+3. site_issue_note: ONE sentence referencing the actual corroborated problem if website_status is 'weak'. Otherwise "N/A".
+4. quality_score: integer 1-10 per rubric. Cap at 4 for chains / 3+ locations / multi-city booking.
+5. low_fit: true if quality_score < ${qualityThreshold}, or if the business is a chain / multi-location.
 6. pain_points: real review complaints only. If reviews < 3 or total review text < 200 chars, MUST be exactly "insufficient data".
 7. personalization_notes: 1-2 hooks, real data only, no fabrication.`
 }

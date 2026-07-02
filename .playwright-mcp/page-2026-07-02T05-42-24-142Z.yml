@@ -1,0 +1,9 @@
+- generic [ref=f32e3]:
+  - generic [ref=f32e4]:
+    - img "bg_error_lines" [ref=f32e6]
+    - generic [ref=f32e16]:
+      - img "circle_dots" [ref=f32e18]
+      - img [ref=f32e632]
+    - heading "Country Blocked" [level=1] [ref=f32e642]
+    - paragraph [ref=f32e643]: Access to this page is forbidden.
+  - img "clouds_shape" [ref=f32e645]

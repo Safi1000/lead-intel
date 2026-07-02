@@ -1,0 +1,643 @@
+- generic [ref=f14e1]:
+  - generic [ref=f14e3]:
+    - banner:
+      - generic [ref=f14e4]:
+        - generic [ref=f14e5]:
+          - link "Bella Vida Aesthetics & Wellness logo" [ref=f14e8] [cursor=pointer]:
+            - /url: /
+            - img "Bella Vida Aesthetics & Wellness logo" [ref=f14e10]
+          - generic [ref=f14e11]:
+            - generic [ref=f14e12]:
+              - paragraph [ref=f14e15]: Call Us
+              - link " (786) 338-8346" [ref=f14e17] [cursor=pointer]:
+                - /url: tel:7863388346
+            - generic [ref=f14e18]:
+              - generic [ref=f14e20]: TEXT US
+              - link " (786) 338-8346" [ref=f14e22] [cursor=pointer]:
+                - /url: sms:7863388346
+            - generic [ref=f14e23]:
+              - generic [ref=f14e25]: New Patient?
+              - link " Get Started" [ref=f14e27] [cursor=pointer]:
+                - /url: /contact/#contact-form
+        - generic [ref=f14e32]:
+          - navigation [ref=f14e34]:
+            - link "Home" [ref=f14e35] [cursor=pointer]:
+              - /url: /
+            - link "About Us" [ref=f14e36] [cursor=pointer]:
+              - /url: /about-us
+            - generic [ref=f14e37] [cursor=pointer]:
+              - text: Services
+              - generic [ref=f14e38]: ▼
+            - link "Results / Gallery" [ref=f14e39] [cursor=pointer]:
+              - /url: /gallery/
+            - link "Blog" [ref=f14e40] [cursor=pointer]:
+              - /url: /our-latest-blog/
+            - link "Contact Us" [ref=f14e41] [cursor=pointer]:
+              - /url: /contact
+          - generic [ref=f14e42]:
+            - link "Home" [ref=f14e43] [cursor=pointer]:
+              - /url: /
+            - link "About Us" [ref=f14e44] [cursor=pointer]:
+              - /url: /about-us
+            - generic [ref=f14e45]:
+              - generic [ref=f14e46] [cursor=pointer]:
+                - text: Services
+                - generic [ref=f14e47]: +
+              - generic:
+                - generic [ref=f14e48]:
+                  - generic [ref=f14e49] [cursor=pointer]:
+                    - text: Medical Facials
+                    - generic [ref=f14e50]: +
+                  - generic:
+                    - link "Signature Facial" [ref=f14e51] [cursor=pointer]:
+                      - /url: /signature-facial
+                    - link "SaltFacial®" [ref=f14e52] [cursor=pointer]:
+                      - /url: /salt-facial
+                    - link "Glass Skin Glow Up" [ref=f14e53] [cursor=pointer]:
+                      - /url: /glass-skin-glow-up/
+                    - link "Microneedling (SkinPen)" [ref=f14e54] [cursor=pointer]:
+                      - /url: /microneedling
+                - generic [ref=f14e55]:
+                  - generic [ref=f14e56] [cursor=pointer]:
+                    - text: Injectables
+                    - generic [ref=f14e57]: +
+                  - generic:
+                    - link "Botox & Neurotoxins" [ref=f14e58] [cursor=pointer]:
+                      - /url: /neurotoxins
+                    - link "Dermal Fillers" [ref=f14e59] [cursor=pointer]:
+                      - /url: /dermal-fillers
+                    - link "Sculptra" [ref=f14e60] [cursor=pointer]:
+                      - /url: /sculptra/
+                    - link "Lipo Shots" [ref=f14e61] [cursor=pointer]:
+                      - /url: /lipo-shots
+                - generic [ref=f14e62]:
+                  - generic [ref=f14e63] [cursor=pointer]:
+                    - text: Advanced Tech
+                    - generic [ref=f14e64]: +
+                  - generic:
+                    - link "Sylfirm X (RF Microneedling)" [ref=f14e65] [cursor=pointer]:
+                      - /url: /sylfirm-x-rf/
+                    - link "Aerolase Laser" [ref=f14e66] [cursor=pointer]:
+                      - /url: /aerolase
+                    - link "Ultherapy" [ref=f14e67] [cursor=pointer]:
+                      - /url: /ultherapy
+                    - link "K Beauty Micro Infusion" [ref=f14e68] [cursor=pointer]:
+                      - /url: /k-beauty-micro-infusion-with-pdrn-injections/
+                - generic [ref=f14e69]:
+                  - generic [ref=f14e70] [cursor=pointer]:
+                    - text: Body & Wellness
+                    - generic [ref=f14e71]: +
+                  - generic:
+                    - link "Bella Vida Instant BBL™" [ref=f14e72] [cursor=pointer]:
+                      - /url: /bella-vida-instant-bbl
+                    - link "Body Contouring (EMS)" [ref=f14e73] [cursor=pointer]:
+                      - /url: /electromagnetic-muscle-stimulation
+                    - link "Regenerative (PRP)" [ref=f14e74] [cursor=pointer]:
+                      - /url: /regenerative-medicine
+            - link "Results / Gallery" [ref=f14e75] [cursor=pointer]:
+              - /url: /results-gallery
+            - link "Blog" [ref=f14e76] [cursor=pointer]:
+              - /url: /blog
+            - link "Contact Us" [ref=f14e77] [cursor=pointer]:
+              - /url: /contact
+    - generic [ref=f14e78]:
+      - article [ref=f14e80]:
+        - generic [ref=f14e83]:
+          - heading "Your Lifestyle Doesn’t Wait for Results, Why Should You?" [level=2] [ref=f14e90]:
+            - generic [ref=f14e91]:
+              - text: Your Lifestyle Doesn’t Wait for Results,
+              - generic [ref=f14e92]: Why Should You?
+          - generic [ref=f14e97]:
+            - generic [ref=f14e99]:
+              - paragraph [ref=f14e100]: Hello Gorgeous
+              - heading "Bella Vida Aesthetics & Wellness" [level=2] [ref=f14e101]
+            - paragraph [ref=f14e104]:
+              - text: Welcome to Bella Vida Aesthetics & Wellness, your luxurious entryway into
+              - link "Iani Silveira’s" [ref=f14e105] [cursor=pointer]:
+                - /url: /iani-silvereira/
+              - text: world of beauty. Discover what it’s like to receive the royal treatment from the Booty Queen™ of Body Sculpting, as she carefully crafts each service around you, on your terms, with ample one-on-one time spent learning your story and goals to best meet your needs. At our medspa, we offer the most innovative treatments and procedures in the industry, each performed by our world-class experts to help you feel beautiful inside and out. With our regenerative medicine and proprietary non-surgical treatments, reaching your goals has never been easier!
+            - link "Learn More" [ref=f14e107] [cursor=pointer]:
+              - /url: /about-us/
+            - link "Book Now" [ref=f14e109] [cursor=pointer]:
+              - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+          - generic [ref=f14e111]:
+            - generic [ref=f14e112]:
+              - heading "Meet the Booty Queen ™, MSN, FNP-BC, CPN" [level=2] [ref=f14e115]
+              - paragraph [ref=f14e118]:
+                - text: Aesthetics innovator Iani Silveira founded Bella Vida Aesthetics & Wellness based on her vision of concierge care, providing exquisite, one-on-one service for clients. With that spirit in mind, her talent for aesthetics, and interest in regenerative medicine, led her to continue paving the way in the industry at large. By creating the innovative, patented
+                - link "Bella Vida Instant BBL™" [ref=f14e119] [cursor=pointer]:
+                  - /url: /bella-vida-instant-bbl/
+                - text: ", and forming strong relationships with clients, Iani has established herself as a leader, pioneer, and friend who never stops reaching new heights."
+              - link "Learn More" [ref=f14e121] [cursor=pointer]:
+                - /url: /iani-silvereira/
+              - link "Book Now" [ref=f14e123] [cursor=pointer]:
+                - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+            - img "Photo Jan 15 2024, 10 58 26 PM (1) (1)" [ref=f14e127]
+          - generic [ref=f14e134]:
+            - button "Previous" [ref=f14e135] [cursor=pointer]: 34Previous
+            - generic [ref=f14e137]:
+              - img [ref=f14e139]
+              - img [ref=f14e141]
+              - img [ref=f14e143]
+              - img [ref=f14e145]
+              - img "Luxury Guide logo" [ref=f14e147]
+              - img "cbs nbc logo" [ref=f14e149]
+              - img "Merz Aesthetics logo" [ref=f14e151]
+              - img "Haute Beauty logo" [ref=f14e153]
+              - img [ref=f14e155]
+              - img [ref=f14e157]
+              - img [ref=f14e159]
+              - img [ref=f14e161]
+              - img [ref=f14e163]
+              - img [ref=f14e165]
+              - img [ref=f14e167]
+              - img [ref=f14e169]
+              - img [ref=f14e171]
+              - img [ref=f14e173]
+              - img [ref=f14e175]
+              - img [ref=f14e177]
+              - img [ref=f14e179]
+              - img [ref=f14e181]
+            - button "Next" [ref=f14e182] [cursor=pointer]: 35Next
+          - generic [ref=f14e185]:
+            - generic [ref=f14e187]:
+              - heading "Discover the Ultimate Facial Rejuvenation Experience" [level=2] [ref=f14e190]:
+                - text: Discover the Ultimate Facial
+                - text: Rejuvenation Experience
+              - paragraph [ref=f14e193]:
+                - text: Whether you want to restore your looks or sculpt and define your facial features, our facial rejuvenation options benefit your skin’s health
+                - emphasis [ref=f14e194]: and
+                - text: appearance. Our masterfully performed services are customized to you, for stunning, supermodel-tier results that reaffirm your natural beauty.
+            - generic [ref=f14e196]:
+              - button "Previous" [ref=f14e197] [cursor=pointer]: 34Previous
+              - generic [ref=f14e199]:
+                - generic [ref=f14e201]:
+                  - link [ref=f14e203] [cursor=pointer]:
+                    - /url: /ultherapy/
+                    - img [ref=f14e205]
+                  - generic [ref=f14e206]:
+                    - heading [level=4] [ref=f14e207]:
+                      - link [ref=f14e208] [cursor=pointer]:
+                        - /url: /ultherapy/
+                        - text: Ultherapy
+                    - paragraph [ref=f14e210]: Ultrasound energy effortlessly lifts sagging skin while reducing the visible signs of aging!
+                - generic [ref=f14e212]:
+                  - link [ref=f14e214] [cursor=pointer]:
+                    - /url: /hydrafacial/
+                    - img [ref=f14e216]
+                  - generic [ref=f14e217]:
+                    - heading [level=4] [ref=f14e218]:
+                      - link [ref=f14e219] [cursor=pointer]:
+                        - /url: /hydrafacial/
+                        - text: Hydrafacial
+                    - paragraph [ref=f14e221]: Experience rejuvenation in three steps with HydraFacial, the industry-preferred facial treatment tailored to your skin’s needs.
+                - tabpanel [ref=f14e222]:
+                  - generic [ref=f14e223]:
+                    - img "Neurotoxins at Bella Vida" [ref=f14e226]
+                    - generic [ref=f14e227]:
+                      - heading "Neurotoxins" [level=4] [ref=f14e228]:
+                        - link "Neurotoxins" [ref=f14e230] [cursor=pointer]:
+                          - /url: /neurotoxins/
+                      - paragraph [ref=f14e232]: Personalized tox solutions freeze wrinkles in their tracks for smooth, youthful skin while stopping future wrinkles in their tracks.
+                - tabpanel [ref=f14e233]:
+                  - generic [ref=f14e234]:
+                    - link "Microneedling at Bella Vida" [ref=f14e236] [cursor=pointer]:
+                      - /url: /microneedling/
+                      - img "Microneedling at Bella Vida" [ref=f14e238]
+                    - generic [ref=f14e239]:
+                      - heading "Microneedling" [level=4] [ref=f14e240]:
+                        - link "Microneedling" [ref=f14e241] [cursor=pointer]:
+                          - /url: /microneedling/
+                      - paragraph [ref=f14e243]: Treat hyperpigmentation, scarring, texture, and more as microneedling harnesses your body’s natural healing power to regenerate your skin on a cellular level.
+                - tabpanel [ref=f14e244]:
+                  - generic [ref=f14e245]:
+                    - img [ref=f14e248]
+                    - generic [ref=f14e249]:
+                      - heading [level=4] [ref=f14e250]:
+                        - link [ref=f14e252] [cursor=pointer]:
+                          - /url: /dermal-fillers/
+                          - text: Dermal Fillers
+                      - paragraph [ref=f14e254]: Our industry-favorite dermal fillers are inherently versatile as they volumize, smooth, and sculpt for a tailor-made look.
+                - tabpanel [ref=f14e255]:
+                  - generic [ref=f14e256]:
+                    - link [ref=f14e258] [cursor=pointer]:
+                      - /url: /pdo-threads/
+                      - img [ref=f14e260]
+                    - generic [ref=f14e261]:
+                      - heading [level=4] [ref=f14e262]:
+                        - link [ref=f14e263] [cursor=pointer]:
+                          - /url: /pdo-threads/
+                          - text: PDO Threads
+                      - paragraph [ref=f14e265]: The non-surgical solution to sagging, PDO threads can be used for recovery-free facelifts and more with their medical-grade composition and collagen boosting benefits!
+                - tabpanel [ref=f14e266]:
+                  - generic [ref=f14e267]:
+                    - link [ref=f14e269] [cursor=pointer]:
+                      - /url: /lipo-shots/
+                      - img [ref=f14e271]
+                    - generic [ref=f14e272]:
+                      - heading [level=4] [ref=f14e273]:
+                        - link [ref=f14e274] [cursor=pointer]:
+                          - /url: /lipo-shots/
+                          - text: Lipo Shots
+                      - paragraph [ref=f14e276]: A direct hit of nutrients boosts your metabolism and turns your body into a fat burning machine.
+                - tabpanel [ref=f14e277]:
+                  - generic [ref=f14e278]:
+                    - link [ref=f14e280] [cursor=pointer]:
+                      - /url: /salt-facial/
+                      - img [ref=f14e282]
+                    - generic [ref=f14e283]:
+                      - heading [level=4] [ref=f14e284]:
+                        - link [ref=f14e285] [cursor=pointer]:
+                          - /url: /salt-facial/
+                          - text: SaltFacial®
+                      - paragraph [ref=f14e287]: State-of-the-art technology paired with all-natural sea salt guarantees you gorgeously glowing skin!
+                - tabpanel [ref=f14e288]:
+                  - generic [ref=f14e289]:
+                    - link [ref=f14e291] [cursor=pointer]:
+                      - /url: /aqua-gold/
+                      - img [ref=f14e293]
+                    - generic [ref=f14e294]:
+                      - heading [level=4] [ref=f14e295]:
+                        - link [ref=f14e296] [cursor=pointer]:
+                          - /url: /aqua-gold/
+                          - text: AquaGold
+                      - paragraph [ref=f14e298]: The first treatment of its kind, AquaGold is our go-to for microdosing dermal filler anywhere on the body for subtly stunning results.
+                - tabpanel [ref=f14e299]:
+                  - generic [ref=f14e300]:
+                    - link [ref=f14e302] [cursor=pointer]:
+                      - /url: /aerolase/
+                      - img [ref=f14e304]
+                    - generic [ref=f14e305]:
+                      - heading [level=4] [ref=f14e306]:
+                        - link [ref=f14e307] [cursor=pointer]:
+                          - /url: /aerolase/
+                          - text: Aerolase
+                      - paragraph [ref=f14e309]: This multi-modality powerhouse targets several concerns, from hyperpigmentation and texture to wrinkles and folds, and it’s entirely tailored to your unique needs.
+                - tabpanel [ref=f14e310]:
+                  - generic [ref=f14e311]:
+                    - link [ref=f14e313] [cursor=pointer]:
+                      - /url: /ultherapy/
+                      - img [ref=f14e315]
+                    - generic [ref=f14e316]:
+                      - heading [level=4] [ref=f14e317]:
+                        - link [ref=f14e318] [cursor=pointer]:
+                          - /url: /ultherapy/
+                          - text: Ultherapy
+                      - paragraph [ref=f14e320]: Ultrasound energy effortlessly lifts sagging skin while reducing the visible signs of aging!
+                - tabpanel [ref=f14e321]:
+                  - generic [ref=f14e322]:
+                    - link [ref=f14e324] [cursor=pointer]:
+                      - /url: /hydrafacial/
+                      - img [ref=f14e326]
+                    - generic [ref=f14e327]:
+                      - heading [level=4] [ref=f14e328]:
+                        - link [ref=f14e329] [cursor=pointer]:
+                          - /url: /hydrafacial/
+                          - text: Hydrafacial
+                      - paragraph [ref=f14e331]: Experience rejuvenation in three steps with HydraFacial, the industry-preferred facial treatment tailored to your skin’s needs.
+                - generic [ref=f14e333]:
+                  - img [ref=f14e336]
+                  - generic [ref=f14e337]:
+                    - heading [level=4] [ref=f14e338]:
+                      - link [ref=f14e340] [cursor=pointer]:
+                        - /url: /neurotoxins/
+                        - text: Neurotoxins
+                    - paragraph [ref=f14e342]: Personalized tox solutions freeze wrinkles in their tracks for smooth, youthful skin while stopping future wrinkles in their tracks.
+                - generic [ref=f14e344]:
+                  - link [ref=f14e346] [cursor=pointer]:
+                    - /url: /microneedling/
+                    - img [ref=f14e348]
+                  - generic [ref=f14e349]:
+                    - heading [level=4] [ref=f14e350]:
+                      - link [ref=f14e351] [cursor=pointer]:
+                        - /url: /microneedling/
+                        - text: Microneedling
+                    - paragraph [ref=f14e353]: Treat hyperpigmentation, scarring, texture, and more as microneedling harnesses your body’s natural healing power to regenerate your skin on a cellular level.
+                - generic [ref=f14e355]:
+                  - img [ref=f14e358]
+                  - generic [ref=f14e359]:
+                    - heading [level=4] [ref=f14e360]:
+                      - link [ref=f14e362] [cursor=pointer]:
+                        - /url: /dermal-fillers/
+                        - text: Dermal Fillers
+                    - paragraph [ref=f14e364]: Our industry-favorite dermal fillers are inherently versatile as they volumize, smooth, and sculpt for a tailor-made look.
+                - generic [ref=f14e366]:
+                  - link [ref=f14e368] [cursor=pointer]:
+                    - /url: /pdo-threads/
+                    - img [ref=f14e370]
+                  - generic [ref=f14e371]:
+                    - heading [level=4] [ref=f14e372]:
+                      - link [ref=f14e373] [cursor=pointer]:
+                        - /url: /pdo-threads/
+                        - text: PDO Threads
+                    - paragraph [ref=f14e375]: The non-surgical solution to sagging, PDO threads can be used for recovery-free facelifts and more with their medical-grade composition and collagen boosting benefits!
+                - generic [ref=f14e377]:
+                  - link [ref=f14e379] [cursor=pointer]:
+                    - /url: /lipo-shots/
+                    - img [ref=f14e381]
+                  - generic [ref=f14e382]:
+                    - heading [level=4] [ref=f14e383]:
+                      - link [ref=f14e384] [cursor=pointer]:
+                        - /url: /lipo-shots/
+                        - text: Lipo Shots
+                    - paragraph [ref=f14e386]: A direct hit of nutrients boosts your metabolism and turns your body into a fat burning machine.
+                - generic [ref=f14e388]:
+                  - link [ref=f14e390] [cursor=pointer]:
+                    - /url: /salt-facial/
+                    - img [ref=f14e392]
+                  - generic [ref=f14e393]:
+                    - heading [level=4] [ref=f14e394]:
+                      - link [ref=f14e395] [cursor=pointer]:
+                        - /url: /salt-facial/
+                        - text: SaltFacial®
+                    - paragraph [ref=f14e397]: State-of-the-art technology paired with all-natural sea salt guarantees you gorgeously glowing skin!
+                - generic [ref=f14e399]:
+                  - link [ref=f14e401] [cursor=pointer]:
+                    - /url: /aqua-gold/
+                    - img [ref=f14e403]
+                  - generic [ref=f14e404]:
+                    - heading [level=4] [ref=f14e405]:
+                      - link [ref=f14e406] [cursor=pointer]:
+                        - /url: /aqua-gold/
+                        - text: AquaGold
+                    - paragraph [ref=f14e408]: The first treatment of its kind, AquaGold is our go-to for microdosing dermal filler anywhere on the body for subtly stunning results.
+                - generic [ref=f14e410]:
+                  - link [ref=f14e412] [cursor=pointer]:
+                    - /url: /aerolase/
+                    - img [ref=f14e414]
+                  - generic [ref=f14e415]:
+                    - heading [level=4] [ref=f14e416]:
+                      - link [ref=f14e417] [cursor=pointer]:
+                        - /url: /aerolase/
+                        - text: Aerolase
+                    - paragraph [ref=f14e419]: This multi-modality powerhouse targets several concerns, from hyperpigmentation and texture to wrinkles and folds, and it’s entirely tailored to your unique needs.
+                - generic [ref=f14e421]:
+                  - link [ref=f14e423] [cursor=pointer]:
+                    - /url: /ultherapy/
+                    - img [ref=f14e425]
+                  - generic [ref=f14e426]:
+                    - heading [level=4] [ref=f14e427]:
+                      - link [ref=f14e428] [cursor=pointer]:
+                        - /url: /ultherapy/
+                        - text: Ultherapy
+                    - paragraph [ref=f14e430]: Ultrasound energy effortlessly lifts sagging skin while reducing the visible signs of aging!
+                - generic [ref=f14e432]:
+                  - link [ref=f14e434] [cursor=pointer]:
+                    - /url: /hydrafacial/
+                    - img [ref=f14e436]
+                  - generic [ref=f14e437]:
+                    - heading [level=4] [ref=f14e438]:
+                      - link [ref=f14e439] [cursor=pointer]:
+                        - /url: /hydrafacial/
+                        - text: Hydrafacial
+                    - paragraph [ref=f14e441]: Experience rejuvenation in three steps with HydraFacial, the industry-preferred facial treatment tailored to your skin’s needs.
+              - button "Next" [ref=f14e442] [cursor=pointer]: 35Next
+              - tablist [ref=f14e443]:
+                - tab "1 of 5" [selected] [ref=f14e444] [cursor=pointer]: • 1
+                - tab "2 of 5" [ref=f14e445] [cursor=pointer]: • 2
+                - tab "3 of 5" [ref=f14e446] [cursor=pointer]: • 3
+                - tab "4 of 5" [ref=f14e447] [cursor=pointer]: • 4
+                - tab "5 of 5" [ref=f14e448] [cursor=pointer]: • 5
+            - generic [ref=f14e450]:
+              - link "View All" [ref=f14e452] [cursor=pointer]:
+                - /url: /facial-rejuvenation/
+              - link "Book Now" [ref=f14e454] [cursor=pointer]:
+                - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+          - generic [ref=f14e458]:
+            - generic [ref=f14e459]:
+              - heading "Achieve Your Body Goals with Body Coutouring" [level=2] [ref=f14e462]
+              - heading "Transform Your Body & Achieve Your Desired Silhouette" [level=3] [ref=f14e465]
+              - paragraph [ref=f14e468]: We’ve built our niche in body contouring, the non-surgical way to enhance, sculpt, lift, tone, and define your physique. Our founder, Iani Silveira, has dedicated her career to pioneering body sculpting to an art, and her philosophy and techniques drive Bella Vida as a practice. No matter what you’re looking for from your body contouring procedures, whether it’s a perkier butt, toned abs, or less excess fat, we’re here to make it happen.
+              - link "Learn More" [ref=f14e470] [cursor=pointer]:
+                - /url: /body-contouring/
+              - link "Book Now" [ref=f14e472] [cursor=pointer]:
+                - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+            - generic [ref=f14e473]:
+              - generic [ref=f14e476]:
+                - heading "Contour & Sculpt with Lipo Shots" [level=4] [ref=f14e477]:
+                  - link "Contour & Sculpt with Lipo Shots" [ref=f14e478] [cursor=pointer]:
+                    - /url: /lipo-shots/
+                - paragraph [ref=f14e480]: A concentrated, nutritious dose of fat-burning power where you want it powers up your metabolism for a well-contoured silhouette.
+              - generic [ref=f14e483]:
+                - heading "Break Down Stubborn Fat Cells with Ultrasonic Cavitation" [level=4] [ref=f14e484]:
+                  - link "Break Down Stubborn Fat Cells with Ultrasonic Cavitation" [ref=f14e485] [cursor=pointer]:
+                    - /url: /ultrasonic-cavitation/
+                - paragraph [ref=f14e487]: A combination of ultrasonic and radiofrequency energy waves breaks down fat and cellulite for a shapelier figure.
+              - generic [ref=f14e490]:
+                - heading "Build & Tone Muscle with Electromagnetic Muscle Stimulation" [level=4] [ref=f14e491]:
+                  - link "Build & Tone Muscle with Electromagnetic Muscle Stimulation" [ref=f14e492] [cursor=pointer]:
+                    - /url: /electromagnetic-muscle-stimulation/
+                - paragraph [ref=f14e494]: The effortless way to exercise your muscles, for a stronger, well-defined look.
+              - generic [ref=f14e497]:
+                - heading "Be the Envy of the Beach with Our Non-Surgical BBL" [level=4] [ref=f14e498]:
+                  - link "Be the Envy of the Beach with Our Non-Surgical BBL" [ref=f14e500] [cursor=pointer]:
+                    - /url: /bella-vida-instant-bbl/
+                - paragraph [ref=f14e502]: "Athletic results without hitting the gym: our non-surgical BBL smooths skin, adds volume, lifts, tones, and gives you all the curve with none of the downsides of a traditional BBL."
+          - generic [ref=f14e505]:
+            - heading "Get the Booty of Your Dreams with the Bella Vida Instant BBL ™" [level=2] [ref=f14e508]:
+              - text: Get the Booty of Your Dreams with the
+              - text: Bella Vida Instant BBL ™
+            - paragraph [ref=f14e511]:
+              - text: The perfect posterior, painstakingly pioneered by our very own Iani Silveira. The patented
+              - link "Bella Vida Instant BBL™" [ref=f14e512] [cursor=pointer]:
+                - /url: /bella-vida-instant-bbl/
+              - text: is the only minimally invasive way to create a shapely butt, thanks to Iani’s special blend of strategically placed biostimulating filler that instantly reshapes glutes, smooths cellulite, reduces stretchmarks, and gives you the size and shape you want. Whether you’re looking for a bootylicious behind or a subtle, plumped look that targets issues like hip dips, Iani is ready to make your dream look a reality. She’ll discuss your goals with you in a thorough consultation, for the VIP treatment you deserve.
+            - link "Learn More" [ref=f14e514] [cursor=pointer]:
+              - /url: /bella-vida-instant-bbl/
+            - link "Book Now" [ref=f14e516] [cursor=pointer]:
+              - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+          - generic [ref=f14e518]:
+            - generic [ref=f14e519]:
+              - heading "Stem Cells & Regenerative Medicine" [level=2] [ref=f14e522]
+              - paragraph [ref=f14e525]: "A focus on wellness starts from the inside out. We offer highly advanced stem cell treatments, whether you’re an athlete, on the mend, or are seeking regenerative benefits. That’s just the surface of our regenerative medicine options: we use bioavailable technologies and natural methods to help your body rejuvenate, so you can rediscover your own vitality while reaping the benefits of deeper healing."
+              - link "Learn More" [ref=f14e527] [cursor=pointer]:
+                - /url: /regenerative-medicine/
+              - link "Book Now" [ref=f14e529] [cursor=pointer]:
+                - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+            - iframe [ref=f14e534]:
+              
+          - generic [ref=f14e537]:
+            - 'heading "A Team Dedicated to Helping You Reach Your Goals: Inside & Out" [level=3] [ref=f14e540]':
+              - text: "A Team Dedicated to Helping You Reach Your Goals:"
+              - text: Inside & Out
+            - paragraph [ref=f14e543]:
+              - text: At our medspa, you’ll find yourself at ease with
+              - link "our talented team" [ref=f14e544] [cursor=pointer]:
+                - /url: /our-team/
+              - text: "of providers! No matter what service you’re undergoing, or what assistance you need, our team is here to consult with you and guide you to the best choices for you as an individual. We’ll take the time to get to know you on a more personal level, from your daily lifestyle to your goals: we don’t underestimate just how important it is to pick the perfect procedure, and with the skills and experience of our team, we’ll get you the results you’ve always wanted."
+            - link "Call - (786) 338-8346" [ref=f14e546] [cursor=pointer]:
+              - /url: tel:7863388346
+            - link "Book Now" [ref=f14e548] [cursor=pointer]:
+              - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+          - generic [ref=f14e549]:
+            - generic [ref=f14e551]:
+              - heading "Unlock the Future of Non-Surgical BBLs" [level=2] [ref=f14e554]
+              - paragraph [ref=f14e557]: Learn from the creator of the Bella Vida Instant BBL™ herself! Iani’s passion for education and dedication to the industry culminates in her special courses, where she teaches the Instant BBL™ technique. From all over the country, she’s training providers on how they can bring this advanced procedure to their own practice, pleasing patients with the instant, and lasting results that have stunned so many.
+            - generic [ref=f14e558]:
+              - generic [ref=f14e559]:
+                - generic [ref=f14e561]:
+                  - img "Instant BBL™ at Bella Vida" [ref=f14e564]
+                  - generic [ref=f14e565]:
+                    - heading "Instant BBL™ at Bella Vida" [level=4] [ref=f14e566]
+                    - paragraph [ref=f14e568]: Get your own perfect backside from the creator of the procedure herself!
+                - link "Learn More" [ref=f14e570] [cursor=pointer]:
+                  - /url: /bella-vida-instant-bbl/
+                - link "Am I a Candidate?" [ref=f14e572] [cursor=pointer]:
+                  - /url: /am-i-a-candidate-for-bbl/
+              - generic [ref=f14e573]:
+                - generic [ref=f14e575]:
+                  - img "Bella Vida Institute logo" [ref=f14e578]
+                  - generic [ref=f14e579]:
+                    - heading "Become a Provider" [level=4] [ref=f14e580]
+                    - paragraph [ref=f14e582]:
+                      - text: "Technique is what makes a provider: our"
+                      - link "trainings" [ref=f14e583] [cursor=pointer]:
+                        - /url: /training/
+                      - text: will get you there.
+                - link "Learn More" [ref=f14e585] [cursor=pointer]:
+                  - /url: /training/
+                - link "Sign Up for Training" [ref=f14e587] [cursor=pointer]:
+                  - /url: /training/#learning-today-form
+          - generic [ref=f14e589]:
+            - generic [ref=f14e592] [cursor=pointer]:
+              - heading "Payment Options & Financing" [level=3] [ref=f14e593]
+              - paragraph [ref=f14e594]: We offer financing and payment options to make your treatments more affordable.
+            - generic [ref=f14e597] [cursor=pointer]:
+              - heading "View Before & After Gallery" [level=3] [ref=f14e598]
+              - paragraph [ref=f14e599]: Real results from our patients, because seeing is believing.
+            - generic [ref=f14e602] [cursor=pointer]:
+              - heading "Schedule a Consultation" [level=3] [ref=f14e603]
+              - paragraph [ref=f14e604]: The concierge experience, because you deserve nothing less!
+            - generic [ref=f14e607] [cursor=pointer]:
+              - heading "Book an Appointment" [level=3] [ref=f14e608]
+              - paragraph [ref=f14e609]: Schedule an appointment from the comfort of your own home!
+      - contentinfo [ref=f14e610]:
+        - generic [ref=f14e611]:
+          - heading "Read Our Reviews" [level=2] [ref=f14e617]
+          - generic [ref=f14e621]:
+            - iframe [ref=f14e625]:
+              
+            - generic [ref=f14e626]:
+              - generic [ref=f14e628]:
+                - generic [ref=f14e630]:
+                  - heading "our luxury location" [level=2] [ref=f14e631]
+                  - paragraph [ref=f14e632]
+                - heading "Bella Vida Aesthetics & Wellness" [level=3] [ref=f14e635]
+              - generic [ref=f14e636]:
+                - list [ref=f14e640]:
+                  - listitem [ref=f14e641]:
+                    - link " 151 SE 1st Suite 5, Miami, FL 33131" [ref=f14e642] [cursor=pointer]:
+                      - /url: https://maps.app.goo.gl/ttq2fHkZkyNjhWFw9
+                      - generic [ref=f14e644]: 
+                      - generic [ref=f14e645]: 151 SE 1st Suite 5, Miami, FL 33131
+                  - listitem [ref=f14e646]:
+                    - link " (786) 338-8346" [ref=f14e647] [cursor=pointer]:
+                      - /url: tel:7863388346
+                      - generic [ref=f14e649]: 
+                      - generic [ref=f14e650]: (786) 338-8346
+                - generic [ref=f14e651]:
+                  - generic [ref=f14e652]:
+                    - heading "New Patient?" [level=4] [ref=f14e654]
+                    - link "Get Started $" [ref=f14e656] [cursor=pointer]:
+                      - /url: /contact/
+                  - generic [ref=f14e657]:
+                    - heading "Existing Patient" [level=4] [ref=f14e659]
+                    - link "Book online $" [ref=f14e661] [cursor=pointer]:
+                      - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking/book-appointment
+          - generic [ref=f14e662]:
+            - generic [ref=f14e663]:
+              - generic [ref=f14e664]:
+                - link "Bella Vida Aesthetics & Wellness logo white" [ref=f14e666] [cursor=pointer]:
+                  - /url: /
+                  - img "Bella Vida Aesthetics & Wellness logo white" [ref=f14e668]
+                - heading "Bella Vida Aesthetics & Wellness" [level=4] [ref=f14e671]
+                - list [ref=f14e674]:
+                  - listitem [ref=f14e675]:
+                    - generic [ref=f14e677]: 
+                    - generic [ref=f14e678]: 151 SE 1st Street, Unit 5, Miami FL 33131
+                  - listitem [ref=f14e679]:
+                    - link " (786) 338-8346" [ref=f14e680] [cursor=pointer]:
+                      - /url: tel:7863388346
+                      - generic [ref=f14e682]: 
+                      - generic [ref=f14e683]: (786) 338-8346
+                  - listitem [ref=f14e684]:
+                    - generic [ref=f14e686]: 
+                    - generic [ref=f14e687]: "Mon-Fri: 10 AM - 6 PM"
+                - link "Book Now" [ref=f14e689] [cursor=pointer]:
+                  - /url: https://bellavidaaesthetics.myaestheticrecord.com/online-booking?hl=en-BR&gei=oWTyaL_BOPnX1sQP2f2J0Qg%2017:46%20We%20did%20not%20do%20her%20booking%20link,%20as%20that%20would've%20been%20there%20when%20we%20took%20over%20the%20website....
+              - generic [ref=f14e692]:
+                - img "Bella Vida Aesthetics & Wellness blue logo" [ref=f14e695]
+                - generic [ref=f14e697]:
+                  - paragraph [ref=f14e698]: FACE & BODY TREATMENTS
+                  - list [ref=f14e699]:
+                    - listitem [ref=f14e700]:
+                      - link "Neurotoxins" [ref=f14e701] [cursor=pointer]:
+                        - /url: /neurotoxins/
+                    - listitem [ref=f14e702]:
+                      - link "Dermal Fillers" [ref=f14e703] [cursor=pointer]:
+                        - /url: /dermal-fillers/
+                  - paragraph [ref=f14e704]:
+                    - link "View All Treatments" [ref=f14e705] [cursor=pointer]:
+                      - /url: /facial-rejuvenation/
+              - generic [ref=f14e708]:
+                - img "Bella Vida Instant BBL treatment green logo" [ref=f14e711]
+                - generic [ref=f14e713]:
+                  - paragraph [ref=f14e714]: FACE & BODY TREATMENTS
+                  - list [ref=f14e715]:
+                    - listitem [ref=f14e716]:
+                      - link "About Bella Vida Instant BBL" [ref=f14e717] [cursor=pointer]:
+                        - /url: /non-surgical-bbl/
+                      - text: ™
+                    - listitem [ref=f14e718]:
+                      - link "Frequently Asked Questions" [ref=f14e719] [cursor=pointer]:
+                        - /url: /bella-vida-instant-bbl-faq/
+                  - paragraph [ref=f14e720]:
+                    - link "Am I a Candidate" [ref=f14e721] [cursor=pointer]:
+                      - /url: /am-i-a-candidate-for-bbl/
+                  - paragraph
+              - generic [ref=f14e724]:
+                - img "Bella Vida Institute yellow logo" [ref=f14e727]
+                - generic [ref=f14e729]:
+                  - paragraph [ref=f14e730]: FACE & BODY TREATMENTS
+                  - list [ref=f14e731]:
+                    - listitem [ref=f14e732]:
+                      - link "About Bella Vida Institute" [ref=f14e733] [cursor=pointer]:
+                        - /url: /training/
+                    - listitem [ref=f14e734]:
+                      - link "FACE Medical Supplies" [ref=f14e735] [cursor=pointer]:
+                        - /url: " https://facemedstore.com/?ref=bellavida&_gl=1*7vzyp4*_ga*MTUzMDcyOTUwNS4xNjgyNTMyMTU0*_ga_M8KXYQFWHF*MTY5NTgyMzk0Ni44NS4wLjE2OTU4MjM5NDYuMC4wLjA."
+                  - paragraph [ref=f14e736]:
+                    - link "Find a Provider Near Me" [ref=f14e737] [cursor=pointer]:
+                      - /url: "#"
+            - heading " Cancellation Policy" [level=5] [ref=f14e741] [cursor=pointer]
+            - text:     
+            - list [ref=f14e744]:
+              - listitem [ref=f14e745]:
+                - link "" [ref=f14e746] [cursor=pointer]:
+                  - /url: https://www.facebook.com/bellavidaaesthetics
+              - listitem [ref=f14e747]:
+                - link "" [ref=f14e748] [cursor=pointer]:
+                  - /url: https://www.youtube.com/channel/UCWiCZ5kGcHjBcux6FsH9WVw
+              - listitem [ref=f14e749]:
+                - link "" [ref=f14e750] [cursor=pointer]:
+                  - /url: https://www.instagram.com/bellavidaaesthetics/
+              - listitem [ref=f14e751]:
+                - link "" [ref=f14e752] [cursor=pointer]:
+                  - /url: https://www.tiktok.com/@bellavidaaesthetics?lang=en
+          - paragraph [ref=f14e758]:
+            - text: Copyright © 2025 Bella Vida Aesthetics & Wellness | All Rights Reserved |
+            - link "Accessibility Statement" [ref=f14e759] [cursor=pointer]:
+              - /url: /accessibility/
+            - text: "|"
+            - link "Privacy Policy" [ref=f14e760] [cursor=pointer]:
+              - /url: /privacy-policy/
+            - text: "|"
+            - link "Terms & Conditions" [ref=f14e761] [cursor=pointer]:
+              - /url: https://bellavidaaesthetics.com/terms-conditions/
+  - text: "2"
+  - generic [ref=f14e762]:
+    - generic:
+      - text: ✨ Hi! Need help with treatments?
+      - generic: ×
+    - button "Open chat" [ref=f14e763] [cursor=pointer]:
+      - img [ref=f14e764]

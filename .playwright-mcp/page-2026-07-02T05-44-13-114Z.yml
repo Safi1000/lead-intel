@@ -1,0 +1,300 @@
+- generic [active] [ref=f50e1]:
+  - alert [ref=f50e2]: Press Alt+1 for screen-reader mode, Alt+0 to cancel
+  - button "Use Website In a Screen-Reader Mode" [ref=f50e3]
+  - link "Accessibility Screen-Reader Guide, Feedback, and Issue Reporting | New window" [ref=f50e4] [cursor=pointer]:
+    - /url: https://accessibe.com/blog/knowledgebase/screen-reader-guide
+  - generic:
+    - generic:
+      - region "Skip Links":
+        - generic:
+          - link "Skip to Content":
+            - /url: "#acsbContent"
+            - text: Skip to Content
+            - generic:
+              - generic: ↵
+              - text: ENTER
+  - dialog [ref=f50e5]:
+    - generic [ref=f50e6]:
+      - img [ref=f50e7]
+      - text: Simplify Text
+    - button [ref=f50e9] [cursor=pointer]:
+      - img [ref=f50e10]
+  - 'button "Open accessiBe: accessibility options, statement and help" [ref=f50e13] [cursor=pointer]':
+    - generic:
+      - img [ref=f50e14]
+      - img
+      - img
+  - generic [ref=f50e17]:
+    - region "Cookie banner" [ref=f50e18]:
+      - paragraph [ref=f50e19]:
+        - paragraph [ref=f50e20]:
+          - text: We use cookies to provide you with a great experience and to help our website run effectively. By using our site you agree to our use of cookies. Please check our
+          - link "Cookies Policy" [ref=f50e21] [cursor=pointer]:
+            - /url: /cookies-policy
+      - button "Accept" [ref=f50e23] [cursor=pointer]:
+        - generic [ref=f50e24]: Accept
+    - banner:
+      - generic [ref=f50e28]:
+        - link "Call Now (786) 359-4068" [ref=f50e29] [cursor=pointer]:
+          - /url: tel:+17863594068
+        - generic [ref=f50e30]:
+          - button "Close Announcement" [ref=f50e31] [cursor=pointer]: ×
+          - paragraph [ref=f50e33]:
+            - strong [ref=f50e35]: Call Now (786) 359-4068
+      - generic [ref=f50e36]:
+        - link "Skip to Content" [ref=f50e37] [cursor=pointer]:
+          - /url: "#page"
+        - generic [ref=f50e40]:
+          - generic [ref=f50e41]:
+            - link "Beyond Health Medspa" [ref=f50e44] [cursor=pointer]:
+              - /url: /
+              - img "Beyond Health Medspa" [ref=f50e46]
+            - navigation [ref=f50e49]:
+              - link "Appointments" [ref=f50e51] [cursor=pointer]:
+                - /url: /book-an-appointment
+              - link "Treatments" [ref=f50e53] [cursor=pointer]:
+                - /url: /treatments
+              - link "Memberships" [ref=f50e55] [cursor=pointer]:
+                - /url: /membership
+              - link "Pricing" [ref=f50e57] [cursor=pointer]:
+                - /url: /pricing
+              - button "Financing" [ref=f50e59] [cursor=pointer]:
+                - generic [ref=f50e60]: Financing
+              - button "About" [ref=f50e62] [cursor=pointer]:
+                - generic [ref=f50e63]: About
+              - link "Contact" [ref=f50e65] [cursor=pointer]:
+                - /url: /contact
+          - generic [ref=f50e66]:
+            - generic [ref=f50e67]:
+              - link "Instagram" [ref=f50e68] [cursor=pointer]:
+                - /url: https://instagram.com/beyondhealthmedspa?igshid=OGQ5ZDc2ODk2ZA==
+                - img [ref=f50e69]
+              - link "TikTok" [ref=f50e71] [cursor=pointer]:
+                - /url: https://www.tiktok.com/@beyondhealthmedspa?_t=8lCLgmrBhQk&_r=1
+                - img [ref=f50e72]
+              - link "Facebook" [ref=f50e74] [cursor=pointer]:
+                - /url: https://www.facebook.com/beyondhealthmedspa
+                - img [ref=f50e75]
+              - link "YouTube" [ref=f50e77] [cursor=pointer]:
+                - /url: https://www.youtube.com/channel/UC1sWAz66kj8iA37f2jsINjA/videos?view=0
+                - img [ref=f50e78]
+            - listbox "language picker" [ref=f50e80]:
+              - generic [ref=f50e81] [cursor=pointer]:
+                - img "English flag icon" [ref=f50e82]
+                - generic [ref=f50e83]: English
+                - img [ref=f50e85]
+            - link "CONTACT US" [ref=f50e88] [cursor=pointer]:
+              - /url: tel:+17863594068
+    - main [ref=f50e89]:
+      - article [ref=f50e90]:
+        - generic [ref=f50e96]:
+          - heading "Miami Medical Spa for Advanced Facial Rejuvenation" [level=1] [ref=f50e102]
+          - generic [ref=f50e107]:
+            - paragraph [ref=f50e108]: Personalized, non-surgical treatments performed by certified specialists using original technologies and products for natural, refined results.
+            - paragraph [ref=f50e109]:
+              - text: Endolift® • PDO Threads • Spider Veins • Botox® • Dermal Fillers and More
+              - text: Serving Miami patients seeking personalized solutions for facial rejuvenation, skin concerns, and aesthetic enhancement.
+              - link "Explore Treatment Options →" [ref=f50e110] [cursor=pointer]:
+                - /url: /treatments
+              - link "Request an Appointment →" [ref=f50e111] [cursor=pointer]:
+                - /url: /book-an-appointment
+        - generic [ref=f50e126]:
+          - heading "Why Patients Choose Beyond Health MedSpa" [level=2] [ref=f50e132]
+          - generic [ref=f50e137]:
+            - paragraph [ref=f50e138]:
+              - strong [ref=f50e139]: Certified Specialists
+              - text: Treatments performed by licensed and experienced medical professionals.
+            - paragraph [ref=f50e140]:
+              - strong [ref=f50e141]: Personalized Approach
+              - text: Every treatment plan is tailored to your goals and facial balance.
+            - paragraph [ref=f50e142]:
+              - strong [ref=f50e143]: Natural, Refined Results
+              - text: Focused on subtle, progressive improvements that look like you.
+            - paragraph [ref=f50e144]:
+              - strong [ref=f50e145]: Advanced Non-Surgical Treatments
+              - text: Modern techniques including Endolift®, PDO Threads, and more.
+            - paragraph [ref=f50e146]:
+              - strong [ref=f50e147]: Trusted Experience
+              - text: Over 15 years of medical and aesthetic expertise in Miami.
+            - paragraph [ref=f50e148]:
+              - strong [ref=f50e149]: Bilingual Care
+              - text: Personalized attention in English and Español.
+        - generic [ref=f50e155]:
+          - heading "Meet Our Lead Specialist" [level=2] [ref=f50e161]:
+            - strong [ref=f50e162]: Meet Our Lead Specialist
+          - generic [ref=f50e176]:
+            - paragraph [ref=f50e177]:
+              - strong [ref=f50e178]: Lylliam Guimarais, APRN, FNP-BC
+              - strong [ref=f50e179]: Autonomous Nurse Practitioner & Master Aesthetic Injector
+            - paragraph [ref=f50e180]: With over 15 years of clinical experience spanning critical care and aesthetic medicine, Lylliam specializes in advanced non-surgical rejuvenation, including Endolift®, PDO Threads, and personalized facial treatments. Her approach combines medical expertise with an artistic eye for facial harmony, creating natural-looking results tailored to each patient’s unique features and goals.
+            - paragraph [ref=f50e181]: By focusing on balance, precision, and individualized care, she develops treatment plans designed to enhance—not change—your natural beauty.
+        - generic [ref=f50e187]:
+          - heading "Trusted Brands We Work With" [level=2] [ref=f50e193]
+          - paragraph [ref=f50e199]: Professional products and technologies used in our treatments.
+          - generic [ref=f50e205]:
+            - generic [ref=f50e206]: Endolift®•
+            - generic [ref=f50e207]: Renovatio™ PDO Threads•
+            - generic [ref=f50e208]: Allergan®•
+            - generic [ref=f50e209]: Galderma®•
+            - generic [ref=f50e210]: Merz Aesthetics®•
+            - generic [ref=f50e211]: Revanesse®•
+            - generic [ref=f50e212]: Endolift®•
+            - generic [ref=f50e213]: Renovatio™ PDO Threads•
+            - generic [ref=f50e214]: Allergan®•
+            - generic [ref=f50e215]: Galderma®•
+            - generic [ref=f50e216]: Merz Aesthetics®•
+            - generic [ref=f50e217]: Revanesse®
+        - generic [ref=f50e223]:
+          - heading "About Beyond Health MedSpa" [level=2] [ref=f50e229]:
+            - strong [ref=f50e230]: About Beyond Health MedSpa
+          - generic [ref=f50e262]:
+            - paragraph [ref=f50e263]: At Beyond Health MedSpa, we believe aesthetic treatments should enhance your natural beauty—not change it. Our approach combines medical expertise, advanced technologies, and personalized treatment plans designed around your unique features and goals.
+            - paragraph [ref=f50e264]
+            - paragraph [ref=f50e265]:
+              - text: ✔ Certified specialists with advanced aesthetic experience
+              - text: ✔ Original products and advanced technologies
+              - text: ✔ Personalized treatment plans for every patient
+              - text: ✔ Focus on natural-looking results and facial harmony
+              - text: ✔ Comprehensive facial and body rejuvenation options in one location
+              - text: ✔ Conveniently located in Miami
+            - paragraph [ref=f50e266]
+            - paragraph [ref=f50e267]: Every recommendation is tailored to your anatomy, concerns, and aesthetic goals—because personalized care matters.
+            - paragraph [ref=f50e268]:
+              - link "Learn More About Our Clinic ⟶" [ref=f50e269] [cursor=pointer]:
+                - /url: /about
+                - strong [ref=f50e270]: Learn More About Our Clinic ⟶
+        - generic [ref=f50e282]:
+          - heading "Explore Our Treatments" [level=2] [ref=f50e288]:
+            - strong [ref=f50e289]: Explore Our Treatments
+          - generic [ref=f50e294]:
+            - heading "Advanced non-surgical treatments designed for natural, refined results." [level=3] [ref=f50e295]
+            - heading [level=3] [ref=f50e296]
+            - heading "Featured Treatments" [level=3] [ref=f50e297]:
+              - strong [ref=f50e298]: Featured Treatments
+            - paragraph [ref=f50e299]:
+              - link "BeyondLífte™" [ref=f50e300] [cursor=pointer]:
+                - /url: /beyondlifte-miami
+                - strong [ref=f50e301]: BeyondLífte™
+              - text: Our signature non-surgical lifting protocol combining Endolift® and PDO Threads for refined facial and neck contouring.
+            - paragraph [ref=f50e302]:
+              - link "Endolift®" [ref=f50e303] [cursor=pointer]:
+                - /url: /endolift-miami
+                - strong [ref=f50e304]: Endolift®
+              - text: Laser-based treatment to support skin tightening and contour improvement with minimal downtime.
+            - paragraph [ref=f50e305]:
+              - link "PDO Threads" [ref=f50e306] [cursor=pointer]:
+                - /url: /pdo-threads
+                - strong [ref=f50e307]: PDO Threads
+              - text: A minimally invasive option to support skin firmness and enhance facial definition over time.
+            - paragraph [ref=f50e308]:
+              - link "Spider Vein Treatment" [ref=f50e309] [cursor=pointer]:
+                - /url: /sclerotherapy
+                - strong [ref=f50e310]: Spider Vein Treatment
+              - text: Targeted treatment to reduce the appearance of spider veins and improve leg aesthetics.
+            - paragraph [ref=f50e311]:
+              - link "Wrinkle Relaxers" [ref=f50e312] [cursor=pointer]:
+                - /url: /botox
+                - strong [ref=f50e313]: Wrinkle Relaxers
+              - text: Softening expression lines such as forehead lines, frown lines, and crow’s feet with natural-looking results.
+            - paragraph [ref=f50e314]:
+              - link "Medical Weight Loss" [ref=f50e315] [cursor=pointer]:
+                - /url: /semaglutide-weight-loss
+                - strong [ref=f50e316]: Medical Weight Loss
+              - text: Personalized programs designed to support appetite control and overall wellness.
+            - paragraph [ref=f50e317]:
+              - link "IV Therapy" [ref=f50e318] [cursor=pointer]:
+                - /url: /iv-therapy
+                - strong [ref=f50e319]: IV Therapy
+              - text: Customized infusions for hydration, energy, and recovery support.
+            - paragraph [ref=f50e320]
+            - heading "Find the Right Treatment for You ⟶" [level=3] [ref=f50e321]:
+              - link "Find the Right Treatment for You ⟶" [ref=f50e322] [cursor=pointer]:
+                - /url: /treatments
+        - generic [ref=f50e327]:
+          - paragraph [ref=f50e329]: What People Are Saying
+          - list [ref=f50e330]:
+            - listitem [ref=f50e331]:
+              - heading "“From start to finish, the experience was professional, welcoming, and personalized. The results looked natural and refined.”" [level=2] [ref=f50e334]
+            - listitem [ref=f50e335]:
+              - heading "“I wanted subtle, natural-looking results and that’s exactly what I received. I felt comfortable and informed throughout the entire process.”" [level=2] [ref=f50e338]
+            - listitem [ref=f50e339]:
+              - heading "“Lylliam and her team are incredibly knowledgeable and attentive. You can immediately tell you are in experienced hands.”" [level=2] [ref=f50e342]
+            - listitem [ref=f50e343]:
+              - heading "“The office is beautiful, clean, and calming. The entire team made me feel comfortable from the moment I arrived.”" [level=2] [ref=f50e346]
+            - listitem [ref=f50e347]:
+              - heading "“I traveled to Miami specifically for treatment at Beyond Health MedSpa and it was absolutely worth it.”" [level=2] [ref=f50e350]
+          - link "Read Our Reviews" [ref=f50e352] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/Aa85FsD6Ym7yBzd38?g_st=ic
+        - generic [ref=f50e358]:
+          - heading "Start Your Personalized Aesthetic Plan" [level=2] [ref=f50e364]
+          - generic [ref=f50e369]:
+            - heading "Every treatment at Beyond Health MedSpa begins with a personalized approach." [level=3] [ref=f50e370]
+            - paragraph [ref=f50e371]: Our team evaluates your goals, facial structure, and skin condition to recommend the most appropriate non-surgical options for natural, balanced, and progressive results.
+          - link "Request Appointment" [ref=f50e376] [cursor=pointer]:
+            - /url: /book-an-appointment
+    - contentinfo [ref=f50e377]:
+      - generic [ref=f50e383]:
+        - generic [ref=f50e389]:
+          - img
+        - generic [ref=f50e397]:
+          - generic [ref=f50e398]:
+            - heading "Don't miss a thing." [level=2] [ref=f50e399]
+            - paragraph [ref=f50e401]: Sign up to Receive Special Promotions, News, and Updates!
+          - generic [ref=f50e402]:
+            - textbox "Email Address" [ref=f50e405]
+            - button "Sign Up" [ref=f50e407] [cursor=pointer]: Sign Up
+          - paragraph [ref=f50e409]:
+            - text: By clicking “Sign Up” you confirm you’re okay with receiving emails from us and agree to our
+            - link "Policies & Terms" [ref=f50e410] [cursor=pointer]:
+              - /url: https://www.beyondhealthmedspa.com/policies
+            - text: . Rest assured, we’re here to make your journey with us as rewarding as possible.
+      - generic [ref=f50e416]:
+        - paragraph [ref=f50e430]:
+          - link "Appointment" [ref=f50e431] [cursor=pointer]:
+            - /url: /book-an-appointment
+          - text: "|"
+          - link "Treatments" [ref=f50e432] [cursor=pointer]:
+            - /url: /treatments
+          - text: "|"
+          - link "Pricing" [ref=f50e433] [cursor=pointer]:
+            - /url: /pricing
+          - text: "|"
+          - link "Membership" [ref=f50e434] [cursor=pointer]:
+            - /url: /membership
+          - text: "|"
+          - link "Financing" [ref=f50e435] [cursor=pointer]:
+            - /url: /payment-plans
+          - text: "|"
+          - link "About" [ref=f50e436] [cursor=pointer]:
+            - /url: /about
+          - text: "|"
+          - link "Contact" [ref=f50e437] [cursor=pointer]:
+            - /url: /contact
+        - generic [ref=f50e442]:
+          - paragraph [ref=f50e443]: Beyond Health MedSpa
+          - paragraph [ref=f50e444]: 8000 SW 117th Ave, Suite 201
+          - paragraph [ref=f50e445]: Miami, FL 33183
+          - paragraph [ref=f50e446]:
+            - link "(786) 359-4068" [ref=f50e447] [cursor=pointer]:
+              - /url: tel:7863594068
+        - generic [ref=f50e452]:
+          - paragraph [ref=f50e453]: © 2026 Beyond Health MedSpa — All rights reserved.
+          - paragraph [ref=f50e454]:
+            - link "Privacy Statement" [ref=f50e455] [cursor=pointer]:
+              - /url: /privacy-statement
+            - text: "|"
+            - link "Terms of Use" [ref=f50e456] [cursor=pointer]:
+              - /url: /terms-of-use
+            - text: "|"
+            - link "SMS Terms" [ref=f50e457] [cursor=pointer]:
+              - /url: /sms-terms
+          - paragraph [ref=f50e458]:
+            - link "Accessibility Policy" [ref=f50e459] [cursor=pointer]:
+              - /url: /accessibility-policy
+            - text: "|"
+            - link "Cookies Policy" [ref=f50e460] [cursor=pointer]:
+              - /url: /cookies-policy
+          - paragraph [ref=f50e461]:
+            - link "Deposit, Refund & Cancellation Policy" [ref=f50e462] [cursor=pointer]:
+              - /url: /deposit-cancelation-policy
+        - paragraph [ref=f50e468]: "Disclaimer: This website is for informational purposes only and does not replace professional medical consultation or advice. All treatments should be reviewed with a qualified provider during your evaluation. Individual results may vary."

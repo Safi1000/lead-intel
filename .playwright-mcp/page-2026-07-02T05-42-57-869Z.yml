@@ -1,0 +1,150 @@
+- generic [active] [ref=f33e1]:
+  - generic [ref=f33e2]:
+    - generic [ref=f33e7]:
+      - button "Menu Toggle" [ref=f33e20] [cursor=pointer]:
+        - generic [ref=f33e21]: 
+        - text: 
+      - generic [ref=f33e28]:
+        - paragraph [ref=f33e32]: Natural beauty, thoughtfully elevated
+        - paragraph [ref=f33e35]: Personalized medical aesthetic care designed to enhance, restore, and preserve your natural beauty with refined results that never look overdone.
+    - text:        
+    - generic [ref=f33e37]:
+      - link "Book now" [ref=f33e43] [cursor=pointer]:
+        - /url: https://bit.ly/3WsR5Ze
+        - generic [ref=f33e45]: Book now
+      - link "Contact" [ref=f33e51] [cursor=pointer]:
+        - /url: https://lp.constantcontactpages.com/su/cqbqUqK/subscribe
+        - generic [ref=f33e53]: Contact
+    - generic [ref=f33e59]:
+      - paragraph [ref=f33e60]: Caruna Med Spa & Laser Center is one of the top med spas for minimally invasive treatments in Miami, Florida.
+      - paragraph [ref=f33e61]: We offer advanced techniques, thoughtful planning, and an intentional approach to skin health, so you look refreshed, confident, and completely yourself.
+    - text:      
+    - region "Slides" [ref=f33e95]:
+      - generic [ref=f33e96]:
+        - group "5 / 5" [ref=f33e97]:
+          - generic [ref=f33e100]:
+            - text: Excellent! Highly Recommended!
+            - text: I recommend Caruna Med Spa to anyone that is looking for a place where the staff is always so welcoming, knowledgeable and always goes above & beyond to meet your needs/expectations.
+        - group "1 / 5" [ref=f33e101]:
+          - generic [ref=f33e104]:
+            - text: The Best Med Spa Laser Hair Removal in Miami
+            - text: This is by far the best medspa laser hair removal place in Miami. The people are very professional, friendly and knowledgeable.
+        - group "2 / 5" [ref=f33e105]:
+          - generic [ref=f33e108]:
+            - text: Simply the Best!
+            - text: I have to tell everyone who ever thought about intimate bleaching - THIS is the only place to go! SO kind staff and discreetly the whole way through, which to me is very important!
+        - group "3 / 5" [ref=f33e109]:
+          - generic [ref=f33e112]:
+            - text: Love this place!
+            - text: I started doing laser treatments a few months ago, and within my first session I saw amazing results! Thank you very much Caruna Med Spa!
+        - group "4 / 5" [ref=f33e113]:
+          - generic [ref=f33e116]:
+            - text: The Best Body Shaping Treatment Ever!
+            - text: I started anti cellulite treatments at Caruna Med Spa three weeks ago and I must say I am more than happy with my results! Thank you so much!
+        - group "5 / 5" [ref=f33e117]:
+          - generic [ref=f33e120]:
+            - text: Excellent! Highly Recommended!
+            - text: I recommend Caruna Med Spa to anyone that is looking for a place where the staff is always so welcoming, knowledgeable and always goes above & beyond to meet your needs/expectations.
+        - group "1 / 5" [ref=f33e121]:
+          - generic [ref=f33e124]:
+            - text: The Best Med Spa Laser Hair Removal in Miami
+            - text: This is by far the best medspa laser hair removal place in Miami. The people are very professional, friendly and knowledgeable.
+      - button "Previous slide": 
+      - button "Next slide": 
+      - generic [ref=f33e125]:
+        - button "Go to slide 1" [ref=f33e126] [cursor=pointer]
+        - button "Go to slide 2" [ref=f33e127] [cursor=pointer]
+        - button "Go to slide 3" [ref=f33e128] [cursor=pointer]
+        - button "Go to slide 4" [ref=f33e129] [cursor=pointer]
+        - button "Go to slide 5" [ref=f33e130] [cursor=pointer]
+    - generic [ref=f33e138]:
+      - link "Book now" [ref=f33e144] [cursor=pointer]:
+        - /url: https://bit.ly/3WsR5Ze
+        - generic [ref=f33e146]: Book now
+      - link "Contact" [ref=f33e152] [cursor=pointer]:
+        - /url: https://lp.constantcontactpages.com/su/cqbqUqK/subscribe
+        - generic [ref=f33e154]: Contact
+    - generic [ref=f33e161]:
+      - link [ref=f33e166] [cursor=pointer]:
+        - /url: https://carunamedspa.com/
+      - generic [ref=f33e170]:
+        - navigation "Menu" [ref=f33e171]:
+          - list [ref=f33e172]:
+            - listitem [ref=f33e173]:
+              - link "Home" [ref=f33e174] [cursor=pointer]:
+                - /url: https://carunamedspa.com/
+            - listitem [ref=f33e175]:
+              - link "About us" [ref=f33e176] [cursor=pointer]:
+                - /url: https://carunamedspa.com/about-us/
+            - listitem [ref=f33e177]:
+              - link "Services" [ref=f33e178] [cursor=pointer]:
+                - /url: https://carunamedspa.com/services/
+            - listitem [ref=f33e179]:
+              - link "Specials" [ref=f33e180] [cursor=pointer]:
+                - /url: https://carunamedspa.com/my-specials/
+            - listitem [ref=f33e181]:
+              - link "Reviews" [ref=f33e182] [cursor=pointer]:
+                - /url: http://tinyurl.com/4b4v8h64
+            - listitem [ref=f33e183]:
+              - link "Contact us" [ref=f33e184] [cursor=pointer]:
+                - /url: https://lp.constantcontactpages.com/su/cqbqUqK/subscribe
+        - text:  
+    - text:    
+    - generic [ref=f33e186]:
+      - generic [ref=f33e190]:
+        - generic [ref=f33e191]:
+          - heading "305-456-9336 (Direct)" [level=6] [ref=f33e192]:
+            - link "305-456-9336" [ref=f33e193] [cursor=pointer]:
+              - /url: tel:305-456-9336
+            - text: (Direct)
+          - heading "305-781-7440 (Text or WhatsApp)" [level=6] [ref=f33e194]:
+            - link "305-781-7440" [ref=f33e195] [cursor=pointer]:
+              - /url: tel:305-781-7440
+            - text: (Text or WhatsApp)
+          - heading [level=6]
+        - link "1800 SW 1st Ave, Suite 103," [ref=f33e197] [cursor=pointer]:
+          - /url: https://goo.gl/maps/ZxAG6TbwNBfGQBaEA
+        - link "Miami, FL 33129" [ref=f33e199] [cursor=pointer]:
+          - /url: https://goo.gl/maps/ZxAG6TbwNBfGQBaEA
+        - link "info@carunamedspa.com" [ref=f33e201] [cursor=pointer]:
+          - /url: mailto:info@carunamedspa.com
+      - generic [ref=f33e206]:
+        - heading "Hours:" [level=5] [ref=f33e207]
+        - paragraph [ref=f33e208]:
+          - text: Mon – Fri. 9:30am – 6pm
+          - text: Sat. By appointment only
+          - text: Sun. Closed
+      - generic [ref=f33e212]:
+        - link:
+          - /url: https://www.carecredit.com/doctor-locator/Cosmetic-in-MIAMI-FL-33129/Carvna-Spa-and-Laser-Center/
+      - link [ref=f33e217] [cursor=pointer]:
+        - /url: http://tinyurl.com/4b4v8h64
+      - list [ref=f33e222]:
+        - listitem [ref=f33e223]:
+          - link "Facebook-f" [ref=f33e224] [cursor=pointer]:
+            - /url: https://www.facebook.com/Caruna-Med-Spa-Laser-Center-133994396633285/
+            - generic [ref=f33e225]: Facebook-f
+            - generic [ref=f33e226]: 
+        - listitem [ref=f33e227]:
+          - link "Twitter" [ref=f33e228] [cursor=pointer]:
+            - /url: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwjz6bHUpYXhAhXDzVkKHaYCBu4QFjAAegQIAxAB&url=https%3A%2F%2Ftwitter.com%2Fcarunaspa&usg=AOvVaw1_IKeciHn5iaSv7ih4E2xm
+            - generic [ref=f33e229]: Twitter
+            - generic [ref=f33e230]: 
+        - listitem [ref=f33e231]:
+          - link "Instagram" [ref=f33e232] [cursor=pointer]:
+            - /url: https://www.instagram.com/carunamedspa/?hl=en
+            - generic [ref=f33e233]: Instagram
+            - generic [ref=f33e234]: 
+        - listitem [ref=f33e235]:
+          - link "Yelp" [ref=f33e236] [cursor=pointer]:
+            - /url: https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwjh-dD7pYXhAhUirVkKHTyrD7cQFjAAegQICRAB&url=https%3A%2F%2Fwww.yelp.com%2Fbiz%2Fcaruna-med-spa-and-laser-center-miami&usg=AOvVaw0ebvaoUHgPfFP3tdhkZoZ5
+            - generic [ref=f33e237]: Yelp
+            - generic [ref=f33e238]: 
+    - paragraph [ref=f33e245]:
+      - text: Copyright © All rights reserved 2024 | Caruna Med Spa & Laser Center | Designed by
+      - link "Goodkin Design" [ref=f33e246] [cursor=pointer]:
+        - /url: http://goodkindesign.com
+  - generic [ref=f33e247]: desktop
+  - button "Contact Us Now" [ref=f33e248] [cursor=pointer]:
+    - generic [ref=f33e249]: 
+    - generic [ref=f33e250]: Contact Us Now

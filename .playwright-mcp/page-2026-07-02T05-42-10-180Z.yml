@@ -1,0 +1,339 @@
+- generic [active] [ref=f21e1]:
+  - img [ref=f21e2]
+  - img [ref=f21e3]
+  - img [ref=f21e4]
+  - generic [ref=f21e5]:
+    - list [ref=f21e9]:
+      - listitem [ref=f21e10]:
+        - 'link "Coconut Grove: (305) 676-4509" [ref=f21e11] [cursor=pointer]':
+          - /url: tel:3056764509
+      - listitem [ref=f21e12]:
+        - 'link "Midtown Miami: (305) 850-7691" [ref=f21e13] [cursor=pointer]':
+          - /url: tel:3058507691
+      - listitem [ref=f21e14]:
+        - link "Client Login" [ref=f21e15] [cursor=pointer]:
+          - /url: https://web2.myaestheticspro.com/clientportal/dsp_loginportal.cfm?8B10F0B0CF622F4854487891EE446A67
+    - banner [ref=f21e16]:
+      - generic [ref=f21e17]:
+        - link "Lavish Laser Medspa logo featuring elegant typography, representing aesthetic treatments and skin health services." [ref=f21e19] [cursor=pointer]:
+          - /url: https://lavishlasermedspa.com/
+          - img "Lavish Laser Medspa logo featuring elegant typography, representing aesthetic treatments and skin health services." [ref=f21e20]
+        - generic [ref=f21e21]:
+          - navigation [ref=f21e22]:
+            - list [ref=f21e23]:
+              - listitem [ref=f21e24]:
+                - link "Enhancement Area 3" [ref=f21e25] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/
+              - listitem [ref=f21e26]:
+                - link "Help Me With… 3" [ref=f21e27] [cursor=pointer]:
+                  - /url: "#"
+              - listitem [ref=f21e28]:
+                - link "Gallery" [ref=f21e29] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/gallery/
+              - listitem [ref=f21e30]:
+                - link "Products" [ref=f21e31] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/medical-grade-skin-care-products/
+              - listitem [ref=f21e32]:
+                - link "About 3" [ref=f21e33] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/medspa-miami/
+              - listitem [ref=f21e34]:
+                - link "LOCATIONS 3" [ref=f21e35] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/locations/
+              - listitem [ref=f21e36]:
+                - link "Contact" [ref=f21e37] [cursor=pointer]:
+                  - /url: https://lavishlasermedspa.com/contact/
+              - listitem [ref=f21e38]:
+                - link "Book Now" [ref=f21e39] [cursor=pointer]:
+                  - /url: https://www.joinblvd.com/b/lavishlasermedspa/widget#/locations
+          - text: a
+    - generic [ref=f21e40]:
+      - article [ref=f21e42]:
+        - generic [ref=f21e45]:
+          - generic [ref=f21e48]:
+            - img "Lavish Laser Medspa logo featuring elegant typography, representing aesthetic treatments and skin health services." [ref=f21e51]
+            - generic [ref=f21e54]:
+              - link "Book Now" [ref=f21e55] [cursor=pointer]:
+                - /url: https://www.joinblvd.com/b/lavishlasermedspa/widget#/locations
+              - link "services" [ref=f21e56] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/
+          - generic [ref=f21e59]:
+            - heading "Miami Medspa" [level=3] [ref=f21e62]
+            - heading "The Lavish Laser Experience" [level=1] [ref=f21e65]
+            - paragraph [ref=f21e68]:
+              - text: At Lavish Laser Medspa in Miami, we offer best-in-class services using state-of-the-art aesthetic technology and products to enhance your overall beauty enabling the best version of you to be realized. Our
+              - link "highly-trained and licensed staff" [ref=f21e69] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/medspa-miami/#team
+              - text: ", led by our Medical Director Dr. Marc Epstein, specializes in enhancing your natural beauty by reversing the signs of aging through skin rejuvenation,"
+              - link "injectables" [ref=f21e70] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/injectables/
+              - text: ","
+              - link "body contouring" [ref=f21e71] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/body-sculpting-miami/
+              - text: ", and other non-invasive aesthetic medicine techniques. We believe true beauty comes from within and are passionate about fostering a wellness approach that reaches beyond the physical view of ourselves to promote positive mental health awareness. All"
+              - link "our treatments" [ref=f21e72] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/
+              - text: at our Miami medspa are performed with a keen eye toward natural enhancements in a safe, relaxing, and professional environment. We can’t wait to meet you and welcome you to the Lavish family.
+            - link "about us" [ref=f21e74] [cursor=pointer]:
+              - /url: https://lavishlasermedspa.com/medspa-miami/
+          - generic [ref=f21e82]:
+            - heading "Face ENHANCING Treatments" [level=3] [ref=f21e85]
+            - paragraph [ref=f21e88]: We offer a variety of treatment options that work to improve common signs of aging from fine lines and wrinkles, skin texture and discoloration, to sagging skin, acne, and more. Schedule a consultation with one of our skin specialists at our Miami medspa who can assess your needs and recommend the best treatment plan for your desired outcomes.
+          - generic [ref=f21e90]:
+            - generic [ref=f21e91]:
+              - link "injectables" [ref=f21e94] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/injectables/
+              - link "hydrafacial" [ref=f21e97] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/facial-treatments/
+              - link "microneedling" [ref=f21e100] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/microneedling-miami/
+              - link "view all" [ref=f21e103] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/
+            - generic [ref=f21e105]:
+              - heading "Confidence breeds beauty" [level=3] [ref=f21e108]
+              - heading "become the best version of you." [level=3] [ref=f21e111]
+          - generic [ref=f21e120]:
+            - heading "Body ENHANCING Treatments" [level=3] [ref=f21e123]
+            - paragraph [ref=f21e126]:
+              - text: Your most beautiful you is waiting to be unveiled to the world. We know today’s hectic lifestyle can leave little time for self-improvement which is why we offer an extensive array of treatment options to enhance those stubborn areas that exercise alone can’t fix. From
+              - link "body contouring" [ref=f21e127] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/body-sculpting-miami/
+              - text: ","
+              - link "muscle activation" [ref=f21e128] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/accufit/
+              - text: ", and"
+              - link "cellulite treatments" [ref=f21e129] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/cellulite-treatment-miami/
+              - text: ", to relaxing"
+              - link "massage" [ref=f21e130] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/miami-massage-therapy/
+              - text: ", our highly skilled and knowledgeable staff can work with you to develop a treatment plan to naturally enhance your body."
+          - generic [ref=f21e131]:
+            - generic [ref=f21e132]:
+              - link "Body Sculpting" [ref=f21e135] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/body-sculpting-miami/
+              - link "Muscle Activation" [ref=f21e138] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/accufit/
+              - link "Laser Hair Removal" [ref=f21e141] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/laser-hair-removal-miami/
+              - link "View All" [ref=f21e144] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/
+            - generic [ref=f21e146]:
+              - heading "Explore" [level=3] [ref=f21e149]
+              - heading "Our Lavish Memberships" [level=3] [ref=f21e152]
+              - paragraph [ref=f21e155]: Variety is the spice of life, and our goal is to provide you with options that can evolve with you on your path to wellness. We have developed comprehensive membership options that provide the flexibility to choose from our exclusive Lavish VIP Flex Membership, HydraFacial Membership, and more.
+              - link "learn more" [ref=f21e157] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/med-spa-membership/
+            - generic [ref=f21e160]:
+              - heading "gallery" [level=3] [ref=f21e163]
+              - paragraph [ref=f21e166]: View our gallery that showcases how we have helped others in their wellness journey. While your individual results may vary, we strive to work with you on achieving the best version of you.
+              - link "explore" [ref=f21e168] [cursor=pointer]:
+                - /url: https://lavishlasermedspa.com/gallery/
+            - generic [ref=f21e169]:
+              - generic [ref=f21e170]:
+                - heading "CUSTOMER TESTIMONIALS" [level=3] [ref=f21e173]
+                - paragraph [ref=f21e176]: Our customers become extensions of our family. We value their input and feedback so we can continue to improve each day. Their positive comments warm our hearts and fuel our desire to work even harder to provide the highest level of service possible. Come indulge in the Lavish experience for yourself.
+                - link "book now" [ref=f21e178] [cursor=pointer]:
+                  - /url: https://www.joinblvd.com/b/lavishlasermedspa/widget#/locations
+              - generic [ref=f21e180]:
+                - generic [ref=f21e185]:
+                  - heading "I love the place!" [level=2] [ref=f21e186]
+                  - generic [ref=f21e187]:
+                    - paragraph [ref=f21e188]: Definitely one of the best health and beauty centers in Miami. The professionalism of the team is undoubtedly the best attribute of the place, without neglecting the quality of the equipment and the treatments. For me, feeling safe in the process is the most important thing and Lavish has always made it that way.
+                    - paragraph [ref=f21e189]: — Lina D.
+                - generic:
+                  - link "4" [ref=f21e190] [cursor=pointer]:
+                    - /url: "#"
+                  - link "5" [ref=f21e191] [cursor=pointer]:
+                    - /url: "#"
+                - generic [ref=f21e192]:
+                  - link "1" [ref=f21e193] [cursor=pointer]:
+                    - /url: "#"
+                  - link "2" [ref=f21e194] [cursor=pointer]:
+                    - /url: "#"
+                  - link "3" [ref=f21e195] [cursor=pointer]:
+                    - /url: "#"
+                  - link "4" [ref=f21e196] [cursor=pointer]:
+                    - /url: "#"
+                  - link "5" [ref=f21e197] [cursor=pointer]:
+                    - /url: "#"
+          - generic [ref=f21e200]:
+            - heading "Discover" [level=3] [ref=f21e203]
+            - heading "Our featured partners" [level=3] [ref=f21e206]
+            - paragraph [ref=f21e209]: At Lavish Laser Medspa, we are committed to partnering with businesses that support you in your wellness journey beyond just skin deep to strengthen your mind, body, and spirit with a renewed commitment to holistic health. Our community of support extends beyond our walls to include our featured partners below that broaden our ability to offer you a wider breadth of services that aligns with our mission. Learn more about each of them and how they can support you wherever you are on your path to wellness.
+          - link "Get financing 5" [ref=f21e216] [cursor=pointer]:
+            - /url: https://pay.withcherry.com/lavish-laser-med-spa?utm_source=practice&utm_medium=textmessage&m=20525
+          - generic [ref=f21e217]:
+            - heading "get started on your journey at our Miami Medspa" [level=3] [ref=f21e222]
+            - generic [ref=f21e223]:
+              - generic [ref=f21e227]:
+                - heading "Book Your Consultation" [level=4] [ref=f21e228]
+                - paragraph [ref=f21e230]:
+                  - text: Schedule a consultation with one of our highly trained and licensed
+                  - link "team members" [ref=f21e231] [cursor=pointer]:
+                    - /url: https://lavishlasermedspa.com/medspa-miami/#team
+                  - text: at our Miami medspa to learn about our treatment options and explore the best plan to achieve your desired results.
+              - generic [ref=f21e235]:
+                - heading "THE LAVISH LASER EXPERIENCE" [level=4] [ref=f21e236]
+                - paragraph [ref=f21e238]: Relax in our tranquil spa setting enjoying a refreshing beverage or enjoy a stroll through our plush outdoor garden followed by a personalized service completed by one of our licensed staff. You will leave feeling refreshed, rejuvenated, and with a renewed sense of self along with a detailed post-treatment plan to ensure you receive maximum results.
+              - generic [ref=f21e242]:
+                - heading "welcome to the family" [level=4] [ref=f21e243]
+                - paragraph [ref=f21e245]:
+                  - generic [ref=f21e246]: As a valued member of our Lavish family, you are welcome to attend exclusive VIP events, receive discounted enhancement services at our spa, and opportunities with our preferred partners that support you in your overall wellness journey.
+            - link "book my consultation" [ref=f21e250] [cursor=pointer]:
+              - /url: https://www.joinblvd.com/b/lavishlasermedspa/widget#/locations
+          - generic [ref=f21e252]:
+            - generic [ref=f21e253]:
+              - heading "book a consultation" [level=3] [ref=f21e256]
+              - paragraph [ref=f21e259]: Life can be hectic but booking a consultation with us is easy. Simply click the link below and fill out the required information. We can’t wait to meet you and begin our journey together!
+              - link "book now" [ref=f21e261] [cursor=pointer]:
+                - /url: https://www.joinblvd.com/b/lavishlasermedspa/widget#/locations
+              - heading "join our newsletter" [level=3] [ref=f21e264]
+              - paragraph [ref=f21e267]: Sign up for our email list and be the first to know about upcoming events, promotions, and spa updates and receive $25 off your first service with us.
+              - img "Venus Legacy skin tightening treatment at Lavish Laser Med Spa showcasing a client receiving rejuvenating therapy." [ref=f21e270]
+              - paragraph [ref=f21e273]: Financial assistance is available through Care Credit.
+              - link "learn more $" [ref=f21e275] [cursor=pointer]:
+                - /url: https://www.carecredit.com/go/728QHV/?dtc=DS7X&sitecode=CCCAPDS7X
+            - generic [ref=f21e276]:
+              - generic [ref=f21e277]:
+                - generic [ref=f21e278]:
+                  - paragraph [ref=f21e281]: Our Locations
+                  - generic [ref=f21e283]:
+                    - heading "Coconut Grove" [level=4] [ref=f21e284]
+                    - paragraph [ref=f21e285]:
+                      - text: 3160 Florida Ave
+                      - text: Miami, FL 33133
+                    - paragraph [ref=f21e286]:
+                      - text: "Phone:"
+                      - link "(305) 676-4509" [ref=f21e287] [cursor=pointer]:
+                        - /url: tel:3056764509
+                      - link "Directions" [ref=f21e288] [cursor=pointer]:
+                        - /url: "https://maps.app.goo.gl/wuXS6QWeSF5p2iGH9 "
+                  - generic [ref=f21e291]:
+                    - heading "Midtown Miami" [level=4] [ref=f21e292]
+                    - paragraph [ref=f21e293]:
+                      - text: 65 NE 16 ST
+                      - text: Miami, FL 33132
+                    - paragraph [ref=f21e294]:
+                      - generic [ref=f21e295]:
+                        - text: "Phone:"
+                        - link "(305) 850-7691" [ref=f21e296] [cursor=pointer]:
+                          - /url: tel:3058507691
+                      - link "Directions" [ref=f21e297] [cursor=pointer]:
+                        - /url: https://maps.app.goo.gl/1qiKWoah3JydwrXr7
+                  - list [ref=f21e298]:
+                    - listitem [ref=f21e299]:
+                      - link "" [ref=f21e300] [cursor=pointer]:
+                        - /url: https://www.facebook.com/lavishlasermedspa
+                    - listitem [ref=f21e301]:
+                      - link "" [ref=f21e302] [cursor=pointer]:
+                        - /url: https://www.instagram.com/lavishlasermedspa/
+                - generic [ref=f21e303]:
+                  - paragraph [ref=f21e306]: navigate
+                  - paragraph [ref=f21e309]:
+                    - link "Enhancement Area" [ref=f21e311] [cursor=pointer]:
+                      - /url: https://lavishlasermedspa.com/
+                    - link "Gallery" [ref=f21e313] [cursor=pointer]:
+                      - /url: https://lavishlasermedspa.com/gallery/
+                    - link "Products" [ref=f21e315] [cursor=pointer]:
+                      - /url: https://lavishlasermedspa.com/medical-grade-skin-care-products/
+                    - link "About" [ref=f21e317] [cursor=pointer]:
+                      - /url: https://lavishlasermedspa.com/medspa-miami/
+              - generic [ref=f21e319]:
+                - paragraph [ref=f21e322]: hours
+                - generic [ref=f21e324]:
+                  - paragraph [ref=f21e325]:
+                    - strong [ref=f21e326]: "MONDAY, TUESDAY, THURSDAY:"
+                    - text: 8:30am – 6:00pm
+                  - paragraph [ref=f21e327]:
+                    - strong [ref=f21e328]: "WEDNESDAY & FRIDAY:"
+                    - text: 9:00am – 5:00pm
+                  - paragraph [ref=f21e329]:
+                    - strong [ref=f21e330]: "SATURDAY:"
+                    - text: 9:00am – 3:00pm
+                  - paragraph [ref=f21e331]:
+                    - strong [ref=f21e332]: "SUNDAY:"
+                    - text: Closed
+      - text: "2"
+      - contentinfo [ref=f21e333]:
+        - list [ref=f21e336]:
+          - listitem [ref=f21e337]:
+            - link "Privacy Policy" [ref=f21e338] [cursor=pointer]:
+              - /url: https://lavishlasermedspa.com/privacy-policy
+          - listitem [ref=f21e339]:
+            - link "Terms & Conditions" [ref=f21e340] [cursor=pointer]:
+              - /url: https://lavishlasermedspa.com/terms-and-conditions/
+        - generic [ref=f21e343]: © 2026 LAVISH LASER LLC
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - heading "Book Your XERF™ Consultation" [level=2]
+          - paragraph: Enter your details below, and a Lavish specialist will contact you to schedule your personalized consultation.
+          - paragraph
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - group "Name (Required)":
+                    - generic:
+                      - text: Name
+                      - generic:
+                        - generic: (Required)
+                    - generic:
+                      - generic:
+                        - generic: First Name
+                        - textbox "First Name":
+                          - /placeholder: Jane
+                      - generic:
+                        - generic: Last Name
+                        - textbox "Last Name":
+                          - /placeholder: Smith
+                  - generic:
+                    - generic:
+                      - text: Email Address
+                      - generic:
+                        - generic: (Required)
+                    - generic:
+                      - textbox "Email Address (Required)":
+                        - /placeholder: name@email.com
+                  - generic:
+                    - generic:
+                      - text: Phone Number
+                      - generic:
+                        - generic: (Required)
+                    - generic:
+                      - textbox "Phone Number (Required)":
+                        - /placeholder: 555-555-5555
+                  - generic:
+                    - generic: Preferred Location
+                    - generic:
+                      - combobox "Preferred Location":
+                        - option "Select Location" [selected]
+                        - option "Coconut Grove"
+                        - option "Midtown Miami"
+                  - group:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - checkbox "I agree to receive appointment-related texts and emails from Lavish Laser Med Spa."
+                          - generic: I agree to receive appointment-related texts and emails from Lavish Laser Med Spa.
+                  - generic:
+                    - generic: CAPTCHA
+                    - generic:
+                      - generic:
+                        - generic:
+                          - iframe
+              - generic:
+                - button "Reserve My Consultation"
+          - paragraph
+  - generic:
+    - iframe [ref=f21e344]:
+      - generic [ref=f26e4]:
+        - button "close" [ref=f26e5] [cursor=pointer]
+        - generic [ref=f26e8] [cursor=pointer]: Hi there, have a question? Text us here.
+    - iframe [ref=f21e345]:
+      - button "Select to open the chat widget" [ref=f25e5] [cursor=pointer]:
+        - generic [ref=f25e6]:
+          - img [ref=f25e7]
+          - img [ref=f25e11]
+          - generic [ref=f25e16]: Text us
