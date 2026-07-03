@@ -11,6 +11,7 @@ import type { WebsiteResult } from './_website.ts'
 export interface AiScore {
   is_correct_niche: boolean
   website_status: 'weak' | 'good' | 'none' | 'unknown'
+  status_reason: string
   site_issue_note: string
   quality_score: number
   low_fit: boolean
@@ -65,24 +66,35 @@ Our scanner reads raw HTML only and frequently MISSES online booking that is inj
 CHAINS / MULTI-LOCATION (HARD RULE — overrides the quality rubric):
 We sell ONLY to owner-operated clinics (1–3 locations) where the owner makes the buying decision. Read the "Chain / multi-location signals" line in the data below. If it is anything OTHER than "none detected", the business is a chain / multi-location and is OUT OF ICP: you MUST set low_fit = true and quality_score to 4 or lower — no matter how good the website, reviews, or rating are. A polished chain site is still a bad lead; do not score it above 4.
 
-SITE ISSUE NOTE (mandatory for weak websites):
-Write ONE crisp sentence a setter can use to open the call — reference the SPECIFIC corroborated problem (mobile, speed, or dated design). Do NOT lead with "no online booking" as the issue unless another problem confirms the site is weak.
+STATUS REASON (status_reason field — fill for EVERY status, one short factual line):
+Explain plainly why you chose the website_status, so the team understands the call:
+- 'good': what makes it good — e.g. "Modern, mobile-friendly site with Boulevard online booking — nothing to upgrade."
+- 'weak': the concrete problem(s) — e.g. "Loads in ~6s and the copyright is from 2018; the design looks dated."
+- 'unknown': why it couldn't be assessed — e.g. "Site didn't respond to our scan (timeout or bot-block) — needs a manual look."
+- 'none': "No website listed on Google Maps."
+
+SITE ISSUE NOTE (our MAIN sales hook — mandatory for WEAK websites):
+This is the line a setter opens the call with, so it must land. Write ONE sentence that (a) names the SPECIFIC corroborated problem we detected and (b) ties it to a consequence the owner actually feels — lost mobile patients, visitors bouncing before they book, or looking dated next to newer competitors. Be concrete and grounded in the signal; no generic filler. Do NOT lead with "no online booking" unless another problem already confirms the site is weak.
 Examples:
-  "Site isn't mobile-friendly — text is tiny and hard to use on a phone."
-  "Website loaded very slowly and looks visually dated."
-  "Copyright year and layout suggest the site hasn't been updated in years."
-  "No mobile viewport and an old copyright year — the site looks neglected."
-If website_status is NOT 'weak', set site_issue_note to "N/A".
+  "Your site isn't mobile-friendly, so the patients searching on their phones hit a broken layout and click over to a competitor."
+  "The homepage takes about 6 seconds to load — most visitors leave before it appears, and Google ranks slow sites lower."
+  "The copyright still reads 2018 and the layout is dated, which makes a premium clinic look neglected next to newer spas nearby."
+Keep it to ONE sentence, specific, and usable out loud. If website_status is NOT 'weak', set site_issue_note to "N/A".
 
-QUALITY SCORE (1-10):
-10 = Perfect: weak website, many reviews, verified email, small/local clinic.
-7-9 = Strong: most criteria met, minor gaps.
-4-6 = Marginal: missing something meaningful (no email, very few reviews, borderline niche).
-1-3 = Poor: wrong niche, great website, barely any reviews, or not reachable at all.
+QUALITY SCORE (1-10) — this is LEAD FIT: "how good a SALES TARGET is this business FOR US", NOT how nice the business or its website is. We sell website REDESIGNS, so a business is only a target when its website is WEAK (something to upgrade). A great business with a great website is a BAD lead for us.
+Score using ONLY these tiers:
+- 8-10: WEAK website AND reachable (has an email or a phone). This is our ideal target — start at 8; go to 9-10 when it also has plenty of reviews and is a single, owner-run location.
+- 5-7: WEAK website but with a real gap — no reachable contact at all, very few reviews, or a borderline niche.
+- 4: WEAK website but a chain / multi-location (out of ICP).
+- 1-3: NOT a target for us — website is already 'good' (nothing to sell), OR 'none' (no site), OR 'unknown' (couldn't assess), OR wrong niche. A polished med spa with a modern site and 500 five-star reviews belongs HERE — a wonderful business, but a 1-3 LEAD, because we have nothing to sell it.
+Rule of thumb: if website_status is NOT 'weak', the score is 1-3, full stop. If it IS 'weak' and reachable, it is 8+.
 
-PAIN POINTS:
-Summarise real complaints or frustrations visible in the reviews. Focus on things that suggest a bad digital experience (hard to reach, no booking, slow service communications, etc.).
-If there are fewer than 3 reviews OR the total review text is under 200 characters, set pain_points to exactly "insufficient data" — do NOT invent plausible-sounding issues.
+REVIEW INSIGHTS (pain_points field):
+Google returns only ~5 reviews, so treat whatever is shown as your full evidence. UNLESS there are fewer than 3 reviews OR under 200 characters of review text in total, you MUST return a concrete, specific angle — never "insufficient data":
+- If ANY review mentions friction — hard to book, no online booking, slow/no response, hard to reach, long waits, billing/scheduling/website problems — LEAD with that; it is the strongest hook, even if the other reviews are positive.
+- Otherwise, state the recurring THEME clients praise, naming the specific provider/treatment/result (e.g. "clients repeatedly praise Dr. X's natural-looking Botox results and the welcoming staff").
+- Ground every word in the actual review text; never invent complaints OR praise.
+"insufficient data" is a LAST RESORT, allowed ONLY when there are genuinely fewer than 3 reviews or under 200 characters total. If reviews are present above that bar, returning "insufficient data" is a mistake.
 
 PERSONALIZATION NOTES:
 One or two short, specific hooks for cold outreach grounded ONLY in actual review content, the website URL, or business details provided. Do not fabricate.`
@@ -102,13 +114,17 @@ const OUTPUT_SCHEMA = {
         enum: ['weak', 'good', 'none', 'unknown'],
         description: 'Quality of the business website based on the technical signals provided.',
       },
+      status_reason: {
+        type: 'string',
+        description: 'One short factual line explaining WHY this website_status was chosen — for EVERY status (good = what makes it modern/why nothing to sell; weak = the specific problem; unknown = why it could not be assessed; none = no website).',
+      },
       site_issue_note: {
         type: 'string',
-        description: 'One sentence a setter uses to open the call. References the specific website problem. "N/A" if website_status is not weak.',
+        description: 'The setter\'s opening line for WEAK sites: names the specific problem AND its business consequence. "N/A" if website_status is not weak.',
       },
       quality_score: {
         type: 'integer',
-        description: 'ICP fit score 1-10. 10 = perfect med spa target.',
+        description: 'LEAD FIT 1-10 (how good a sales target FOR US, not how nice the business is). Only weak-website leads score high; good/none/unknown/wrong-niche score 1-3.',
       },
       low_fit: {
         type: 'boolean',
@@ -116,14 +132,14 @@ const OUTPUT_SCHEMA = {
       },
       pain_points: {
         type: 'string',
-        description: 'Real complaints from reviews. "insufficient data" if reviews are thin.',
+        description: 'Best outreach angle from reviews: real complaints/friction if any, otherwise the recurring theme clients praise (specific provider/treatment/result). "insufficient data" only if reviews < 3 or total text < 200 chars.',
       },
       personalization_notes: {
         type: 'string',
         description: '1-2 specific outreach hooks grounded in actual data about this business.',
       },
     },
-    required: ['is_correct_niche', 'website_status', 'site_issue_note', 'quality_score', 'low_fit', 'pain_points', 'personalization_notes'],
+    required: ['is_correct_niche', 'website_status', 'status_reason', 'site_issue_note', 'quality_score', 'low_fit', 'pain_points', 'personalization_notes'],
     additionalProperties: false,
   },
 }
@@ -173,11 +189,12 @@ ${reviewSection}
 SCORING RULES — follow exactly:
 1. is_correct_niche: true only for med spas / aesthetic / botox / skin clinics. false otherwise.
 2. website_status: use the technical signals above. 'weak' = has a CORROBORATED problem (mobile/slow/dated). 'good' = modern + has booking. 'none' = no website. 'unknown' = could not fetch. Missing-booking alone is NOT enough to call 'weak' — the scanner misses JS booking widgets. Do not penalize quality_score for 'unknown'/unreachable.
-3. site_issue_note: ONE sentence referencing the actual corroborated problem if website_status is 'weak'. Otherwise "N/A".
-4. quality_score: integer 1-10 per rubric. Cap at 4 for chains / 3+ locations / multi-city booking.
-5. low_fit: true if quality_score < ${qualityThreshold}, or if the business is a chain / multi-location.
-6. pain_points: real review complaints only. If reviews < 3 or total review text < 200 chars, MUST be exactly "insufficient data".
-7. personalization_notes: 1-2 hooks, real data only, no fabrication.`
+3. status_reason: ONE short factual line explaining the website_status you chose — required for EVERY status (good/weak/unknown/none), per the STATUS REASON rules.
+4. site_issue_note: our main sales hook — ONE sentence naming the corroborated problem AND its business consequence, if website_status is 'weak'. Otherwise "N/A".
+5. quality_score: integer 1-10 = LEAD FIT (how good a target FOR US). Only 'weak' sites score above 3; good/none/unknown/wrong-niche → 1-3. Chains capped at 4.
+6. low_fit: true if quality_score < ${qualityThreshold}, or if the business is a chain / multi-location.
+7. pain_points: best outreach angle from reviews — real complaints/friction first (esp. digital), else the recurring theme clients praise (name the specific provider/treatment/result). Only "insufficient data" if reviews < 3 or total review text < 200 chars. Never fabricate.
+8. personalization_notes: 1-2 hooks, real data only, no fabrication.`
 }
 
 export async function scorePlace(
@@ -209,16 +226,22 @@ export async function scorePlace(
 
   // Clamp score to valid range (Structured Outputs enforces schema, not value ranges)
   score.quality_score = Math.max(1, Math.min(10, Math.round(score.quality_score)))
-  score.low_fit = score.quality_score < qualityThreshold
 
-  // Deterministic chain cap. gpt-4o-mini treats the prompt's "cap at 4" as a soft suggestion
-  // and routinely scores polished chains 8–10, so we enforce the business rule in code: if the
-  // scraper found multi-location signals, this is out of ICP — hard-cap the score and mark low_fit.
+  // Lead-fit cap. quality_score means "how good a SALES TARGET is this for us", not "how nice is
+  // this business". We sell redesigns, so only a WEAK website is sellable — good/none/unknown sites
+  // can never rank above 3. Enforced in code because gpt-4o-mini keeps scoring polished non-weak
+  // sites 8–10, which would bury the real prospects when the list is sorted by quality_score.
+  if (score.website_status !== 'weak') {
+    score.quality_score = Math.min(score.quality_score, 3)
+  }
+
+  // Deterministic chain cap. Chains / multi-location are out of ICP no matter how polished.
   const chainSignals = place.websiteSignals?.chainSignals ?? []
   if (chainSignals.length > 0) {
     score.quality_score = Math.min(score.quality_score, 4)
-    score.low_fit = true
   }
+
+  score.low_fit = score.quality_score < qualityThreshold || chainSignals.length > 0
 
   return { score, raw: data }
 }

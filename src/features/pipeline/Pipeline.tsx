@@ -139,6 +139,8 @@ function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
   const [maxLeads, setMaxLeads] = useState('')
   const [dryRun, setDryRun] = useState(false)
+  const [batchName, setBatchName] = useState('')
+  const [targetTotal, setTargetTotal] = useState('')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [liveRun, setLiveRun] = useState<PipelineRun | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -175,6 +177,8 @@ function RunTrigger({ orgId }: { orgId: string }) {
       org_id: orgId,
       dry_run: dryRun,
       ...(maxLeads ? { max_places: Number(maxLeads) } : {}),
+      ...(targetTotal ? { target_total: Number(targetTotal) } : {}),
+      ...(batchName.trim() ? { batch_name: batchName.trim() } : {}),
     }),
     onSuccess: (data) => {
       setActiveRunId(data.run_id)
@@ -197,6 +201,35 @@ function RunTrigger({ orgId }: { orgId: string }) {
       <h2 className="mb-4 text-[15px] font-semibold">Trigger run</h2>
       <div className="flex flex-wrap items-end gap-4">
         <div>
+          <Label htmlFor="batch-name">Batch name</Label>
+          <Input
+            id="batch-name"
+            type="text"
+            placeholder="e.g. July Miami spas"
+            value={batchName}
+            onChange={(e) => setBatchName(e.target.value)}
+            className="w-52"
+          />
+          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+            All leads from this run land in this batch.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="target-total">Target leads (large batch)</Label>
+          <Input
+            id="target-total"
+            type="number"
+            min={1}
+            placeholder="e.g. 1000"
+            value={targetTotal}
+            onChange={(e) => setTargetTotal(e.target.value)}
+            className="w-44"
+          />
+          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+            Runs across multiple chunks until reached.
+          </p>
+        </div>
+        <div>
           <Label htmlFor="max-leads">Max leads to scan</Label>
           <Input
             id="max-leads"
@@ -208,7 +241,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
             className="w-44"
           />
           <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            Overrides the saved default for this run only.
+            Single-run cap (ignored when a target is set).
           </p>
         </div>
         <label className="flex items-center gap-2 cursor-pointer pb-5">
@@ -249,6 +282,20 @@ function RunTrigger({ orgId }: { orgId: string }) {
             <span className="font-medium">Current run</span>
             <StatusBadge status={liveRun.status} />
           </div>
+          {liveRun.target_total != null && (
+            <div className="mb-3">
+              <div className="flex justify-between text-[12px] text-[var(--color-text-secondary)] mb-1">
+                <span>Progress</span>
+                <strong className="text-[var(--color-text)]">{liveRun.processed_total ?? 0} / {liveRun.target_total}</strong>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-[var(--color-border)] overflow-hidden">
+                <div
+                  className="h-full bg-[var(--color-primary)] transition-all"
+                  style={{ width: `${Math.min(100, Math.round(((liveRun.processed_total ?? 0) / liveRun.target_total) * 100))}%` }}
+                />
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-5 gap-y-1 text-[12px] text-[var(--color-text-secondary)]">
             <span>Scanned: <strong className="text-[var(--color-text)]">{liveRun.total_searched}</strong></span>
             <span>New: <strong className="text-[var(--color-text)]">{liveRun.total_new}</strong></span>

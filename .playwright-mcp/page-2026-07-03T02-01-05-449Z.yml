@@ -1,0 +1,213 @@
+- generic [ref=f1e2]:
+  - banner:
+    - generic [ref=f1e3]:
+      - link "Skip to Content" [ref=f1e4] [cursor=pointer]:
+        - /url: "#page"
+      - generic [ref=f1e7]:
+        - generic [ref=f1e8]:
+          - link "Kian Aesthetic Institute" [ref=f1e11] [cursor=pointer]:
+            - /url: /
+            - img "Kian Aesthetic Institute" [ref=f1e13]
+          - navigation [ref=f1e16]:
+            - link "Home" [ref=f1e18] [cursor=pointer]:
+              - /url: /
+            - link "Contact Us" [ref=f1e20] [cursor=pointer]:
+              - /url: /contact-us
+            - link "About" [ref=f1e22] [cursor=pointer]:
+              - /url: /about
+            - button "Before and After" [ref=f1e24] [cursor=pointer]:
+              - generic [ref=f1e25]: Before and After
+            - link "Team" [ref=f1e27] [cursor=pointer]:
+              - /url: /kai-team
+            - link "Model Application" [ref=f1e29] [cursor=pointer]:
+              - /url: /model-application
+            - button "Surgical" [ref=f1e31] [cursor=pointer]:
+              - generic [ref=f1e32]: Surgical
+            - button "Med Spa" [ref=f1e34] [cursor=pointer]:
+              - generic [ref=f1e35]: Med Spa
+            - button "Medical Studies" [ref=f1e37] [cursor=pointer]:
+              - generic [ref=f1e38]: Medical Studies
+        - link "Call" [ref=f1e41] [cursor=pointer]:
+          - /url: tel:+13102956422
+  - main [ref=f1e42]:
+    - article [ref=f1e43]:
+      - generic [ref=f1e44]:
+        - generic [ref=f1e45]:
+          - generic:
+            - generic:
+              - generic:
+                - img "kai-site-rhinoplasty-01.jpg"
+        - generic [ref=f1e49]:
+          - heading "Innovating Aesthetics with Integrity & Expertise" [level=4] [ref=f1e63]
+          - link "Book Now" [ref=f1e68] [cursor=pointer]:
+            - /url: /contact-us
+        - generic:
+          - img
+          - img
+      - generic [ref=f1e69]:
+        - generic [ref=f1e74]:
+          - heading "Our Services. Your Future." [level=2] [ref=f1e80]
+          - link "Learn more" [ref=f1e85] [cursor=pointer]:
+            - /url: /our-services
+        - generic:
+          - img
+          - img
+      - generic [ref=f1e86]:
+        - generic [ref=f1e91]:
+          - heading "Precision. Innovation. Unmatched Care." [level=2] [ref=f1e97]
+          - list [ref=f1e101]:
+            - listitem [ref=f1e102]:
+              - heading "Facial Surgery" [level=3] [ref=f1e104]:
+                - button "Facial Surgery" [ref=f1e105] [cursor=pointer]:
+                  - generic [ref=f1e106]: Facial Surgery
+              - text: •
+            - listitem [ref=f1e112]:
+              - heading "Fillers & Injectables" [level=3] [ref=f1e113]:
+                - button "Fillers & Injectables" [ref=f1e114] [cursor=pointer]:
+                  - generic [ref=f1e115]: Fillers & Injectables
+            - listitem [ref=f1e121]:
+              - heading "Laser Treatments" [level=3] [ref=f1e122]:
+                - button "Laser Treatments" [ref=f1e123] [cursor=pointer]:
+                  - generic [ref=f1e124]: Laser Treatments
+            - listitem [ref=f1e130]:
+              - heading "Face & Body Contouring" [level=3] [ref=f1e131]:
+                - button "Face & Body Contouring" [ref=f1e132] [cursor=pointer]:
+                  - generic [ref=f1e133]: Face & Body Contouring
+        - generic:
+          - img
+          - img
+      - generic [ref=f1e139]:
+        - generic [ref=f1e144]:
+          - heading "Get to Know Dr. Kian Karimi" [level=1] [ref=f1e152]
+          - paragraph [ref=f1e158]:
+            - strong [ref=f1e159]:
+              - emphasis [ref=f1e160]:
+                - text: Dr. Kian Karimi, MD, FACS
+                - text: Founder & Medical Director, Kian Aesthetic Institute & Expert Facial Plastic Surgeon in Los Angeles
+          - generic [ref=f1e165]:
+            - paragraph [ref=f1e166]: Dr. Kian Karimi is a double board-certified facial plastic and reconstructive surgeon and the founder of the Kian Aesthetic Institute in Los Angeles. Recognized nationally and internationally for his artistry and innovative techniques, Dr. Karimi specializes in rhinoplasty, deep plane facelifts, and advanced minimally invasive facial rejuvenation.
+            - paragraph [ref=f1e167]: With more than 15 years of surgical experience, Dr. Karimi has become a trusted leader in aesthetics, frequently sought after by media outlets and invited to lecture and train providers across the world. As co-founder and course chairman of the Los Angeles Multi-Specialty Cosmetic Academy, he has trained thousands of physicians and medical professionals in the latest aesthetic techniques.
+            - paragraph [ref=f1e168]: Dr. Karimi’s commitment to excellence has earned him repeated recognition as a “Top Doctor” and “Southern California Super Doctor,” along with Castle Connolly awards in Facial Plastic Surgery. He has published extensively in peer-reviewed journals, contributed to major textbooks in facial plastic surgery, and serves as a key opinion leader and researcher for leading aesthetic companies.
+            - paragraph [ref=f1e169]: Beyond his surgical expertise, Dr. Karimi is passionate about advancing the field of regenerative aesthetics, integrating novel therapies such as platelet-rich fibrin (PRF), EZGEL, and thread lifting into modern facial rejuvenation. His philosophy combines science, artistry, and compassion to deliver natural, transformative results tailored to each patient’s unique goals.
+            - paragraph [ref=f1e170]: At Kian Aesthetic Institute, Dr. Karimi leads a team dedicated to excellence in surgical and non-surgical facial aesthetics, setting the standard for innovation, safety, and patient-centered care.
+          - list [ref=f1e185]:
+            - listitem [ref=f1e186]:
+              - heading "Kian Karimi, MD FACS" [level=3] [ref=f1e188]:
+                - button "Kian Karimi, MD FACS" [ref=f1e189] [cursor=pointer]:
+                  - generic [ref=f1e190]: Kian Karimi, MD FACS
+            - listitem [ref=f1e196]:
+              - heading "Educating The Next Generation" [level=3] [ref=f1e197]:
+                - button "Educating The Next Generation" [ref=f1e198] [cursor=pointer]:
+                  - generic [ref=f1e199]: Educating The Next Generation
+            - listitem [ref=f1e205]:
+              - heading "Beauty, Science, and Innovation Meet" [level=3] [ref=f1e206]:
+                - button "Beauty, Science, and Innovation Meet" [ref=f1e207] [cursor=pointer]:
+                  - generic [ref=f1e208]: Beauty, Science, and Innovation Meet
+        - generic:
+          - img
+          - img
+      - generic [ref=f1e214]:
+        - generic [ref=f1e223]:
+          - heading "Dr. Kian Karimi — Career Timeline" [level=2] [ref=f1e224]
+          - generic [ref=f1e225]:
+            - button "←" [ref=f1e226] [cursor=pointer]
+            - generic [ref=f1e227]:
+              - generic [ref=f1e228]:
+                - generic [ref=f1e229]: "2001"
+                - generic [ref=f1e230]: Graduated Magna Cum Laude
+                - generic [ref=f1e231]: Indiana University
+              - generic [ref=f1e232]:
+                - generic [ref=f1e233]: "2005"
+                - generic [ref=f1e234]: Alpha Omega Alpha Honor Society
+                - generic [ref=f1e235]: Indiana University
+              - generic [ref=f1e236]:
+                - generic [ref=f1e237]: "2010"
+                - generic [ref=f1e238]: Resident Teacher of the Year
+                - generic [ref=f1e239]: University of Florida
+              - generic [ref=f1e240]:
+                - generic [ref=f1e241]: "2011"
+                - generic [ref=f1e242]: Kris Conrad Merit Award
+                - generic [ref=f1e243]: University of Toronto
+              - generic [ref=f1e244]:
+                - generic [ref=f1e245]: "2015"
+                - generic [ref=f1e246]: Founded Dr. Kian Nasal & Facial Plastic Surgery
+                - generic [ref=f1e247]: Los Angeles, CA
+              - generic [ref=f1e248]:
+                - generic [ref=f1e249]: "2023"
+                - generic [ref=f1e250]: Founded Kian Aesthetic Institute
+                - generic [ref=f1e251]: Los Angeles, CA
+              - generic [ref=f1e252]:
+                - generic [ref=f1e253]: "2025"
+                - generic [ref=f1e254]: International Keynote & Expansion
+                - generic [ref=f1e255]: Lectured worldwide on regenerative surgery
+            - button "→" [ref=f1e256] [cursor=pointer]
+        - generic:
+          - img
+      - generic [ref=f1e257]:
+        - generic [ref=f1e264]:
+          - list [ref=f1e266]:
+            - listitem:
+              - generic:
+                - heading "Cindy made me feel completely at ease as a first-time Botox patient and delivered the natural results I hoped for. I now trust her with all my injectable needs." [level=2]
+                - link "Google Review" [ref=f1e267] [cursor=pointer]:
+                  - /url: https://g.page/r/CYNvSlP8HSdgEAE/review
+            - listitem:
+              - generic:
+                - heading [level=2]: Sharon gave me the perfect natural lips I’d been wanting for years. She listened, explained, and exceeded my expectations.
+                - link [ref=f1e268] [cursor=pointer]:
+                  - /url: https://g.page/r/CYNvSlP8HSdgEAE/review
+                  - text: Google Review
+            - listitem:
+              - generic:
+                - heading [level=2]: Dr. Karimi handled my complex revision with unmatched skill and care. I’ve never felt safer or more confident with a surgeon.
+                - link [ref=f1e269] [cursor=pointer]:
+                  - /url: https://g.co/kgs/AsZ8ePe
+                  - text: Google Review
+            - listitem:
+              - generic:
+                - heading [level=2]: Dr. Karimi keeps it natural and personalized—he’s the only one I trust for injectables. His expertise and ethics are unmatched.
+                - link [ref=f1e270] [cursor=pointer]:
+                  - /url: https://g.co/kgs/AsZ8ePe
+                  - text: Google Review
+          - button "Previous" [ref=f1e271] [cursor=pointer]:
+            - img [ref=f1e273]
+          - button "Next" [ref=f1e275] [cursor=pointer]:
+            - img [ref=f1e277]
+          - generic: Item 1 of 4
+        - generic:
+          - img
+  - contentinfo [ref=f1e279]:
+    - generic [ref=f1e285]:
+      - generic [ref=f1e290]:
+        - heading "Visit Us" [level=2] [ref=f1e291]
+        - paragraph [ref=f1e292]: 12301 Wilshire Blvd. Suite 600 Los Angeles, CA 90025
+        - paragraph [ref=f1e293]:
+          - strong [ref=f1e294]: Hours
+          - text: "Monday–Friday: 9am–5pm"
+        - paragraph [ref=f1e295]: "Saturday: 9am-1pm"
+        - paragraph [ref=f1e296]:
+          - strong [ref=f1e297]: Phone
+          - text: (310) 295-6422
+      - generic [ref=f1e307]:
+        - generic [ref=f1e308]:
+          - heading "Stay in the loop" [level=2] [ref=f1e309]
+          - paragraph [ref=f1e311]: Sign up with your email address to receive news and updates.
+        - generic [ref=f1e312]:
+          - textbox "Email Address" [ref=f1e315]
+          - button "Sign Up" [ref=f1e317] [cursor=pointer]: Sign Up
+    - generic [ref=f1e323]:
+      - heading "The kian Aesthetic Institute" [level=3] [ref=f1e329]
+      - navigation [ref=f1e335]:
+        - link "Instagram" [ref=f1e336] [cursor=pointer]:
+          - /url: https://www.instagram.com/thekianinstitute/
+          - img [ref=f1e338]
+        - link "hello@thekianinstitute.com" [ref=f1e341] [cursor=pointer]:
+          - /url: mailto:hello@thekianinstitute.com
+          - img [ref=f1e343]
+      - generic [ref=f1e350]:
+        - paragraph [ref=f1e351]:
+          - strong [ref=f1e352]: Category
+        - paragraph [ref=f1e353]:
+          - link "Privacy Policy" [ref=f1e354] [cursor=pointer]:
+            - /url: /privacy-policy
+        - paragraph [ref=f1e355]

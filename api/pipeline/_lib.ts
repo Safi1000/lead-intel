@@ -171,14 +171,29 @@ async function markRunFailed(runId: string, msg: string): Promise<void> {
   }).catch(() => {})
 }
 
-export async function fireEdgeFunction(runId: string, orgId: string, dryRun: boolean, maxPlaces?: number): Promise<void> {
+export async function fireEdgeFunction(
+  runId: string,
+  orgId: string,
+  dryRun: boolean,
+  maxPlaces?: number,
+  extra?: { target_total?: number; batch_id?: string | null; batch_name?: string; chunk_index?: number },
+): Promise<void> {
   const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
   console.log(`[pipeline/run] calling edge function: ${url} run_id=${runId}`)
 
   const fetchPromise = fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ run_id: runId, org_id: orgId, dry_run: dryRun, ...(maxPlaces != null ? { max_places: maxPlaces } : {}) }),
+    body: JSON.stringify({
+      run_id: runId,
+      org_id: orgId,
+      dry_run: dryRun,
+      ...(maxPlaces != null ? { max_places: maxPlaces } : {}),
+      ...(extra?.target_total != null ? { target_total: extra.target_total } : {}),
+      ...(extra?.batch_id ? { batch_id: extra.batch_id } : {}),
+      ...(extra?.batch_name ? { batch_name: extra.batch_name } : {}),
+      ...(extra?.chunk_index != null ? { chunk_index: extra.chunk_index } : {}),
+    }),
   })
 
   // Race: if the edge function responds before 6s it's an immediate error (auth/404).

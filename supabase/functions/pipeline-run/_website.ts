@@ -38,6 +38,12 @@ const FETCH_TIMEOUT_MS = 12000
 
 const ROLE_PREFIXES = ['info', 'contact', 'sales', 'hello', 'support', 'admin', 'enquiries', 'enquiry', 'office', 'mail', 'booking', 'appointments']
 const DISCARD_PREFIXES = ['noreply', 'no-reply', 'donotreply', 'do-not-reply', 'bounce', 'mailer-daemon', 'postmaster', 'unsubscribe']
+// Small med spas very often list a free-provider business email (e.g. doublejaesthetics@gmail.com)
+// in the footer. These must be accepted even though the domain ≠ the site domain.
+const FREE_EMAIL_PROVIDERS = new Set(['gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com', 'gmx.com', 'proton.me', 'protonmail.com', 'comcast.net', 'att.net', 'verizon.net', 'sbcglobal.net', 'bellsouth.net'])
+// Third-party/vendor/tracking addresses that appear in page source (Wix/Sentry telemetry, CDNs,
+// schema examples) but are never the business's real contact. Rejected regardless of source.
+const TRACKING_EMAIL_DOMAIN_RE = /(?:wixpress\.com|wix\.com|sentry\.io|sentry-next\.[a-z.]+|squarespace\.com|godaddy\.com|cloudflare\.[a-z]+|gstatic\.com|googleapis\.com|schema\.org|example\.(?:com|org|net)|w3\.org|sentry\.[a-z.]+)$/i
 
 const EMAIL_REGEX = /[\w.+\-]+@[\w\-]+\.[\w.]{2,}/g
 
@@ -161,15 +167,20 @@ function extractRegexEmails(html: string): string[] {
   return (text.match(EMAIL_REGEX) ?? []).map((e) => e.toLowerCase())
 }
 
-function filterEmails(emails: string[], siteDomain: string): string[] {
+// `fromMailto` = the address came from an explicit mailto: link the owner placed on the page, so
+// it is trusted regardless of domain (minus tracking/junk). Regex-scraped addresses from page text
+// are noisier, so they must be on the site domain or a known free provider.
+function filterEmails(emails: string[], siteDomain: string, fromMailto = false): string[] {
   return emails.filter((e) => {
     const [local, domain] = e.split('@')
     if (!local || !domain) return false
+    if (domain.length < 4 || !domain.includes('.')) return false
     if (DISCARD_PREFIXES.some((p) => local.startsWith(p))) return false
     const emailDomain = domain.replace(/^www\./, '')
-    if (siteDomain && emailDomain !== siteDomain && !emailDomain.endsWith('.' + siteDomain)) return false
-    if (domain.length < 4 || !domain.includes('.')) return false
-    return true
+    if (TRACKING_EMAIL_DOMAIN_RE.test(emailDomain)) return false
+    if (fromMailto) return true
+    const onSite = !!siteDomain && (emailDomain === siteDomain || emailDomain.endsWith('.' + siteDomain))
+    return onSite || FREE_EMAIL_PROVIDERS.has(emailDomain)
   })
 }
 
@@ -316,8 +327,8 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     }
 
     if (!email) {
-      // Prefer mailto: links (high confidence)
-      const mailtoFiltered = filterEmails(extractMailtoEmails(html), siteDomain)
+      // Prefer mailto: links (high confidence) — trusted regardless of domain (fromMailto)
+      const mailtoFiltered = filterEmails(extractMailtoEmails(html), siteDomain, true)
       if (mailtoFiltered.length > 0) {
         email = rankEmails(mailtoFiltered)[0]
         emailSource = 'mailto'

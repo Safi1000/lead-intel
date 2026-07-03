@@ -32,7 +32,9 @@ const SEARCH_TERMS = [
   'skin clinic',
 ]
 
-// Top 20 US metros ranked by med spa density + spend
+// Top 20 US metros ranked by med spa density + spend.
+// CONTIGUOUS US ONLY — Hawaii (Honolulu) and Alaska (Anchorage) are intentionally excluded
+// (non-contiguous, different market/logistics). Any dynamic location source must exclude them too.
 const TARGET_METROS = [
   'New York City, NY',
   'Los Angeles, CA',
@@ -119,6 +121,61 @@ function buildShuffledSearches(): Array<{ search_term: string; location: string 
     ;[combos[i], combos[j]] = [combos[j], combos[i]]
   }
   return combos
+}
+
+// ---------------------------------------------------------------------------
+// Chaining (large batches across many invocations)
+// A "job" (target_total set) runs as a chain of chunks. Each invocation processes a
+// time-boxed slice, then re-invokes itself for the next chunk until the target is met,
+// combos are exhausted, or the user stops. sourced_places dedup is the natural cursor.
+// ---------------------------------------------------------------------------
+
+// Wall-clock budget per invocation — below the 150s hard limit, leaving margin for the final
+// DB writes + firing the next chunk.
+const CHUNK_TIME_BUDGET_MS = 110_000
+// Max NEW (deduped) candidates to gather + enrich in one chunk. Keeps the search phase bounded.
+const CHUNK_CANDIDATE_CAP = 60
+
+// Fire the next chunk (the edge function invokes itself). Same race-then-return pattern the Vercel
+// trigger uses, so the next isolate is in-flight before this one exits.
+async function chainNextChunk(payload: Record<string, unknown>): Promise<void> {
+  const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/pipeline-run`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch((e) => { console.error('[chain] next-chunk fetch failed:', (e as Error).message); return null })
+  const timeout = new Promise((resolve) => setTimeout(() => resolve('timeout'), 5000))
+  await Promise.race([fetchPromise, timeout])
+}
+
+// Cumulative run totals, computed from the DB at finalize (chunk counters are per-invocation).
+async function computeRunTotals(runId: string): Promise<Record<string, number>> {
+  const rows = await dbSelect<{ website_status: string | null; crm_lead_id: string | null; email: string | null; website: string | null }>(
+    'sourced_places', `pipeline_run_id=eq.${runId}&select=website_status,crm_lead_id,email,website`,
+  )
+  return {
+    total_searched: rows.length,
+    total_new: rows.length,
+    total_enriched: rows.filter((r) => r.website).length,
+    total_emailed: rows.filter((r) => r.email).length,
+    total_imported: rows.filter((r) => r.crm_lead_id).length,
+    total_no_website: rows.filter((r) => r.website_status === 'none').length,
+  }
+}
+
+// Rebuild the export rows for a whole (chained) run from the DB, since each chunk only holds its own.
+async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[]> {
+  const rows = await dbSelect<Record<string, unknown>>(
+    'sourced_places',
+    `pipeline_run_id=eq.${runId}&order=created_at&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
+  )
+  return rows.map((r) => ({
+    place_id: r.place_id, name: r.name, address: r.address, phone: r.phone ?? '', website: r.website ?? '',
+    website_status: r.website_status ?? '', status_reason: r.status_reason ?? '', is_correct_niche: r.is_correct_niche ?? '',
+    site_issue_note: r.site_issue_note ?? '', email: r.email ?? '', email_source: r.email_source ?? '', email_confidence: r.email_confidence ?? '',
+    rating: r.rating ?? '', quality_score: r.quality_score ?? '', low_fit: r.low_fit ?? '', pain_points: r.pain_points ?? '',
+    personalization_notes: r.personalization_notes ?? '', search_query: r.search_term ?? '', search_location: r.search_location ?? '', error: r.error ?? '',
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -226,15 +283,20 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
   }
 
-  let body: { run_id: string; org_id: string; dry_run?: boolean; max_places?: number }
+  let body: { run_id: string; org_id: string; dry_run?: boolean; max_places?: number; target_total?: number; batch_id?: string; batch_name?: string; chunk_index?: number }
   try { body = await req.json() } catch {
     return new Response(JSON.stringify({ error: 'invalid body' }), { status: 400 })
   }
 
-  const { run_id: runId, org_id: orgId, dry_run: dryRun = false, max_places: maxPlacesOverride } = body
+  const { run_id: runId, org_id: orgId, dry_run: dryRun = false, max_places: maxPlacesOverride,
+          target_total: targetTotal, batch_id: incomingBatchId, batch_name: batchName, chunk_index: chunkIndex = 0 } = body
   if (!runId || !orgId) {
     return new Response(JSON.stringify({ error: 'run_id and org_id are required' }), { status: 400 })
   }
+
+  // Chaining job when target_total is set: this invocation is one time-boxed chunk of a larger job.
+  const chaining = targetTotal != null
+  const chunkStart = Date.now()
 
   // Counters
   let totalSearched = 0
@@ -249,9 +311,19 @@ Deno.serve(async (req: Request) => {
     // Load org config
     const configs = await dbSelect('pipeline_config', `org_id=eq.${orgId}&limit=1`)
     const cfg = configs[0] ?? { quality_threshold: 6, max_places_per_run: 100, openai_model: 'gpt-4o-mini' }
-    const maxPlaces = maxPlacesOverride ?? Number(cfg.max_places_per_run ?? 100)
+    const cfgMax = maxPlacesOverride ?? Number(cfg.max_places_per_run ?? 100)
     const qualityThreshold = Number(cfg.quality_threshold ?? 6)
     const model: string = (cfg.openai_model as string) ?? 'gpt-4o-mini'
+
+    // How many to gather+enrich in THIS chunk. Legacy runs use the configured cap directly;
+    // chaining chunks take min(remaining toward target, per-chunk cap).
+    let processedSoFar = 0
+    if (chaining) {
+      const runRows = await dbSelect<{ processed_total: number }>('pipeline_runs', `id=eq.${runId}&select=processed_total`)
+      processedSoFar = Number(runRows[0]?.processed_total ?? 0)
+    }
+    const remaining = chaining ? Math.max(0, (targetTotal as number) - processedSoFar) : cfgMax
+    const maxPlaces = chaining ? Math.min(remaining, CHUNK_CANDIDATE_CAP) : cfgMax
 
     // -------------------------------------------------------------------------
     // Phase 1: SEARCH — iterate shuffled combos until maxPlaces reached
@@ -300,20 +372,24 @@ Deno.serve(async (req: Request) => {
       const existingSet = new Set(existing.map((r) => r.place_id))
       newResults = allResults.filter((r) => !existingSet.has(r.id))
     }
+    // De-dup within this batch too — the same place can surface from multiple search combos.
+    newResults = [...new Map(newResults.map((r) => [r.id, r])).values()]
 
     totalNew = newResults.length
-    await dbUpdate('pipeline_runs', { total_searched: totalSearched, total_new: totalNew }, `id=eq.${runId}`)
+    // Legacy runs report totals per run; chaining jobs report cumulative progress via processed_total.
+    if (!chaining) await dbUpdate('pipeline_runs', { total_searched: totalSearched, total_new: totalNew }, `id=eq.${runId}`)
 
     // -------------------------------------------------------------------------
-    // Prepare CRM batch (one batches row per run, only in live runs)
+    // Prepare CRM batch. Chaining jobs reuse ONE named batch across all chunks (created by the
+    // trigger and passed in as batch_id); legacy runs create their own.
     // -------------------------------------------------------------------------
-    let batchId: string | null = null
-    if (!dryRun && newResults.length > 0) {
+    let batchId: string | null = incomingBatchId ?? null
+    if (!dryRun && newResults.length > 0 && !batchId) {
       const batches = await dbInsert<{ id: string }>('batches', {
         org_id: orgId,
         template_id: null,
         template_name: 'Google Maps Pipeline',
-        file_name: `Pipeline Run ${runId.slice(0, 8)}`,
+        file_name: batchName ?? `Pipeline Run ${runId.slice(0, 8)}`,
         total_rows: newResults.length,
         imported_count: 0,
         rejected_count: 0,
@@ -327,19 +403,30 @@ Deno.serve(async (req: Request) => {
     // -------------------------------------------------------------------------
     const leadsToInsert: Record<string, unknown>[] = []
     let stopped = false
+    let processedThisChunk = 0
 
-    for (let idx = 0; idx < newResults.length; idx++) {
-      const result = newResults[idx]
-
-      // Check stop_requested every 5 leads to avoid a DB call on every iteration
-      if (idx > 0 && idx % 5 === 0) {
-        const runRows = await dbSelect<{ stop_requested: boolean }>('pipeline_runs', `id=eq.${runId}&select=stop_requested`)
-        if (runRows[0]?.stop_requested) {
-          console.log(`[pipeline-run] stop requested at lead ${idx}, exiting cleanly`)
-          stopped = true
-          break
-        }
+    // Process leads in bounded-concurrency batches. Per-lead work is mostly waiting on the website
+    // fetch + OpenAI, so running LEAD_CONCURRENCY at once overlaps those waits (~6x faster) while
+    // staying well within Google Places / OpenAI rate limits. Shared counters/arrays are safe to
+    // mutate from the callbacks (JS is single-threaded; mutations happen between awaits).
+    const LEAD_CONCURRENCY = 6
+    for (let batchStart = 0; batchStart < newResults.length; batchStart += LEAD_CONCURRENCY) {
+      // Stop check (once per batch)
+      const runRows = await dbSelect<{ stop_requested: boolean }>('pipeline_runs', `id=eq.${runId}&select=stop_requested`)
+      if (runRows[0]?.stop_requested) {
+        console.log(`[pipeline-run] stop requested at lead ${batchStart}, exiting cleanly`)
+        stopped = true
+        break
       }
+      // Time-box the chunk so a chaining job never hits the 150s limit — the next chunk continues.
+      if (chaining && Date.now() - chunkStart > CHUNK_TIME_BUDGET_MS) {
+        console.log(`[pipeline-run] chunk ${chunkIndex} hit time budget at lead ${batchStart}/${newResults.length}`)
+        break
+      }
+
+      await Promise.all(newResults.slice(batchStart, batchStart + LEAD_CONCURRENCY).map(async (result) => {
+      processedThisChunk++
+
       const placeId = result.id
       let details: PlaceDetails | null = null
       let aiScore: AiScore | null = null
@@ -398,7 +485,7 @@ Deno.serve(async (req: Request) => {
           search_location: result._location,
           error: rowError ?? 'No website on Google Maps',
         })
-        continue
+        return
       }
 
       // Insert into sourced_places now (marks place as seen even if later steps fail)
@@ -418,7 +505,7 @@ Deno.serve(async (req: Request) => {
         })
       } catch (e) {
         console.error(`[${placeId}] sourced_places insert failed:`, (e as Error).message)
-        continue
+        return
       }
 
       // Phase 4: Website analysis (email + quality signals)
@@ -463,6 +550,7 @@ Deno.serve(async (req: Request) => {
             email_source: emailResult.emailSource,
             email_confidence: emailResult.emailConfidence,
             website_status: aiScore?.website_status ?? 'unknown',
+            status_reason: aiScore?.status_reason ?? null,
             is_correct_niche: aiScore?.is_correct_niche ?? null,
             site_issue_note: aiScore?.site_issue_note ?? null,
             pain_points: aiScore?.pain_points ?? null,
@@ -503,6 +591,8 @@ Deno.serve(async (req: Request) => {
             'Website': details.website ?? '',
             'Email': emailResult.email ?? '',
             'Rating': details.rating != null ? String(details.rating) : '',
+            'Website Status': aiScore?.website_status ?? '',
+            'Why This Status': aiScore?.status_reason ?? '',
             'Site Issue Note': aiScore?.site_issue_note ?? '',
             'Pain Points': aiScore?.pain_points ?? '',
             'Quality Score': aiScore?.quality_score != null ? String(aiScore.quality_score) : '',
@@ -530,6 +620,7 @@ Deno.serve(async (req: Request) => {
         phone: details.phone ?? '',
         website: details.website,
         website_status: aiScore?.website_status ?? '',
+        status_reason: aiScore?.status_reason ?? '',
         is_correct_niche: aiScore?.is_correct_niche ?? '',
         site_issue_note: aiScore?.site_issue_note ?? '',
         email: emailResult.email ?? '',
@@ -544,6 +635,7 @@ Deno.serve(async (req: Request) => {
         search_location: result._location,
         error: rowError ?? '',
       })
+      }))
     }
 
     // Batch-insert leads (500 at a time)
@@ -567,26 +659,58 @@ Deno.serve(async (req: Request) => {
           console.error('Leads batch insert failed:', (e as Error).message)
         }
       }
-      if (batchId) await dbUpdate('batches', { imported_count: totalImported }, `id=eq.${batchId}`)
+      // Legacy runs set the batch count now; chaining jobs set the cumulative count at finalize.
+      if (batchId && !chaining) await dbUpdate('batches', { imported_count: totalImported }, `id=eq.${batchId}`)
     }
 
-    // Phase 7: XLSX audit log (upload even on partial/stopped runs)
+    // -------------------------------------------------------------------------
+    // Chain the next chunk, or finalize.
+    // -------------------------------------------------------------------------
+    const newProcessedTotal = processedSoFar + processedThisChunk
+    const foundNew = newResults.length > 0
+    const targetMet = chaining && newProcessedTotal >= (targetTotal as number)
+    const exhausted = chaining && !foundNew // a full search pass that surfaced no new places
+    const shouldChain = chaining && !stopped && !targetMet && !exhausted
+
+    if (shouldChain) {
+      await dbUpdate('pipeline_runs', {
+        status: 'running',
+        processed_total: newProcessedTotal,
+        chunk_index: chunkIndex + 1,
+        batch_id: batchId,
+        last_progress_at: new Date().toISOString(), // heartbeat for the stall watchdog
+      }, `id=eq.${runId}`)
+      await chainNextChunk({
+        run_id: runId, org_id: orgId, dry_run: dryRun,
+        target_total: targetTotal, batch_id: batchId, batch_name: batchName, chunk_index: chunkIndex + 1,
+      })
+      console.log(`[pipeline-run] chunk ${chunkIndex} done (${processedThisChunk} leads, ${newProcessedTotal}/${targetTotal}) → chained next`)
+      return new Response(JSON.stringify({ ok: true, run_id: runId, chunk: chunkIndex, processed: newProcessedTotal, chaining: true }), { status: 200 })
+    }
+
+    // FINALIZE — legacy single run, or the last chunk of a chaining job.
+    const finalTotals = chaining
+      ? await computeRunTotals(runId)
+      : { total_searched: totalSearched, total_new: totalNew, total_enriched: totalEnriched, total_emailed: totalEmailed, total_imported: totalImported, total_no_website: totalNoWebsite }
+
+    if (batchId) await dbUpdate('batches', { imported_count: finalTotals.total_imported, total_rows: finalTotals.total_new }, `id=eq.${batchId}`)
+
+    // XLSX audit log (upload even on partial/stopped runs). Chaining rebuilds from the DB.
+    const exportRows = chaining ? await fetchRunXlsxRows(runId) : xlsxRows
     let xlsxPath: string | null = null
-    if (xlsxRows.length > 0) xlsxPath = await buildAndUploadXlsx(orgId, runId, xlsxRows)
+    if (exportRows.length > 0) xlsxPath = await buildAndUploadXlsx(orgId, runId, exportRows)
 
     await dbUpdate('pipeline_runs', {
       status: stopped ? 'stopped' : 'completed',
       completed_at: new Date().toISOString(),
-      total_searched: totalSearched,
-      total_new: totalNew,
-      total_enriched: totalEnriched,
-      total_emailed: totalEmailed,
-      total_imported: totalImported,
-      total_no_website: totalNoWebsite,
+      processed_total: newProcessedTotal,
+      chunk_index: chunkIndex + 1,
+      batch_id: batchId,
+      ...finalTotals,
       xlsx_path: xlsxPath,
     }, `id=eq.${runId}`)
 
-    return new Response(JSON.stringify({ ok: true, run_id: runId }), { status: 200 })
+    return new Response(JSON.stringify({ ok: true, run_id: runId, processed: newProcessedTotal, chaining }), { status: 200 })
 
   } catch (e) {
     const msg = (e as Error).message ?? 'Unknown error'
