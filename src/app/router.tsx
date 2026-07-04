@@ -45,6 +45,7 @@ const LeadTemplatesPage = lazyPage(() => import('../features/templates/Templates
 const UploadPage = lazyPage(() => import('../features/upload/Upload').then((m) => ({ default: m.UploadPage })))
 const BatchesPage = lazyPage(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
 const DueTodayPage = lazyPage(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
+const ActivityPage = lazyPage(() => import('../features/leadwork/Activity').then((m) => ({ default: m.ActivityPage })))
 const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
@@ -119,6 +120,10 @@ export const router = createBrowserRouter([
                 children: [
                   { path: 'home', element: <WorkHomePage /> },
                   { path: 'today', element: L(<DueTodayPage />) },
+                  {
+                    element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
+                    children: [{ path: 'activity', element: L(<ActivityPage />) }],
+                  },
                   { path: 'progress', element: L(<ProgressPage />) },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },

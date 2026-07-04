@@ -1,0 +1,139 @@
+- generic [ref=f16e3]:
+  - region "top of page" [active]
+  - button "Skip to Main Content"
+  - generic [ref=f16e10]:
+    - group:
+      - banner:
+        - generic [ref=f16e11]:
+          - group:
+            - link "Atelier_RGB_Secondary-Logo_Petal-1.png" [ref=f16e16] [cursor=pointer]:
+              - /url: https://www.ateliermedicalaesthetics.com
+              - img "Atelier_RGB_Secondary-Logo_Petal-1.png" [ref=f16e20]
+            - generic [ref=f16e21]:
+              - navigation "Site" [ref=f16e25]:
+                - button "Menu" [ref=f16e27] [cursor=pointer]:
+                  - img [ref=f16e31]
+              - list "Social Bar" [ref=f16e35]:
+                - listitem [ref=f16e36]:
+                  - link "Instagram" [ref=f16e37] [cursor=pointer]:
+                    - /url: https://www.instagram.com/atelier.med.aesthetics/
+                    - img "Instagram" [ref=f16e39]
+      - main:
+        - generic [ref=f16e40]:
+          - generic [ref=f16e44]:
+            - group:
+              - generic [ref=f16e46]:
+                - heading "Contact L'atelier Medical Aesthetics" [level=1] [ref=f16e49]
+                - paragraph [ref=f16e51]: I look forward to seeing you! Please send me a message if you have any questions, or book your appointment online today!
+          - generic [ref=f16e52]:
+            - group:
+              - generic [ref=f16e54]:
+                - heading "Location" [level=3] [ref=f16e57]
+                - generic [ref=f16e58]:
+                  - paragraph [ref=f16e59]: 186 Provencher Boulevard
+                  - paragraph [ref=f16e60]: Winnipeg MB, Canada
+                  - paragraph [ref=f16e61]
+                  - paragraph [ref=f16e62]:
+                    - link "(204) 793-6065" [ref=f16e64] [cursor=pointer]:
+                      - /url: tel:(204) 793-6065
+          - generic [ref=f16e65]:
+            - group:
+              - generic [ref=f16e67]:
+                - heading "Hours" [level=3] [ref=f16e70]
+                - paragraph [ref=f16e72]: Use my booking system to see available appointments.
+                - link "Book Appointment" [ref=f16e74] [cursor=pointer]:
+                  - /url: https://lateliermedicalaesthetics.janeapp.com/#/staff_member/1/treatment/14
+                  - generic [ref=f16e75]: Book Appointment
+          - generic [ref=f16e76]:
+            - group:
+              - iframe [ref=f16e80]:
+                
+        - generic [ref=f16e81]:
+          - group:
+            - generic [ref=f16e85]:
+              - group:
+                - form "Contact" [ref=f16e93]:
+                  - group [ref=f16e94]:
+                    - generic [ref=f16e95]:
+                      - generic [ref=f16e96]:
+                        - heading "Send a Message" [level=1] [ref=f16e104]:
+                          - generic [ref=f16e105]: Send a Message
+                        - generic [ref=f16e107]:
+                          - generic [ref=f16e109]:
+                            - text: Name
+                            - generic [ref=f16e110]: "*"
+                          - textbox "Name" [ref=f16e115]
+                        - generic [ref=f16e117]:
+                          - generic [ref=f16e119]:
+                            - text: Email
+                            - generic [ref=f16e120]: "*"
+                          - textbox "Email" [ref=f16e125]
+                          - generic [ref=f16e127]:
+                            - text: Phone
+                            - generic [ref=f16e128]: "*"
+                          - generic [ref=f16e133]:
+                            - button "Phone. Phone. Select a country code" [ref=f16e137] [cursor=pointer]:
+                              - generic [ref=f16e140]:
+                                - img [ref=f16e142]
+                                - img [ref=f16e145]
+                            - textbox "Phone. Phone" [ref=f16e147]
+                        - generic [ref=f16e149]:
+                          - generic [ref=f16e151]:
+                            - text: How can I help?
+                            - generic [ref=f16e152]: "*"
+                          - textbox "How can I help?" [ref=f16e157]:
+                            - /placeholder: ""
+                        - button "Send Message" [ref=f16e162] [cursor=pointer]:
+                          - generic [ref=f16e163]: Send Message
+                      - region
+            - generic [ref=f16e164]:
+              - group:
+                - img "pexels-pavel-danilyuk-6925410-edit.jpg" [ref=f16e170]
+      - contentinfo:
+        - generic [ref=f16e171]:
+          - group:
+            - generic [ref=f16e175]:
+              - group:
+                - heading "ATELIER" [level=2] [ref=f16e178]
+            - generic [ref=f16e179]:
+              - group:
+                - paragraph [ref=f16e182]: Atelier Aesthetics is owned by Joelle Touchette, Nurse Practitioner and Skin Specialist. Enhance your beauty today, and book an appointment at our Winnipeg location.
+            - generic [ref=f16e183]:
+              - group:
+                - generic [ref=f16e185]:
+                  - paragraph [ref=f16e188]: Location
+                  - generic [ref=f16e189]:
+                    - paragraph [ref=f16e190]: 186 Provencher Boulevard
+                    - paragraph [ref=f16e191]: Winnipeg, MB
+                    - paragraph [ref=f16e192]:
+                      - link "Directions" [ref=f16e194] [cursor=pointer]:
+                        - /url: https://www.google.com/maps/dir//186+Provencher+Blvd,+Winnipeg,+MB+R2H+0G4/@49.8919159,-97.2041768,12z/data=!4m8!4m7!1m0!1m5!1m1!1s0x52bdfded36fd9945:0x73b378ac9fdd198f!2m2!1d-97.1217765!2d49.8919451?entry=ttu&g_ep=EgoyMDI1MDMyNS4xIKXMDSoASAFQAw%3D%3D
+            - generic [ref=f16e195]:
+              - group:
+                - generic [ref=f16e197]:
+                  - paragraph [ref=f16e200]: Contact
+                  - generic [ref=f16e201]:
+                    - paragraph [ref=f16e202]:
+                      - link "Leave a message" [ref=f16e204] [cursor=pointer]:
+                        - /url: https://www.ateliermedicalaesthetics.com/contact
+                    - paragraph [ref=f16e205]:
+                      - link "Book Online" [ref=f16e207] [cursor=pointer]:
+                        - /url: https://lateliermedicalaesthetics.janeapp.com/#/staff_member/1/treatment/14
+                    - paragraph [ref=f16e208]:
+                      - link "(204) 793-6065" [ref=f16e210] [cursor=pointer]:
+                        - /url: tel:204-793-6065
+            - generic [ref=f16e211]:
+              - group:
+                - generic [ref=f16e213]:
+                  - paragraph [ref=f16e216]: Follow
+                  - list "Social Bar" [ref=f16e218]:
+                    - listitem [ref=f16e219]:
+                      - link "Instagram" [ref=f16e220] [cursor=pointer]:
+                        - /url: https://www.instagram.com/atelier.med.aesthetics/
+            - generic [ref=f16e222]:
+              - group:
+                - paragraph [ref=f16e225]: © 2025 by L'atelier Medical Aesthetics
+            - paragraph [ref=f16e229]:
+              - link "Website by Jenni Joy Co." [ref=f16e231] [cursor=pointer]:
+                - /url: https://www.jennijoy.ca/
+  - region "bottom of page"

@@ -1,0 +1,9 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - img "Robot" [ref=f20e4]
+    - generic [ref=f20e5]:
+      - heading "bcorchardaesthetics.com" [level=1] [ref=f20e6]
+      - paragraph [ref=f20e7]: Checking the site connection security
+      - img "CDN icon" [ref=f20e9]
+  - contentinfo [ref=f20e10]:
+    - paragraph [ref=f20e11]: This page requires cookies to be enabled in your browser settings. Please check this setting and enable cookies (if disabled)

@@ -578,6 +578,11 @@ export type ActivityType =
   | 'Booked'
   | 'No Show'
   | 'Note'
+  // System-logged types (not quick buttons) — written automatically by the app
+  | 'Stage Change'
+  | 'Temperature'
+  | 'Verdict'
+  | 'Unassigned'
 export const ACTIVITY_TYPES: ActivityType[] = [
   'Called - No Answer', 'Called - Spoke', 'Left Voicemail', 'Emailed', 'Replied', 'Booked', 'No Show', 'Note',
 ]
@@ -667,6 +672,10 @@ export interface ManualLead {
   temperature: Temperature // legacy; superseded by `stage`
   setter: string | null // claiming setter (name)
   closer: string | null // claiming closer (name)
+  /** Closer's post-handoff verdict: was the setter's "qualified" lead actually warm? */
+  closer_verdict: 'warm' | 'not_warm' | null
+  closer_verdict_by: string | null
+  closer_verdict_at: string | null
   remarks: LeadRemark[]
   created_at: string
   updated_at: string

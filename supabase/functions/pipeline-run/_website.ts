@@ -524,6 +524,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
   // bot-blocked sites, fetch the RENDERED page text and recover the signals we couldn't see.
   // ---------------------------------------------------------------------------
   const isJsShell = qualitySignals.detectedIssues.some((i) => i.startsWith('Site content is JavaScript-rendered'))
+  let renderFallbackUsed = false
   if (!homepageHtml || isJsShell) {
     const rendered = await fetchRendered(websiteUri)
     if (rendered) {
@@ -562,16 +563,22 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
       }
 
       // Replace the "couldn't verify" messaging with what the render actually established.
+      // Mobile: renders can't verify the viewport, and printing "NO" to the model invites false
+      // "not mobile-friendly" claims (audit 2026-07-04: CLINIQUE AG, Skin Solution) — assume yes.
+      qualitySignals.hasMobileViewport = true
+      renderFallbackUsed = true
       qualitySignals.detectedIssues = qualitySignals.detectedIssues.filter((i) => !i.startsWith('Site content is JavaScript-rendered'))
-      qualitySignals.detectedIssues.push('Assessed via headless-render fallback — booking/contact and email were read from the RENDERED page; layout, load speed, SSL and mobile could not be verified (treat those as UNKNOWN)')
+      qualitySignals.detectedIssues.push('Assessed via headless-render fallback — booking/contact were read from the RENDERED page; layout, load speed, SSL, mobile and email presence could not be fully verified (treat those as UNKNOWN)')
       if (!qualitySignals.hasBookingWidget) {
         qualitySignals.detectedIssues.push('CONFIRMED no online contact: even the fully rendered page shows no booking or contact option — patients can only phone')
       }
     }
   }
 
-  // No email published anywhere on the site is itself a real weakness (patients can't email).
-  if (reachable && !email) {
+  // No email published anywhere on the site is itself a real weakness (patients can't email) —
+  // but ONLY assert absence when we directly read the real page. Render fallbacks are partial
+  // (lazy-loaded footers missing) and shells hide emails behind JS, so absence proves nothing there.
+  if (homepageHtml && !isJsShell && !renderFallbackUsed && !email) {
     qualitySignals.detectedIssues.push('No email address published anywhere on the site — patients cannot reach the clinic by email')
   }
   // No SSL — the site loads over http:// (didn't upgrade to https). Insecure + browsers warn visitors.

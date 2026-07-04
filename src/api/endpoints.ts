@@ -392,8 +392,18 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
   stage: (l.stage as ManualLead['stage']) ?? 'New', next_follow_up: (l.next_follow_up as string) ?? null, call_at: (l.call_at as string) ?? null,
   done_at: (l.done_at as string) ?? null, done_by: (l.done_by as string) ?? null,
   temperature: (l.temperature as Temperature) ?? null, setter: (l.setter as string) ?? null, closer: (l.closer as string) ?? null,
+  closer_verdict: (l.closer_verdict as 'warm' | 'not_warm') ?? null,
+  closer_verdict_by: (l.closer_verdict_by as string) ?? null,
+  closer_verdict_at: (l.closer_verdict_at as string) ?? null,
   remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
 })
+
+/** System activity logger — used for automatic entries (stage changes, verdicts, unassignment). */
+const logSystemActivity = async (leadId: string, type: ActivityType, note: string) => {
+  const author = useAuthStore.getState().user?.name ?? null
+  const author_id = useAuthStore.getState().user?.id ?? null
+  await supabase.from('lead_activities').insert({ lead_id: leadId, type, note, author, author_id })
+}
 
 export const manualLeadsApi = {
   list: async (params?: { status?: LeadStatus; search?: string; batch_id?: string }): Promise<Paginated<ManualLead>> => {
@@ -419,9 +429,39 @@ export const manualLeadsApi = {
     return mapLead(data, (remarks ?? []) as LeadRemark[])
   },
   update: async (id: string, body: Partial<{ status: LeadStatus; stage: LeadStage; next_follow_up: string | null; call_at: string | null; temperature: Temperature; setter: string | null; closer: string | null }>): Promise<ManualLead> => {
+    // Snapshot old values first so stage/temperature changes land in the activity log with old → new.
+    let prev: { stage?: string; temperature?: string | null } = {}
+    if (body.stage !== undefined || body.temperature !== undefined) {
+      const { data: old } = await supabase.from('leads').select('stage,temperature').eq('id', id).single()
+      prev = (old ?? {}) as typeof prev
+    }
     const { data, error } = await supabase.from('leads').update({ ...body, updated_at: new Date().toISOString() }).eq('id', id).select().single()
     if (error) throw new Error(error.message)
+    if (body.stage !== undefined && prev.stage && prev.stage !== body.stage) {
+      await logSystemActivity(id, 'Stage Change', `${prev.stage} → ${body.stage}`).catch(() => {})
+    }
+    if (body.temperature !== undefined && prev.temperature !== body.temperature && body.temperature) {
+      await logSystemActivity(id, 'Temperature', `Marked ${body.temperature}`).catch(() => {})
+    }
     return mapLead(data)
+  },
+  /** Closer/manager verdict after handoff: was this "qualified" lead actually warm? */
+  setCloserVerdict: async (id: string, verdict: 'warm' | 'not_warm'): Promise<void> => {
+    const by = useAuthStore.getState().user?.id ?? null
+    const { error } = await supabase.from('leads')
+      .update({ closer_verdict: verdict, closer_verdict_by: by, closer_verdict_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+    await logSystemActivity(id, 'Verdict', verdict === 'warm' ? 'Closer confirmed: lead was genuinely warm' : 'Closer flagged: lead was NOT warm (qualified only)').catch(() => {})
+  },
+  /** Manager/superadmin: pull a lead back from its setter and/or closer. */
+  unassign: async (id: string, which: 'setter' | 'closer' | 'both'): Promise<void> => {
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (which === 'setter' || which === 'both') { patch.setter = null; patch.setter_id = null; patch.status = 'new' }
+    if (which === 'closer' || which === 'both') { patch.closer = null; patch.closer_id = null }
+    const { error } = await supabase.from('leads').update(patch).eq('id', id)
+    if (error) throw new Error(error.message)
+    await logSystemActivity(id, 'Unassigned', `Lead unassigned (${which}) by manager`).catch(() => {})
   },
   /** Mark a lead processed / un-processed (throughput tracking). */
   markDone: async (id: string, done: boolean): Promise<void> => {
@@ -465,6 +505,73 @@ export const activitiesApi = {
     if (error) throw new Error(error.message)
     await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId)
     return data as LeadActivity
+  },
+}
+
+// ---- Org-wide activity feed (Activity page: manager oversight of setter work) ----
+export interface ActivityFeedItem {
+  id: string
+  kind: 'activity' | 'remark'
+  lead_id: string
+  lead_name: string
+  batch_id: string | null
+  type: string // ActivityType for activities; 'Remark' for lead_remarks
+  note: string | null
+  author: string | null
+  author_id: string | null // null for remarks (table has no author_id)
+  at: string
+}
+
+export const activityFeedApi = {
+  /** All setter/closer activity across the org since `sinceISO` (activities + remarks, newest first). */
+  list: async (sinceISO: string): Promise<ActivityFeedItem[]> => {
+    const org = effectiveOrgId()
+    let aq = supabase.from('lead_activities')
+      .select('id,lead_id,type,note,author,author_id,at,leads!inner(display_name,org_id,batch_id)')
+      .gte('at', sinceISO).order('at', { ascending: false }).limit(1000)
+    if (org) aq = aq.eq('leads.org_id', org)
+    let rq = supabase.from('lead_remarks')
+      .select('id,lead_id,author,author_role,text,at,leads!inner(display_name,org_id,batch_id)')
+      .gte('at', sinceISO).order('at', { ascending: false }).limit(1000)
+    if (org) rq = rq.eq('leads.org_id', org)
+    const [a, r] = await Promise.all([aq, rq])
+    if (a.error) throw new Error(a.error.message)
+    if (r.error) throw new Error(r.error.message)
+    type JoinedLead = { display_name: string | null; batch_id: string | null }
+    const items: ActivityFeedItem[] = [
+      ...(a.data ?? []).map((x) => ({
+        id: x.id as string, kind: 'activity' as const, lead_id: x.lead_id as string,
+        lead_name: ((x.leads as unknown as JoinedLead)?.display_name) ?? 'Lead',
+        batch_id: ((x.leads as unknown as JoinedLead)?.batch_id) ?? null,
+        type: x.type as string, note: (x.note as string) ?? null,
+        author: (x.author as string) ?? null, author_id: (x.author_id as string) ?? null, at: x.at as string,
+      })),
+      ...(r.data ?? []).map((x) => ({
+        id: x.id as string, kind: 'remark' as const, lead_id: x.lead_id as string,
+        lead_name: ((x.leads as unknown as JoinedLead)?.display_name) ?? 'Lead',
+        batch_id: ((x.leads as unknown as JoinedLead)?.batch_id) ?? null,
+        type: 'Remark', note: (x.text as string) ?? null,
+        author: (x.author as string) ?? null, author_id: null, at: x.at as string,
+      })),
+    ]
+    return items.sort((x, y) => y.at.localeCompare(x.at))
+  },
+  /** Per-setter closer-verdict tallies (setter performance: genuinely-warm vs not-warm handoffs). */
+  verdictStats: async (): Promise<Array<{ setter: string; warm: number; not_warm: number }>> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('leads').select('setter,closer_verdict').not('closer_verdict', 'is', null)
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    const by = new Map<string, { warm: number; not_warm: number }>()
+    for (const l of data ?? []) {
+      const s = (l.setter as string) ?? 'Unassigned'
+      const e = by.get(s) ?? { warm: 0, not_warm: 0 }
+      if (l.closer_verdict === 'warm') e.warm++
+      else e.not_warm++
+      by.set(s, e)
+    }
+    return [...by.entries()].map(([setter, v]) => ({ setter, ...v })).sort((a, b) => (b.warm + b.not_warm) - (a.warm + a.not_warm))
   },
 }
 

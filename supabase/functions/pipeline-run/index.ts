@@ -122,17 +122,55 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 // ---------------------------------------------------------------------------
-// Search combinations — shuffled each run for geographic diversity
+// Search combinations — yield-aware.
+// Location pool lives in the search_locations table (falls back to TARGET_METROS). Every searched
+// term×location combo records how many NEW places it produced (search_yield via bump_search_yield
+// RPC). Selection skips recently-dry combos (paying to re-search an exhausted metro is pure waste),
+// explores never-searched combos first, then exploits the highest-yielding known ones.
 // ---------------------------------------------------------------------------
 
-function buildShuffledSearches(): Array<{ search_term: string; location: string }> {
-  const combos = SEARCH_TERMS.flatMap((term) => TARGET_METROS.map((city) => ({ search_term: term, location: city })))
-  // Fisher-Yates shuffle so limited runs cover diverse areas, not just the first city repeatedly
-  for (let i = combos.length - 1; i > 0; i--) {
+const YIELD_COOLDOWN_DAYS = 14 // a dry combo gets retried after this long (new spas open)
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[combos[i], combos[j]] = [combos[j], combos[i]]
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
-  return combos
+  return arr
+}
+
+async function buildYieldAwareSearches(): Promise<Array<{ search_term: string; location: string }>> {
+  let locations: string[] = TARGET_METROS
+  const yieldMap = new Map<string, { last_new: number; last_searched_at: string | null }>()
+  try {
+    const locs = await dbSelect<{ location: string }>('search_locations', 'active=is.true&select=location')
+    if (locs.length > 0) locations = locs.map((l) => l.location)
+    const yields = await dbSelect<{ search_term: string; location: string; last_new: number; last_searched_at: string | null }>(
+      'search_yield', 'select=search_term,location,last_new,last_searched_at')
+    for (const y of yields) yieldMap.set(`${y.search_term}|${y.location}`, y)
+  } catch (e) {
+    console.error('[search] yield/location load failed, using static pool:', (e as Error).message)
+  }
+
+  const cooldownMs = YIELD_COOLDOWN_DAYS * 24 * 3600 * 1000
+  const fresh: Array<{ search_term: string; location: string }> = []      // never searched
+  const productive: Array<{ search_term: string; location: string; ln: number }> = [] // yielded last time
+  let skipped = 0
+  for (const term of SEARCH_TERMS) {
+    for (const location of locations) {
+      const y = yieldMap.get(`${term}|${location}`)
+      if (!y) { fresh.push({ search_term: term, location }); continue }
+      const age = y.last_searched_at ? Date.now() - new Date(y.last_searched_at).getTime() : Infinity
+      if (y.last_new === 0 && age < cooldownMs) { skipped++; continue } // recently dry — don't pay to re-search
+      if (y.last_new === 0) fresh.push({ search_term: term, location }) // cooldown expired — re-explore
+      else productive.push({ search_term: term, location, ln: y.last_new })
+    }
+  }
+  // Explore new ground first (shuffled for geographic diversity), then best-known producers.
+  productive.sort((a, b) => b.ln - a.ln)
+  const ordered = [...shuffle(fresh), ...productive.map(({ search_term, location }) => ({ search_term, location }))]
+  console.log(`[search] combos: ${ordered.length} usable (${fresh.length} fresh, ${productive.length} productive), ${skipped} skipped as dry`)
+  return ordered
 }
 
 // ---------------------------------------------------------------------------
@@ -427,15 +465,18 @@ Deno.serve(async (req: Request) => {
     // -------------------------------------------------------------------------
     type RawResult = RawPlace & { _search_term: string; _location: string; _address: string; _name: string }
     const allResults: RawResult[] = []
-    const searches = buildShuffledSearches()
+    const searches = await buildYieldAwareSearches()
+    const searchedCombos: Array<{ search_term: string; location: string; raw: number }> = []
 
     for (const search of searches) {
       if (allResults.length >= maxPlaces) break
       try {
+        let raw = 0
         let pageToken: string | undefined
         do {
           const { places, nextPageToken } = await placesTextSearch(search.search_term, search.location, pageToken)
           for (const p of places) {
+            raw++
             allResults.push({
               ...p,
               _search_term: search.search_term,
@@ -448,6 +489,7 @@ Deno.serve(async (req: Request) => {
           pageToken = nextPageToken
           if (places.length === 0) break
         } while (pageToken && allResults.length < maxPlaces)
+        searchedCombos.push({ ...search, raw })
       } catch (e) {
         console.error(`Search "${search.search_term} in ${search.location}" failed:`, (e as Error).message)
       }
@@ -473,6 +515,26 @@ Deno.serve(async (req: Request) => {
     newResults = [...new Map(newResults.map((r) => [r.id, r])).values()]
 
     totalNew = newResults.length
+
+    // Record yield for every combo actually searched this chunk (0-new records are the whole
+    // point — they mark the combo as dry so future chunks stop paying to re-search it).
+    if (searchedCombos.length > 0) {
+      const newByCombo = new Map<string, number>()
+      for (const r of newResults) {
+        const k = `${r._search_term}|${r._location}`
+        newByCombo.set(k, (newByCombo.get(k) ?? 0) + 1)
+      }
+      await Promise.all(searchedCombos.map((c) => {
+        const nw = newByCombo.get(`${c.search_term}|${c.location}`) ?? 0
+        // A zero from a cut-off search (few raw results sampled) isn't proof the combo is dry —
+        // only record zeros when we actually saw a meaningful sample. Positives always count.
+        if (nw === 0 && c.raw < 8) return Promise.resolve()
+        return fetch(`${SUPABASE_URL}/rest/v1/rpc/bump_search_yield`, {
+          method: 'POST', headers: svcHeaders(),
+          body: JSON.stringify({ p_term: c.search_term, p_location: c.location, p_new: nw }),
+        }).catch((e) => console.error('[search] yield bump failed:', (e as Error).message))
+      }))
+    }
     // Legacy runs report totals per run; chaining jobs report cumulative progress via processed_total.
     if (!chaining) await dbUpdate('pipeline_runs', { total_searched: totalSearched, total_new: totalNew }, `id=eq.${runId}`)
 
