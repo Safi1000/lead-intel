@@ -284,7 +284,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="font-medium">Current run</span>
             <div className="flex items-center gap-3">
-              <ElapsedTimer startedAt={liveRun.started_at} completedAt={liveRun.completed_at} running={liveRun.status === 'running' || liveRun.status === 'queued'} />
+              <ElapsedTimer startedAt={liveRun.started_at} completedAt={liveRun.completed_at} running={liveRun.status === 'running'} />
               <StatusBadge status={liveRun.status} />
             </div>
           </div>
