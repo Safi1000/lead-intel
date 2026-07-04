@@ -44,7 +44,9 @@ const DISCARD_PREFIXES = ['noreply', 'no-reply', 'donotreply', 'do-not-reply', '
 const FREE_EMAIL_PROVIDERS = new Set(['gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com', 'gmx.com', 'proton.me', 'protonmail.com', 'comcast.net', 'att.net', 'verizon.net', 'sbcglobal.net', 'bellsouth.net'])
 // Third-party/vendor/tracking addresses that appear in page source (Wix/Sentry telemetry, CDNs,
 // schema examples) but are never the business's real contact. Rejected regardless of source.
-const TRACKING_EMAIL_DOMAIN_RE = /(?:wixpress\.com|wix\.com|sentry\.io|sentry-next\.[a-z.]+|squarespace\.com|godaddy\.com|cloudflare\.[a-z]+|gstatic\.com|googleapis\.com|schema\.org|example\.(?:com|org|net)|w3\.org|sentry\.[a-z.]+)$/i
+// mysite.com/yoursite.com etc. are website-builder TEMPLATE placeholders (Wix ships
+// mailto:info@mysite.com) — never a real contact, even in an explicit mailto: link.
+const TRACKING_EMAIL_DOMAIN_RE = /(?:wixpress\.com|wix\.com|sentry\.io|sentry-next\.[a-z.]+|squarespace\.com|godaddy\.com|cloudflare\.[a-z]+|gstatic\.com|googleapis\.com|schema\.org|example\.(?:com|org|net)|w3\.org|sentry\.[a-z.]+|mysite\.com|yoursite\.com|yourdomain\.com|yourcompany\.com)$/i
 
 const EMAIL_REGEX = /[\w.+\-]+@[\w\-]+\.[\w.]{2,}/g
 // Strict single-address validator — rejects leading junk (e.g. "%20foo@x.com"), trailing punctuation,
@@ -245,7 +247,7 @@ async function fetchRendered(url: string): Promise<string | null> {
   }
 }
 
-async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs: number; finalUrl?: string }> {
+async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs: number; finalUrl?: string; truncatedEmails?: { mailto: string[]; text: string[] } }> {
   const start = Date.now()
   try {
     const controller = new AbortController()
@@ -276,7 +278,15 @@ async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs
     // Cap size to bound CPU: the quality/chain/email regexes each scan the whole document, and some
     // med-spa sites ship 700KB+ of inline scripts/JSON. The signals we need live in the visible
     // markup, so ~400KB is plenty and keeps per-lead CPU well under the edge function's limit.
-    return { html: html.length > 400_000 ? html.slice(0, 400_000) : html, loadTimeMs, finalUrl }
+    // EXCEPTION — emails: on giant builder pages (ERT: 2.5MB Wix) the footer email sits far past
+    // the cap, so harvest candidates from the FULL html first (two single-pass regexes, cheap).
+    if (html.length > 400_000) {
+      return {
+        html: html.slice(0, 400_000), loadTimeMs, finalUrl,
+        truncatedEmails: { mailto: extractMailtoEmails(html), text: extractRegexEmails(html) },
+      }
+    }
+    return { html, loadTimeMs, finalUrl }
   } catch {
     return { html: null, loadTimeMs: Date.now() - start }
   }
@@ -453,7 +463,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
 
   for (const pageUrl of pagesToTry) {
     if (pagesChecked >= MAX_PAGES) break
-    const { html, loadTimeMs, finalUrl } = await fetchPage(pageUrl)
+    const { html, loadTimeMs, finalUrl, truncatedEmails } = await fetchPage(pageUrl)
     pagesChecked++
     if (pagesChecked === 1 && finalUrl) homepageFinalUrl = finalUrl
     if (!html) {
@@ -485,6 +495,17 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
           emailSource = 'text_match'
           emailConfidence = 'low'
         }
+      }
+    }
+    // Giant-page fallback: candidates harvested from the FULL html before truncation (the page's
+    // footer email often sits past the 400KB cap on heavy Wix/builder sites).
+    if (!email && truncatedEmails) {
+      const m = filterEmails(truncatedEmails.mailto, siteDomain, true)
+      if (m.length > 0) {
+        email = rankEmails(m)[0]; emailSource = 'mailto'; emailConfidence = 'high'
+      } else {
+        const t = filterEmails(truncatedEmails.text, siteDomain)
+        if (t.length > 0) { email = rankEmails(t)[0]; emailSource = 'text_match'; emailConfidence = 'low' }
       }
     }
 

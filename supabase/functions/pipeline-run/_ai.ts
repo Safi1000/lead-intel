@@ -54,11 +54,13 @@ WHAT WE WANT (ideal lead):
 - Small (1–3 locations) — the owner makes the decision, which means a faster close
 - Reachable: has a verified email and/or direct phone number
 
+SECOND PRODUCT — NO WEBSITE:
+A business with NO website is NOT a skip — we sell those their FIRST website (a separate pitch). Mark website_status = 'none', but judge is_correct_niche purely on the business itself (name, Google business type, reviews). A med spa or aesthetics clinic with no website and real reviews is a GOOD lead. Never set is_correct_niche = false merely because there is no website or little website data.
+
 WHAT TO SKIP:
-- Business with no website — cannot sell an upgrade; mark website_status = 'none'
 - Business with a great modern website (fast, mobile-friendly, has online booking) — nothing to sell; mark website_status = 'good'
-- Wrong business type — mark is_correct_niche = false
-- Too new / too few reviews — not yet a proven money-making business
+- Wrong business type — mark is_correct_niche = false (this field is ONLY about the business type, never about website presence or review count)
+- Too new / too few reviews — not yet a proven money-making business; express this through a LOW quality_score, NOT through is_correct_niche
 
 WEBSITE STATUS RULES (set this based on the technical signals provided below):
 - 'weak': Has a website WITH at least one clear, CORROBORATED problem: not mobile-friendly, slow to load, or dated design (old copyright year, table-based layout). THIS IS OUR IDEAL TARGET.
@@ -224,11 +226,11 @@ ${websiteSection}
 ${reviewSection}
 
 SCORING RULES — follow exactly:
-1. is_correct_niche: true only for med spas / aesthetic / botox / skin clinics. false otherwise.
+1. is_correct_niche: judge ONLY the business type (name, Google business type, reviews): true for med spas / aesthetic / botox / skin clinics, false for other business types. NEVER false because the website is missing ('none' is a sellable first-website lead) or because data is thin.
 2. website_status: use the technical signals above. 'weak' = has a CORROBORATED problem (mobile/slow/dated). 'good' = modern + has booking. 'none' = no website. 'unknown' = could not fetch. Missing-booking alone is NOT enough to call 'weak' — the scanner misses JS booking widgets. Do not penalize quality_score for 'unknown'/unreachable.
 3. status_reason: ONE short factual line explaining the website_status you chose — required for EVERY status (good/weak/unknown/none), per the STATUS REASON rules.
 4. site_issue_note: our main sales hook — ONE sentence naming the corroborated problem AND its business consequence, if website_status is 'weak'. Otherwise "N/A".
-5. quality_score: integer 1-10 = LEAD FIT (how good a target FOR US). Only 'weak' sites score above 3; good/none/unknown/wrong-niche → 1-3. Chains capped at 4.
+5. quality_score: integer 1-10 = LEAD FIT (how good a target FOR US). Only 'weak' sites score above 3; good/none/unknown/wrong-niche → 1-3. Chains capped at 4. (A low score for 'none' does NOT mean wrong niche — no-website med spas are still imported for the first-website pitch via is_correct_niche=true.)
 6. low_fit: true if quality_score < ${qualityThreshold}, or if the business is a chain / multi-location.
 7. pain_points: best outreach angle from reviews — real complaints/friction first (esp. digital), else the recurring theme clients praise (name the specific provider/treatment/result). Only "insufficient data" if reviews < 3 or total review text < 200 chars. Never fabricate.
 8. personalization_notes: 1-2 hooks, real data only, no fabrication.`
