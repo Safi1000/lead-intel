@@ -237,6 +237,8 @@ async function fetchRendered(url: string): Promise<string | null> {
     if (!res.ok) return null
     const text = await res.text()
     if (text.length < 300) return null // render failed or empty shell
+    // The renderer can be served the same bot-challenge page — don't treat that as site content.
+    if (/sgcaptcha|robot challenge|checking your browser|just a moment|verify you are human/i.test(text.slice(0, 2000))) return null
     return text.length > 200_000 ? text.slice(0, 200_000) : text
   } catch {
     return null
@@ -265,6 +267,12 @@ async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs
     // issues → a false 'weak'. Treat these as unreachable (→ 'unknown') instead.
     // Ground-truth run (2026-07-02): 4/17 sites were JS-gated this way and need a real browser.
     if (res.status === 202 || html.length < 600) return { html: null, loadTimeMs, finalUrl }
+    // Bot-challenge interstitials served with HTTP 200 (sgcaptcha, Cloudflare "Just a moment",
+    // etc.). Verified live: leverve.ca serves a "Robot Challenge Screen" that we scored as a real
+    // page → false "no booking/contact". Treat as unreachable so the render fallback takes over.
+    if (/sgcaptcha|robot challenge|checking your browser|just a moment|cf-chl|__cf_chl/i.test(html.slice(0, 3000)) && html.length < 20_000) {
+      return { html: null, loadTimeMs, finalUrl }
+    }
     // Cap size to bound CPU: the quality/chain/email regexes each scan the whole document, and some
     // med-spa sites ship 700KB+ of inline scripts/JSON. The signals we need live in the visible
     // markup, so ~400KB is plenty and keeps per-lead CPU well under the edge function's limit.

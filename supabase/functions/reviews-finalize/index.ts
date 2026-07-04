@@ -1,7 +1,7 @@
 /**
  * reviews-finalize — DataForSEO pingback receiver (Phase 2 of review enrichment).
  *
- * pipeline-run posts two review tasks per imported lead (20 highest + 20 lowest rated).
+ * pipeline-run posts two review tasks per imported lead (20 newest + 20 lowest rated).
  * DataForSEO calls this function when each task finishes:
  *   GET /reviews-finalize?id=<task_id>&tag=<place_id>&secret=<PIPELINE_SECRET>
  *
@@ -43,19 +43,20 @@ async function dbUpdate(table: string, body: unknown, qs: string): Promise<void>
 // Review-insights re-scoring (pain_points is what we sell — this is the payoff step)
 // ---------------------------------------------------------------------------
 
-const INSIGHTS_PROMPT = `You are a lead-qualification analyst for a web design agency selling website redesigns to med spas and aesthetic clinics. You are given a BALANCED sample of a clinic's Google reviews: up to 20 highest-rated AND up to 20 lowest-rated, each with a date. This is far richer evidence than a typical relevance-picked sample — use it.
+const INSIGHTS_PROMPT = `You are a lead-qualification analyst for a web design agency selling website redesigns to med spas and aesthetic clinics. You are given a rich sample of a clinic's Google reviews — up to 20 MOST RECENT and up to 20 LOWEST-RATED, each with a date — plus WHAT WE FOUND ON THEIR WEBSITE (defects our scanner detected).
 
 Return:
 
-pain_points — the single most sellable outreach angle, grounded ONLY in these reviews:
-- FIRST look at the LOW-rated reviews for friction we can fix with a better website: hard to book, phone never answered, no online booking, slow replies, scheduling chaos, billing/communication problems. If present, LEAD with it and say roughly how many reviewers mention it.
+pain_points — the single most sellable outreach angle:
+- STRONGEST possible angle: review friction that CORROBORATES a detected website defect (e.g. reviewers say they can't get through to book AND the site has no booking flow; reviewers say nobody replies AND the site publishes no email). When reviews and the website findings line up, connect them EXPLICITLY — that one-two punch is the pitch. Never invent website defects that are not in the findings.
+- Otherwise: friction from the reviews we can fix with a better website — hard to book, phone never answered, no online booking, slow replies, scheduling chaos, communication problems. Say roughly how many reviewers mention it.
 - Distinguish website-fixable friction (booking/contact/communication) from service complaints (bad injections, rude staff, results) — mention service complaints only as context, they are NOT our pitch.
-- Note recency when it matters: complaints from the last year are hot; if ALL reviews are years old, say the business looks dormant.
-- If the low-rated reviews show no real friction (still 4-5★ or trivial gripes), say the reputation is uniformly strong and give the dominant praise theme (name the provider/treatment reviewers mention).
+- Use the dates: the MOST RECENT reviews show current reality — friction there is hot. If ALL reviews are years old, say the business looks dormant.
+- If there is no real friction anywhere (low-rated are still 4-5★ or trivial gripes), say the reputation is uniformly strong and give the dominant praise theme from the recent reviews (name the provider/treatment reviewers mention).
 
 personalization_notes — 1-2 short, specific cold-outreach hooks quoting or referencing actual review content (names, treatments, phrases). No fabrication, no generic flattery.
 
-Ground every word in the supplied reviews. Never invent.`
+Ground every word in the supplied reviews and website findings. Never invent.`
 
 const INSIGHTS_SCHEMA = {
   name: 'review_insights',
@@ -71,12 +72,15 @@ const INSIGHTS_SCHEMA = {
   },
 }
 
-async function rescoreInsights(businessName: string, high: Review[], low: Review[]): Promise<{ pain_points: string; personalization_notes: string } | null> {
+async function rescoreInsights(businessName: string, recent: Review[], low: Review[], siteContext: string): Promise<{ pain_points: string; personalization_notes: string } | null> {
   const fmt = (rs: Review[]) => rs.map((r) => `[${r.rating ?? '?'}★${r.time ? ' ' + String(r.time).slice(0, 10) : ''}] ${r.text.slice(0, 400)}`).join('\n')
   const user = `Business: ${businessName}
 
-HIGHEST-RATED reviews (${high.length}):
-${fmt(high) || '(none)'}
+WEBSITE FINDINGS (from our scanner — the only site defects you may reference):
+${siteContext || '(none available)'}
+
+MOST RECENT reviews (${recent.length}):
+${fmt(recent) || '(none)'}
 
 LOWEST-RATED reviews (${low.length}):
 ${fmt(low) || '(none)'}`
@@ -140,25 +144,33 @@ Deno.serve(async (req: Request) => {
     if (!placeId) return new Response(JSON.stringify({ ok: true, note: 'no task row' }), { status: 200 })
 
     const pair = await dbSelect<{ sort: string | null; status: string; reviews: Review[] | null }>(
-      'review_tasks', `place_id=eq.${placeId}&select=sort,status,reviews`)
+      'review_tasks', `place_id=eq.${placeId}&select=sort,status,reviews&order=created_at.desc`)
     const done = pair.filter((p) => p.status === 'done')
     if (done.length < 2) return new Response(JSON.stringify({ ok: true, note: 'waiting for pair' }), { status: 200 })
 
-    const high = done.find((p) => p.sort === 'highest_rating')?.reviews ?? []
+    // 'newest' is the current sort; tolerate 'highest_rating' rows from older runs.
+    const recent = done.find((p) => p.sort === 'newest' || p.sort === 'highest_rating')?.reviews ?? []
     const lowRaw = done.find((p) => p.sort === 'lowest_rating')?.reviews ?? []
     // De-dup: on small businesses both sorts can return overlapping reviews.
-    const seen = new Set(high.map((rv) => rv.text))
+    const seen = new Set(recent.map((rv) => rv.text))
     const low = lowRaw.filter((rv) => !seen.has(rv.text))
-    if (high.length + low.length < 3) {
+    if (recent.length + low.length < 3) {
       return new Response(JSON.stringify({ ok: true, note: 'too few reviews to rescore' }), { status: 200 })
     }
 
-    // 4. Re-score pain points + personalization on the balanced sample.
-    const place = (await dbSelect<{ name: string; crm_lead_id: string | null }>(
-      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id`))[0]
+    // 4. Re-score pain points + personalization on the balanced sample, cross-checked against the
+    // site defects our scanner actually found (so reviews + website connect into ONE narrative).
+    const place = (await dbSelect<{ name: string; crm_lead_id: string | null; website_status: string | null; site_issue_note: string | null; status_reason: string | null }>(
+      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id,website_status,site_issue_note,status_reason`))[0]
     if (!place) return new Response(JSON.stringify({ ok: true, note: 'place not found' }), { status: 200 })
 
-    const insights = await rescoreInsights(place.name ?? 'this business', high, low)
+    const siteContext = [
+      place.website_status ? `Website status: ${place.website_status}` : '',
+      place.site_issue_note && place.site_issue_note !== 'N/A' ? `Detected site issues: ${place.site_issue_note}` : '',
+      place.status_reason ? `Assessment: ${place.status_reason}` : '',
+    ].filter(Boolean).join('\n')
+
+    const insights = await rescoreInsights(place.name ?? 'this business', recent, low, siteContext)
     if (!insights) return new Response(JSON.stringify({ ok: false, note: 'rescore failed' }), { status: 200 })
 
     await dbUpdate('sourced_places', {
@@ -176,7 +188,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log(`[reviews-finalize] ${place.name}: rescored from ${high.length}+${low.length} reviews`)
+    console.log(`[reviews-finalize] ${place.name}: rescored from ${recent.length} recent + ${low.length} lowest reviews`)
     return new Response(JSON.stringify({ ok: true, rescored: true }), { status: 200 })
   } catch (e) {
     console.error('[reviews-finalize] error:', (e as Error).message)

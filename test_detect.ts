@@ -1,37 +1,37 @@
-// End-to-end: real site → analyzeWebsite (with excerpt) → scorePlace → final output.
-import { readFileSync } from 'node:fs'
+// 0-false-positive honesty check: replay the deployed rules-skip against the newest batch's
+// 13 imported (weak) leads. Any SKIP here = the rule would have cost a real lead.
 import { analyzeWebsite } from './supabase/functions/pipeline-run/_website.ts'
-import { scorePlace } from './supabase/functions/pipeline-run/_ai.ts'
 
-const env = readFileSync('.env', 'utf8')
-const OPENAI = (env.match(/^OPENAI_API_KEY=(.+)/m) || [])[1].trim().replace(/^["']|["']$/g, '')
+const INFERRED = new Set(['Embedded form/scheduler', 'Booking link', 'Contact/appointment page', 'On-page form', 'Contact/booking CTA', 'Embedded/custom booking', 'Booking/contact found on rendered page'])
+const soft = (i: string) => i.startsWith('No Instagram or Facebook') || i.startsWith('Built on ')
 
-// Retief: the classic weak lead (2019 copyright, no email, Squarespace) — excerpt should ground hooks.
-const ws = await analyzeWebsite('https://www.retiefskincenter.com/')
-console.log('--- analyzeWebsite ---')
-console.log('excerpt chars:', ws.visibleTextExcerpt?.length ?? 0)
-console.log('excerpt sample:', (ws.visibleTextExcerpt ?? '').slice(0, 180))
-console.log('issues:', ws.detectedIssues.length)
+const IMPORTED: Array<[string, string]> = [
+  ['Beam Beauty', 'https://www.beambeauty.ca/'],
+  ['Clinique Laser-Esthetique', 'http://www.laseresthetique.com/'],
+  ['Dermka Clinic', 'https://dermkaclinik.com/'],
+  ['Dr. Anna Medical', 'https://drannamd.com/'],
+  ['Ekinoxe Esthetique', 'https://cliniqueekinoxe.ca/'],
+  ['EM Medecine Esthetique', 'http://emmedecineesthetique.com/'],
+  ['Heaven The Spa', 'https://www.heavenspa.ca/'],
+  ['La Deesse Cosmetic', 'https://www.ldmediclinic.com/'],
+  ['La Peau Dor', 'http://www.lapeaudor.com/'],
+  ['Medicart Quebec', 'https://medicart.com/clinique/medicart-quebec/'],
+  ['My Beauty Secrets', 'https://mybeautysecretsvictoria.ca/'],
+  ['Sunshine Cosmetic Clinic', 'https://sunshinemedispa.com/mississauga/'],
+  ['Viva Clinic', 'http://www.cliniqueviva.com/'],
+]
 
-const { score } = await scorePlace({
-  name: 'Retief Skin Center',
-  address: 'Nashville, TN, USA',
-  phone: '+1 615 555 0100',
-  website: 'https://www.retiefskincenter.com/',
-  rating: 4.8,
-  businessType: 'skin_care_clinic',
-  reviews: [
-    { text: 'Dr. Retief is wonderful, my skin has never looked better after the laser treatments.', rating: 5 },
-    { text: 'Great results but I had to call three times before anyone picked up to schedule.', rating: 4 },
-    { text: 'Very professional staff, love the results.', rating: 5 },
-  ],
-  email: null,
-  websiteSignals: ws,
-}, 6, 'gpt-4o-mini', OPENAI)
-
-console.log('\n--- scorePlace ---')
-console.log(`ws=${score.website_status} q=${score.quality_score} low_fit=${score.low_fit} conf=${score.confidence} niche=${score.is_correct_niche}`)
-console.log('status_reason:', score.status_reason)
-console.log('site_issue_note:', score.site_issue_note)
-console.log('pain_points:', score.pain_points)
-console.log('personalization:', score.personalization_notes)
+let skips = 0
+for (const [name, url] of IMPORTED) {
+  try {
+    const w = await analyzeWebsite(url)
+    const certainGood = !!(w.reachable && w.hasBookingWidget && w.bookingPlatform
+      && !INFERRED.has(w.bookingPlatform) && w.hasMobileViewport
+      && w.detectedIssues.every(soft) && w.chainSignals.length === 0)
+    if (certainGood) skips++
+    const hard = w.detectedIssues.filter((i) => !soft(i))
+    const why = certainGood ? '' : ` [${!w.reachable ? 'unreachable/challenge' : !w.hasBookingWidget ? 'no booking' : INFERRED.has(w.bookingPlatform!) ? 'inferred: ' + w.bookingPlatform : !w.hasMobileViewport ? 'no viewport' : w.chainSignals.length ? 'CHAIN: ' + w.chainSignals[0].slice(0, 40) : 'hard: ' + hard.map((i) => i.split(' — ')[0]).join(' | ').slice(0, 80)}]`
+    console.log(`${certainGood ? '!! SKIP !!      ' : 'AI-SCORED (ok) '} ${name.padEnd(26)}${why}`)
+  } catch (e) { console.log(`ERROR           ${name}: ${(e as Error).message}`) }
+}
+console.log(`\nFALSE POSITIVES: ${skips}/13 ${skips === 0 ? '— rule is honest ✓' : '— RULE WOULD LOSE REAL LEADS ✗'}`)

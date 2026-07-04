@@ -33,9 +33,11 @@ export interface PlaceForScoring {
 }
 
 const OPENAI_API_BASE = 'https://api.openai.com/v1'
-// Borderline / low-confidence leads get a second pass with the full model — pay for the better
-// brain only on the ~15% of leads that are genuinely hard to call.
-const ESCALATION_MODEL = 'gpt-4o'
+// Borderline / low-confidence leads get a second pass with a stronger model — pay for the better
+// brain only on the leads that are genuinely hard to call (~7% measured). gpt-4.1-mini is ~6x
+// cheaper than legacy-priced gpt-4o and sits between 4o-mini and 4o in quality. If the model name
+// ever 404s, the escalation try/catch keeps the first-pass result — graceful fallback.
+const ESCALATION_MODEL = 'gpt-4.1-mini'
 
 const SYSTEM_PROMPT = `You are a lead-qualification AI for a web design agency that sells premium website redesigns to US med spas and aesthetic clinics.
 

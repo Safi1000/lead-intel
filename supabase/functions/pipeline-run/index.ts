@@ -226,6 +226,13 @@ const EXCLUDED_PLACE_TYPES = new Set([
   'tanning_studio', 'veterinary_care', 'pet_groomer', 'florist', 'pharmacy',
 ])
 
+// Booking labels that are INFERRED (form/link/CTA heuristics) rather than a named platform match.
+// Rules-skip requires a NAMED platform — inferred booking still goes to the AI for judgment.
+const INFERRED_BOOKING_LABELS = new Set([
+  'Embedded form/scheduler', 'Booking link', 'Contact/appointment page', 'On-page form',
+  'Contact/booking CTA', 'Embedded/custom booking', 'Booking/contact found on rendered page',
+])
+
 async function placesTextSearch(
   searchTerm: string,
   location: string,
@@ -250,8 +257,9 @@ async function placesTextSearch(
 
 // ---------------------------------------------------------------------------
 // DataForSEO review enrichment (two-pass, async).
-// For every IMPORTED lead we post two review tasks — 20 highest + 20 lowest rated — so the AI can
-// later rebuild pain_points from a balanced sample instead of Google's 5 relevance-picked reviews.
+// For every IMPORTED lead we post two review tasks — 20 NEWEST + 20 lowest rated — so the AI can
+// later rebuild pain_points from a current + friction-weighted sample instead of Google's 5
+// relevance-picked reviews.
 // DataForSEO pings our reviews-finalize edge function when each task completes (~≤45 min).
 // Cost: ~$0.0045/lead. Skipped entirely when DATAFORSEO_* secrets are unset.
 // ---------------------------------------------------------------------------
@@ -274,8 +282,10 @@ async function enqueueReviewTasks(placeId: string, orgId: string, isCanada: bool
         Authorization: 'Basic ' + btoa(`${DFS_LOGIN}:${DFS_PASSWORD}`),
         'Content-Type': 'application/json',
       },
+      // newest = current operational reality (still mostly positive for 4.8★+ spas, so the praise
+      // theme survives); lowest_rating = guaranteed friction/dirt. No compound sort exists in the API.
       body: JSON.stringify([
-        { ...base, sort_by: 'highest_rating' },
+        { ...base, sort_by: 'newest' },
         { ...base, sort_by: 'lowest_rating' },
       ]),
     })
@@ -603,8 +613,39 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // Rules-skip: when the scraper is CERTAIN the site is good — a NAMED booking platform,
+      // mobile viewport, zero detected issues, no chain signals — the lead can never be imported
+      // (gate requires 'weak'), so scoring it with the AI is pure wasted spend (~75% of scanned
+      // leads in saturated metros are good sites). Anything uncertain still goes to the AI.
+      // SOFT issues (pitch angles, not real weaknesses — the AI classifies these sites 'good' anyway)
+      // don't block the skip. Any HARD issue (no email, slow, old copyright, SSL, SEO, no-contact,
+      // free subdomain, etc.) still routes the lead to the AI. Verified vs Playwright 2026-07-04.
+      const softIssue = (i: string) => i.startsWith('No Instagram or Facebook') || i.startsWith('Built on ')
+      const certainGood = !!(
+        hasWebsite && websiteResult && websiteResult.reachable
+        && websiteResult.hasBookingWidget && websiteResult.bookingPlatform
+        && !INFERRED_BOOKING_LABELS.has(websiteResult.bookingPlatform)
+        && websiteResult.hasMobileViewport
+        && websiteResult.detectedIssues.every(softIssue)
+        && websiteResult.chainSignals.length === 0
+      )
+      if (certainGood && details) {
+        aiScore = {
+          is_correct_niche: true, // irrelevant to the gate for 'good' sites; kept truthy for consistency
+          website_status: 'good',
+          status_reason: `Modern site: ${websiteResult!.bookingPlatform} online booking, mobile-friendly, no issues detected (auto-classified — AI skipped).`,
+          site_issue_note: 'N/A',
+          quality_score: 2,
+          low_fit: true,
+          confidence: 'high',
+          pain_points: 'not analyzed — site is already modern, nothing to sell',
+          personalization_notes: '',
+        }
+        aiRaw = { rules_skip: true }
+      }
+
       // Phase 5: AI scoring — also scores no-website leads (determines niche + reachability).
-      if (details) {
+      if (details && !certainGood) {
         try {
           const placeForAi: PlaceForScoring = {
             name: details.name,

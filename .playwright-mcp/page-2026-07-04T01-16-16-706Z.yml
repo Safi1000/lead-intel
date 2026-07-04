@@ -1,0 +1,259 @@
+- generic [ref=f13e3]:
+  - region "top of page"
+  - generic [ref=f13e9]:
+    - banner [ref=f13e10]:
+      - generic [ref=f13e16]:
+        - generic:
+          - generic:
+            - generic [ref=f13e21]:
+              - paragraph [ref=f13e30]:
+                - generic [ref=f13e32]: WELCOME TO NU YOU MED SPA + LASER CLINIC
+              - generic [ref=f13e33]:
+                - generic:
+                  - generic:
+                    - list "Social Bar" [ref=f13e38]:
+                      - listitem [ref=f13e39]:
+                        - link "Instagram" [ref=f13e40] [cursor=pointer]:
+                          - /url: https://www.instagram.com/nuyou.medspa/
+                          - img "Instagram" [ref=f13e41]
+                      - listitem [ref=f13e42]:
+                        - link "Facebook" [ref=f13e43] [cursor=pointer]:
+                          - /url: https://www.facebook.com/nuyoumedspahalifax
+                          - img "Facebook" [ref=f13e44]
+                    - list "Social Bar" [ref=f13e46]:
+                      - listitem [ref=f13e47]:
+                        - link "Instagram" [ref=f13e48] [cursor=pointer]:
+                          - /url: https://www.instagram.com/nuyou.medspa/
+                          - img "Instagram" [ref=f13e49]
+                      - listitem [ref=f13e50]:
+                        - link "Facebook" [ref=f13e51] [cursor=pointer]:
+                          - /url: https://www.facebook.com/nuyoumedspahalifax
+                          - img "Facebook" [ref=f13e52]
+            - generic [ref=f13e57]:
+              - link "NuYou Updated Logo_tif.png.webp" [ref=f13e63] [cursor=pointer]:
+                - /url: https://www.nuyoumedispa.ca
+                - img "NuYou Updated Logo_tif.png.webp" [ref=f13e64]
+              - generic [ref=f13e65]:
+                - generic:
+                  - generic:
+                    - navigation "Site" [ref=f13e70]:
+                      - list [ref=f13e71]:
+                        - listitem [ref=f13e72] [cursor=pointer]:
+                          - button "TREATMENTS" [ref=f13e73]:
+                            - paragraph [ref=f13e76]: TREATMENTS
+                          - button "More TREATMENTS pages" [ref=f13e77]:
+                            - img [ref=f13e78]
+                        - listitem [ref=f13e80] [cursor=pointer]:
+                          - link "ABOUT" [ref=f13e81]:
+                            - /url: https://www.nuyoumedispa.ca/about
+                            - paragraph [ref=f13e84]: ABOUT
+                        - listitem [ref=f13e85] [cursor=pointer]:
+                          - link "BEAUTY BIOLOGY LAB" [ref=f13e86]:
+                            - /url: https://www.nuyoumedispa.ca/general-7
+                            - paragraph [ref=f13e89]: BEAUTY BIOLOGY LAB
+                        - listitem [ref=f13e90] [cursor=pointer]:
+                          - link "CONTACT" [ref=f13e91]:
+                            - /url: https://www.nuyoumedispa.ca/contact
+                            - paragraph [ref=f13e94]: CONTACT
+                    - link "BOOK NOW" [ref=f13e96] [cursor=pointer]:
+                      - /url: https://book.squareup.com/appointments/v37aya303b73t9/location/LRNH39YEJVAGY/services?buttonTextColor=ffffff&color=000000&locale=en-CA&referrer=so
+                      - generic [ref=f13e98]: BOOK NOW
+              - button "Log In" [ref=f13e104] [cursor=pointer]:
+                - img [ref=f13e108]
+                - generic [ref=f13e111]: Log In
+            - button [ref=f13e115] [cursor=pointer]:
+              - img [ref=f13e117]
+    - main [ref=f13e120]:
+      - generic [ref=f13e125]:
+        - generic:
+          - generic:
+            - generic:
+              - generic [ref=f13e135]:
+                - generic:
+                  - generic:
+                    - heading "Your Skin Comes First" [level=1] [ref=f13e140]
+                    - heading "BODY CONTOURING - CELLULITE REDUCTION LASER TREATMENTS" [level=6] [ref=f13e141]:
+                      - generic [ref=f13e144]:
+                        - text: BODY CONTOURING - CELLULITE REDUCTION
+                        - text: LASER TREATMENTS
+              - generic [ref=f13e167]:
+                - generic:
+                  - generic:
+                    - paragraph [ref=f13e171]:
+                      - generic [ref=f13e172]: Trust our Experts
+                    - heading "Say hello to a whole Nu You" [level=2] [ref=f13e173]:
+                      - generic [ref=f13e176]:
+                        - text: Say hello to a
+                        - text: whole Nu You
+                    - paragraph [ref=f13e177]:
+                      - generic [ref=f13e178]: NuYou Med Spa is your go-to destination for all your beauty needs. Our expert team is fully dedicated to providing you with a safe, comfortable and effective treatment experience. Our spa is equipped with SharpLight Technologies featuring a versatile selection of med-aesthetic treatments for your beauty goals. to help you look and feel your best.
+                    - link "Book Now" [ref=f13e180] [cursor=pointer]:
+                      - /url: https://nuyoumedspa.janeapp.com/
+                      - generic [ref=f13e181]: Book Now
+              - generic [ref=f13e187]:
+                - generic:
+                  - generic:
+                    - heading "NuYou Services" [level=2] [ref=f13e191]:
+                      - generic [ref=f13e192]: NuYou Services
+                    - generic [ref=f13e206]:
+                      - paragraph [ref=f13e211]:
+                        - link "LASER HAIR REMOVAL" [ref=f13e212] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/laser-hair-removal-1
+                          - generic [ref=f13e216]: LASER HAIR REMOVAL
+                      - paragraph [ref=f13e221]:
+                        - link "BODY CONTOURING/ SCULPTING" [ref=f13e222] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/body-contouring-sculpting
+                          - generic [ref=f13e225]: BODY CONTOURING/ SCULPTING
+                      - paragraph [ref=f13e230]:
+                        - link "ACNE TREATMENT" [ref=f13e231] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/acne-treatment
+                          - generic [ref=f13e234]: ACNE TREATMENT
+                    - generic [ref=f13e239]:
+                      - img "Natural Beauty" [ref=f13e245]
+                      - img "Close Up Portrait" [ref=f13e256]
+              - generic [ref=f13e257]:
+                - generic:
+                  - generic:
+                    - generic [ref=f13e274]:
+                      - paragraph [ref=f13e279]:
+                        - link "FACIALS" [ref=f13e280] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/facials
+                          - generic [ref=f13e283]: FACIALS
+                      - paragraph [ref=f13e288]:
+                        - link "SKIN REJUVENATION" [ref=f13e289] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/skin-rejuventation
+                          - generic [ref=f13e292]: SKIN REJUVENATION
+                      - paragraph [ref=f13e297]:
+                        - link "SHELLEY'S HAIR STUDIO & HEAD SPA" [ref=f13e299] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/copy-of-facials
+                    - generic [ref=f13e304]:
+                      - img "Facial" [ref=f13e310]
+                      - img "Hair Wash" [ref=f13e321]
+              - generic [ref=f13e322]:
+                - generic:
+                  - generic:
+                    - generic [ref=f13e339]:
+                      - paragraph [ref=f13e344]:
+                        - link "VASCULAR & PIGMENTED LESIONS" [ref=f13e345] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/vascular-pigmented-lesions
+                          - generic [ref=f13e348]: VASCULAR & PIGMENTED LESIONS
+                      - paragraph [ref=f13e353]:
+                        - link "MEN'S HAIR REMOVAL" [ref=f13e354] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/men-s-hair-removal
+                          - generic [ref=f13e357]: MEN'S HAIR REMOVAL
+                      - paragraph [ref=f13e362]:
+                        - link "BOTOX" [ref=f13e363] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/botox
+                          - generic [ref=f13e366]: BOTOX
+                    - generic [ref=f13e371]:
+                      - img "Beautiful Skin" [ref=f13e377]
+                      - img "Shaved Armpit" [ref=f13e383]
+              - generic [ref=f13e389]:
+                - generic:
+                  - generic:
+                    - generic [ref=f13e406]:
+                      - paragraph [ref=f13e411]:
+                        - link "REFLEXOLOGY" [ref=f13e412] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/copy-of-laser-hair-removal
+                          - generic [ref=f13e415]: REFLEXOLOGY
+                      - paragraph [ref=f13e420]:
+                        - link "MEN'S HAIR REMOVAL" [ref=f13e421] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/men-s-hair-removal
+                          - generic [ref=f13e424]: MEN'S HAIR REMOVAL
+                      - paragraph [ref=f13e429]:
+                        - link "BOTOX" [ref=f13e430] [cursor=pointer]:
+                          - /url: https://www.nuyoumedispa.ca/botox
+                          - generic [ref=f13e433]: BOTOX
+                    - img "Shaved Armpit" [ref=f13e449]
+              - generic [ref=f13e479]:
+                - generic:
+                  - generic:
+                    - paragraph [ref=f13e483]:
+                      - generic [ref=f13e484]: WE BELIEVE
+                    - heading "Your Skin Comes First" [level=2] [ref=f13e485]:
+                      - generic [ref=f13e488]:
+                        - text: Your Skin
+                        - text: Comes First
+                    - paragraph [ref=f13e489]:
+                      - generic [ref=f13e490]: NuYou MedSpa + Laser Clinic was born with the vision of providing a powerful solution to enhance natural beauty without the need for surgery or down-time. We can’t wait to be a part of your transformational journey.
+                    - paragraph [ref=f13e491]:
+                      - link "BOOK NOW" [ref=f13e492] [cursor=pointer]:
+                        - /url: https://www.nuyoumedispa.ca
+                        - generic [ref=f13e494]: BOOK NOW
+    - contentinfo [ref=f13e495]:
+      - generic [ref=f13e501]:
+        - generic:
+          - generic:
+            - heading "Are you on the list?" [level=2] [ref=f13e502]:
+              - generic [ref=f13e504]: Are you on the list?
+            - generic [ref=f13e506]:
+              - generic:
+                - generic:
+                  - paragraph [ref=f13e507]:
+                    - generic [ref=f13e508]: Join to get exclusive offers & discounts
+                  - generic [ref=f13e509]:
+                    - generic [ref=f13e510]: Enter your email here *
+                    - textbox "Enter your email here *" [ref=f13e512]:
+                      - /placeholder: Email
+                  - button "Join" [ref=f13e514] [cursor=pointer]:
+                    - generic [ref=f13e515]: Join
+            - generic [ref=f13e521]:
+              - generic [ref=f13e526]:
+                - generic:
+                  - generic:
+                    - paragraph [ref=f13e530]:
+                      - generic [ref=f13e532]: Nu You MedSpa
+                    - generic:
+                      - paragraph [ref=f13e533]:
+                        - generic [ref=f13e535]: 28 Esquire Ln
+                      - paragraph [ref=f13e536]:
+                        - generic [ref=f13e538]: Bedford, NS B4A 1A4
+                      - paragraph [ref=f13e539]
+                      - paragraph [ref=f13e540]:
+                        - generic [ref=f13e541]: "Monday & Tuesday: 10 am - 7 pm"
+                      - paragraph [ref=f13e542]:
+                        - generic [ref=f13e543]: "Wednesday: 10 am - 6 pm"
+                      - paragraph [ref=f13e544]:
+                        - generic [ref=f13e545]: "Thursday & Friday: 10 am-5 pm"
+                      - paragraph [ref=f13e546]:
+                        - generic [ref=f13e547]: "Saturday: 10 am - 3 pm"
+                      - paragraph [ref=f13e548]
+                      - paragraph [ref=f13e549]:
+                        - generic [ref=f13e551]: Appointments outside of these hours may be available upon request.
+                      - paragraph [ref=f13e552]
+                      - paragraph [ref=f13e553]
+              - generic [ref=f13e554]:
+                - generic:
+                  - generic:
+                    - paragraph [ref=f13e558]: Policy
+                    - paragraph [ref=f13e559]:
+                      - link "FAQ" [ref=f13e562] [cursor=pointer]:
+                        - /url: https://www.nuyoumedispa.ca/faq
+              - generic [ref=f13e563]:
+                - generic:
+                  - generic:
+                    - paragraph [ref=f13e567]:
+                      - generic [ref=f13e568]: Customer Service
+                    - generic:
+                      - paragraph [ref=f13e569]:
+                        - generic [ref=f13e570]:
+                          - generic [ref=f13e571]: "Tel:"
+                          - link "(902) 422-7327" [ref=f13e575] [cursor=pointer]:
+                            - /url: https://www.google.ca/search?q=nuyou&sca_esv=0ee0280be053867a&sxsrf=ADLYWILJG1W_3NOoGpuzROc90d4vZnNLvg%3A1715951817479&source=hp&ei=yVhHZr35Fr6T0PEP3-SssAE&iflsig=AL9hbdgAAAAAZkdm2dW6OdyQe6oxd1hwUJE1A_DZECmQ&ved=0ahUKEwj9gZvU4pSGAxW-CTQIHV8yCxYQ4dUDCBY&uact=5&oq=nuyou&gs_lp=Egdnd3Mtd2l6IgVudXlvdTIKECMYgAQYJxiKBTIQEC4YgAQYQxjHARiKBRivATILEC4YgAQYxwEYrwEyEBAuGIAEGEMYxwEYigUYrwEyBRAAGIAEMgUQABiABDIFEAAYgAQyCBAuGIAEGOUEMggQLhiABBjlBDIIEC4YgAQY5QRIoQhQAFjXBXAAeACQAQCYAZgBoAGXBaoBAzAuNbgBA8gBAPgBAZgCBaACuAXCAgQQIxgnwgIKEAAYgAQYQxiKBcICCxAAGIAEGLEDGIMBwgILEC4YgAQYsQMYgwHCAhEQLhiABBixAxjRAxiDARjHAcICDhAAGIAEGLEDGIMBGIoFwgILEC4YgAQY0QMYxwHCAg4QLhiABBixAxjRAxjHAcICCxAAGIAEGLEDGIoFwgIQEC4YgAQYFBiHAhjHARivAcICDRAuGIAEGNEDGMcBGArCAgUQLhiABJgDAJIHAzAuNaAH01E&sclient=gws-wiz#
+                      - paragraph [ref=f13e576]:
+                        - generic [ref=f13e579]:
+                          - text: "Email:"
+                          - link "info@nuyoumedspa.ca" [ref=f13e580] [cursor=pointer]:
+                            - /url: mailto:info@nuyoumedspa.ca
+                    - list "Social Bar" [ref=f13e582]:
+                      - listitem [ref=f13e583]:
+                        - link "Instagram" [ref=f13e584] [cursor=pointer]:
+                          - /url: https://www.instagram.com/nuyou.medspa/
+                          - img "Instagram" [ref=f13e585]
+                      - listitem [ref=f13e586]:
+                        - link "Facebook" [ref=f13e587] [cursor=pointer]:
+                          - /url: https://www.facebook.com/nuyoumedspahalifax
+                          - img "Facebook" [ref=f13e588]
+                    - paragraph [ref=f13e589]:
+                      - generic [ref=f13e591]: © 2035 by BOP Online
+  - region "bottom of page"
