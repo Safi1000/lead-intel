@@ -24,7 +24,10 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
         Prefer: 'return=minimal',
       },
-      body: JSON.stringify({ stop_requested: true }),
+      // Force stop: flag it AND mark it stopped immediately. The flag halts the running chunk at its
+      // next batch check and prevents it chaining; setting status='stopped' now gives instant UI
+      // feedback and stops the watchdog from ever resuming it.
+      body: JSON.stringify({ stop_requested: true, status: 'stopped', completed_at: new Date().toISOString() }),
     })
 
     if (!patchRes.ok) {

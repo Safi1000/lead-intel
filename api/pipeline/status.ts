@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
 
     // Watchdog for stuck 'running' runs.
     if (run.status === 'running') {
-      const isChaining = run.target_total != null
+      const isChaining = run.target_total != null || run.qualified_target != null
       if (isChaining) {
         // A chaining job legitimately runs for many minutes. Instead of age, watch PROGRESS: a healthy
         // chain heartbeats last_progress_at each chunk (~every ≤2 min). If it hasn't advanced in >4 min,
@@ -29,8 +29,10 @@ export default async function handler(req: any, res: any) {
         if (stalledMs > 4 * 60 * 1000) {
           try {
             await fireEdgeFunction(runId, orgId, run.dry_run === true, undefined, {
-              target_total: Number(run.target_total),
+              target_total: run.target_total != null ? Number(run.target_total) : undefined,
+              qualified_target: run.qualified_target != null ? Number(run.qualified_target) : undefined,
               batch_id: run.batch_id ?? null,
+              batch_id_no_website: run.batch_id_no_website ?? null,
               chunk_index: Number(run.chunk_index ?? 0),
             })
             // bump the heartbeat so a rapid re-poll doesn't double-fire

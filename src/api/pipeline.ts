@@ -37,8 +37,10 @@ export interface PipelineRun {
   total_imported: number
   total_no_website: number
   target_total?: number | null
+  qualified_target?: number | null
   processed_total?: number | null
   batch_id?: string | null
+  batch_id_no_website?: string | null
   error: string | null
   xlsx_path: string | null
   xlsx_url?: string | null
@@ -102,8 +104,8 @@ export const pipelineApi = {
     call<PipelineConfig>('/config', { method: 'PUT', body: JSON.stringify(body) }),
 
   // --- Runs ---
-  triggerRun: (body: { org_id: string; dry_run: boolean; max_places?: number; target_total?: number; batch_name?: string }) =>
-    call<{ run_id: string; batch_id?: string | null; dry_run: boolean; status: string }>('/run', { method: 'POST', body: JSON.stringify(body) }),
+  triggerRun: (body: { org_id: string; dry_run: boolean; qualified_target?: number; batch_name?: string }) =>
+    call<{ run_id: string; batch_id?: string | null; batch_id_no_website?: string | null; dry_run: boolean; status: string }>('/run', { method: 'POST', body: JSON.stringify(body) }),
 
   getStatus: (orgId: string, runId: string) =>
     call<PipelineRun>(`/status?orgId=${encodeURIComponent(orgId)}&runId=${encodeURIComponent(runId)}`),

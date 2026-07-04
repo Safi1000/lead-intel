@@ -137,10 +137,9 @@ function StatusBadge({ status }: { status: PipelineRun['status'] }) {
 
 function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
-  const [maxLeads, setMaxLeads] = useState('')
   const [dryRun, setDryRun] = useState(false)
   const [batchName, setBatchName] = useState('')
-  const [targetTotal, setTargetTotal] = useState('')
+  const [qualifiedTarget, setQualifiedTarget] = useState('')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [liveRun, setLiveRun] = useState<PipelineRun | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -176,8 +175,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
     mutationFn: () => pipelineApi.triggerRun({
       org_id: orgId,
       dry_run: dryRun,
-      ...(maxLeads ? { max_places: Number(maxLeads) } : {}),
-      ...(targetTotal ? { target_total: Number(targetTotal) } : {}),
+      ...(qualifiedTarget ? { qualified_target: Number(qualifiedTarget) } : {}),
       ...(batchName.trim() ? { batch_name: batchName.trim() } : {}),
     }),
     onSuccess: (data) => {
@@ -215,33 +213,18 @@ function RunTrigger({ orgId }: { orgId: string }) {
           </p>
         </div>
         <div>
-          <Label htmlFor="target-total">Target leads (large batch)</Label>
+          <Label htmlFor="qualified-target">Qualified Leads</Label>
           <Input
-            id="target-total"
+            id="qualified-target"
             type="number"
             min={1}
-            placeholder="e.g. 1000"
-            value={targetTotal}
-            onChange={(e) => setTargetTotal(e.target.value)}
+            placeholder="e.g. 100"
+            value={qualifiedTarget}
+            onChange={(e) => setQualifiedTarget(e.target.value)}
             className="w-44"
           />
           <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            Runs across multiple chunks until reached.
-          </p>
-        </div>
-        <div>
-          <Label htmlFor="max-leads">Max leads to scan</Label>
-          <Input
-            id="max-leads"
-            type="number"
-            min={1}
-            placeholder="Use saved default"
-            value={maxLeads}
-            onChange={(e) => setMaxLeads(e.target.value)}
-            className="w-44"
-          />
-          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            Single-run cap (ignored when a target is set).
+            Runs until this many importable leads are found (website + no-website batches).
           </p>
         </div>
         <label className="flex items-center gap-2 cursor-pointer pb-5">
@@ -282,16 +265,16 @@ function RunTrigger({ orgId }: { orgId: string }) {
             <span className="font-medium">Current run</span>
             <StatusBadge status={liveRun.status} />
           </div>
-          {liveRun.target_total != null && (
+          {liveRun.qualified_target != null && (
             <div className="mb-3">
               <div className="flex justify-between text-[12px] text-[var(--color-text-secondary)] mb-1">
-                <span>Progress</span>
-                <strong className="text-[var(--color-text)]">{liveRun.processed_total ?? 0} / {liveRun.target_total}</strong>
+                <span>Qualified leads <span className="text-[var(--color-text-muted)]">(scanned {liveRun.processed_total ?? 0})</span></span>
+                <strong className="text-[var(--color-text)]">{liveRun.total_imported ?? 0} / {liveRun.qualified_target}</strong>
               </div>
               <div className="h-1.5 w-full rounded-full bg-[var(--color-border)] overflow-hidden">
                 <div
                   className="h-full bg-[var(--color-primary)] transition-all"
-                  style={{ width: `${Math.min(100, Math.round(((liveRun.processed_total ?? 0) / liveRun.target_total) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.round(((liveRun.total_imported ?? 0) / liveRun.qualified_target) * 100))}%` }}
                 />
               </div>
             </div>

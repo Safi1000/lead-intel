@@ -176,7 +176,7 @@ export async function fireEdgeFunction(
   orgId: string,
   dryRun: boolean,
   maxPlaces?: number,
-  extra?: { target_total?: number; batch_id?: string | null; batch_name?: string; chunk_index?: number },
+  extra?: { target_total?: number; qualified_target?: number; batch_id?: string | null; batch_id_no_website?: string | null; batch_name?: string; chunk_index?: number },
 ): Promise<void> {
   const url = `${SUPABASE_URL}/functions/v1/pipeline-run`
   console.log(`[pipeline/run] calling edge function: ${url} run_id=${runId}`)
@@ -190,7 +190,9 @@ export async function fireEdgeFunction(
       dry_run: dryRun,
       ...(maxPlaces != null ? { max_places: maxPlaces } : {}),
       ...(extra?.target_total != null ? { target_total: extra.target_total } : {}),
+      ...(extra?.qualified_target != null ? { qualified_target: extra.qualified_target } : {}),
       ...(extra?.batch_id ? { batch_id: extra.batch_id } : {}),
+      ...(extra?.batch_id_no_website ? { batch_id_no_website: extra.batch_id_no_website } : {}),
       ...(extra?.batch_name ? { batch_name: extra.batch_name } : {}),
       ...(extra?.chunk_index != null ? { chunk_index: extra.chunk_index } : {}),
     }),

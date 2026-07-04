@@ -24,6 +24,7 @@ export interface WebsiteResult {
   copyrightYear: number | null
   detectedIssues: string[] // human-readable sentences, pasted into the AI prompt
   chainSignals: string[] // multi-location / chain evidence, pasted into the AI prompt (empty = looks single-site)
+  visibleTextExcerpt: string | null // first ~1200 chars of the page's readable text — grounds the AI's niche call and lets hooks quote the site's own wording
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,15 @@ const FREE_EMAIL_PROVIDERS = new Set(['gmail.com', 'googlemail.com', 'yahoo.com'
 const TRACKING_EMAIL_DOMAIN_RE = /(?:wixpress\.com|wix\.com|sentry\.io|sentry-next\.[a-z.]+|squarespace\.com|godaddy\.com|cloudflare\.[a-z]+|gstatic\.com|googleapis\.com|schema\.org|example\.(?:com|org|net)|w3\.org|sentry\.[a-z.]+)$/i
 
 const EMAIL_REGEX = /[\w.+\-]+@[\w\-]+\.[\w.]{2,}/g
+// Strict single-address validator — rejects leading junk (e.g. "%20foo@x.com"), trailing punctuation,
+// and comma/semicolon-joined multi-address strings ("a@x.com,b@y.com").
+const STRICT_EMAIL_RE = /^[a-z0-9](?:[a-z0-9._%+\-]*[a-z0-9])?@[a-z0-9\-]+(?:\.[a-z0-9\-]+)+$/i
+
+// Clean one raw address token: percent-decode (%20 → space), strip surrounding junk, lowercase.
+function cleanEmail(s: string): string {
+  try { s = decodeURIComponent(s) } catch { /* leave as-is */ }
+  return s.replace(/^[\s,;<>()"'|]+|[\s,;<>()"'|.]+$/g, '').toLowerCase().trim()
+}
 
 // Med-spa-specific booking platforms. If any of these appear in the HTML, the
 // business has online booking — a significant positive signal (NOT a problem).
@@ -86,6 +96,16 @@ const BOOKING_PLATFORMS: Array<{ name: string; pattern: string }> = [
 // markup. Kept deliberately narrow (hyphenated slugs / path segments) so it does not fire on
 // prose like "book now" text or on facebook.com links.
 const BOOKING_LINK_RE = /(?:href|src|data-href)\s*=\s*["'][^"']*(?:\/book|book-|online-booking|\/appointment|-appointment|\/schedul|\/widget\/form|acuityscheduling|calendly\.com|book\.[a-z0-9-]+\.)[^"']*["']/i
+
+// A med spa with a CONTACT/APPOINTMENT form or a "schedule/contact us" CTA counts as reachable
+// online — it is NOT a "no booking" weakness. These broaden detection to stop false negatives.
+const CONTACT_FORM_RE = /<form[\s>]/i
+// Embedded form / scheduler platforms (contact forms + booking widgets).
+const FORM_PLATFORM_RE = /(calendly|hs-form|hsforms|hubspot|jotform|typeform|gravityforms|gform_|wpforms|wpcf7|contact-form-7|formstack|wufoo|123formbuilder|getresponse|mindbody|vagaro|squarespace-forms|tally\.so|fillout|paperform)/i
+// A link to a contact / appointment / booking page.
+const CONTACT_LINK_RE = /(?:href|action)\s*=\s*["'][^"']*(?:\/contact|contact-us|\/appointments?|\/book|\/booking|\/schedul|\/consult|get-started)[^"']*["']/i
+// Visible-text CTAs a real page shows for booking/contact (matched against stripped text, not scripts).
+const CONTACT_KEYWORD_RE = /\b(?:book\s*(?:now|online|an?\s*appointment|a?\s*consultation)?|schedule\s*(?:an?\s*)?(?:appointment|consultation|call|visit|now|online)?|request\s*(?:an?\s*)?(?:appointment|consultation|callback)|make\s*an?\s*appointment|online\s*booking|reserve\s*(?:your|a)?\s*(?:spot|appointment|table)?|free\s*consultation|contact\s*us|get\s*started)\b/i
 
 // ---------------------------------------------------------------------------
 // Chain / multi-location signals
@@ -156,15 +176,18 @@ function parseDomain(url: string): string {
 function extractMailtoEmails(html: string): string[] {
   const out: string[] = []
   for (const m of html.matchAll(/mailto:([^\s"'?#>]+)/gi)) {
-    const addr = m[1].split(/[?#]/)[0].toLowerCase().trim()
-    if (addr.includes('@')) out.push(addr)
+    // A single mailto may hold several comma/semicolon-separated addresses.
+    for (const part of m[1].split(/[?#]/)[0].split(/[,;]+/)) {
+      const addr = cleanEmail(part)
+      if (STRICT_EMAIL_RE.test(addr)) out.push(addr)
+    }
   }
   return out
 }
 
 function extractRegexEmails(html: string): string[] {
   const text = html.replace(/<[^>]+>/g, ' ')
-  return (text.match(EMAIL_REGEX) ?? []).map((e) => e.toLowerCase())
+  return (text.match(EMAIL_REGEX) ?? []).map(cleanEmail).filter((e) => STRICT_EMAIL_RE.test(e))
 }
 
 // `fromMailto` = the address came from an explicit mailto: link the owner placed on the page, so
@@ -172,6 +195,7 @@ function extractRegexEmails(html: string): string[] {
 // are noisier, so they must be on the site domain or a known free provider.
 function filterEmails(emails: string[], siteDomain: string, fromMailto = false): string[] {
   return emails.filter((e) => {
+    if (!STRICT_EMAIL_RE.test(e)) return false // reject %20 prefixes, joined addresses, trailing junk
     const [local, domain] = e.split('@')
     if (!local || !domain) return false
     if (domain.length < 4 || !domain.includes('.')) return false
@@ -196,7 +220,30 @@ function rankEmails(emails: string[]): string[] {
 // Fetch with timing
 // ---------------------------------------------------------------------------
 
-async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs: number }> {
+// Headless-render fallback (r.jina.ai): returns the RENDERED page as markdown/text — sees what a
+// browser sees, including JS-injected content. Used only for JS-shell pages and bot-blocked sites
+// (~15% of leads), so the free tier's rate limits are fine; set JINA_API_KEY for higher limits.
+const RENDER_TIMEOUT_MS = 25_000 // first render of a heavy site can take ~20s (jina caches after)
+async function fetchRendered(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS)
+    const key = typeof Deno !== 'undefined' ? Deno.env.get('JINA_API_KEY') : undefined
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      signal: controller.signal,
+      headers: key ? { Authorization: `Bearer ${key}` } : {},
+    })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    const text = await res.text()
+    if (text.length < 300) return null // render failed or empty shell
+    return text.length > 200_000 ? text.slice(0, 200_000) : text
+  } catch {
+    return null
+  }
+}
+
+async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs: number; finalUrl?: string }> {
   const start = Date.now()
   try {
     const controller = new AbortController()
@@ -207,17 +254,21 @@ async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs
     })
     clearTimeout(timer)
     const loadTimeMs = Date.now() - start
-    if (!res.ok) return { html: null, loadTimeMs }
+    const finalUrl = res.url || url // where we landed after redirects (for SSL check)
+    if (!res.ok) return { html: null, loadTimeMs, finalUrl }
     const ct = res.headers.get('content-type') ?? ''
-    if (!ct.includes('text/html') && !ct.includes('text/plain')) return { html: null, loadTimeMs }
+    if (!ct.includes('text/html') && !ct.includes('text/plain')) return { html: null, loadTimeMs, finalUrl }
     const html = await res.text()
     // Bot-challenge / JS-gate guard: some sites (Cloudflare-style JS challenges) answer any
     // non-browser client with HTTP 202 + a tiny stub (~170 bytes). res.ok is true, so without
     // this guard we'd score the stub as a real page and emit bogus "not mobile / no booking"
     // issues → a false 'weak'. Treat these as unreachable (→ 'unknown') instead.
     // Ground-truth run (2026-07-02): 4/17 sites were JS-gated this way and need a real browser.
-    if (res.status === 202 || html.length < 600) return { html: null, loadTimeMs }
-    return { html, loadTimeMs }
+    if (res.status === 202 || html.length < 600) return { html: null, loadTimeMs, finalUrl }
+    // Cap size to bound CPU: the quality/chain/email regexes each scan the whole document, and some
+    // med-spa sites ship 700KB+ of inline scripts/JSON. The signals we need live in the visible
+    // markup, so ~400KB is plenty and keeps per-lead CPU well under the edge function's limit.
+    return { html: html.length > 400_000 ? html.slice(0, 400_000) : html, loadTimeMs, finalUrl }
   } catch {
     return { html: null, loadTimeMs: Date.now() - start }
   }
@@ -233,51 +284,134 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   bookingPlatform: string | null
   copyrightYear: number | null
   detectedIssues: string[]
+  visibleTextExcerpt: string | null
 } {
   const issues: string[] = []
-
-  // 1. Mobile viewport — absence is a strong mobile-unfriendly signal
-  const hasMobileViewport = /<meta[^>]+name=["']viewport["']/i.test(html)
-  if (!hasMobileViewport) issues.push('No mobile viewport — site is not mobile-friendly (text will be tiny on phones)')
-
-  // 2. Online booking — a named platform host, OR a booking link/widget in the markup.
-  let bookingPlatform: string | null = null
   const htmlLower = html.toLowerCase()
-  for (const { name, pattern } of BOOKING_PLATFORMS) {
-    if (htmlLower.includes(pattern)) {
-      bookingPlatform = name
-      break
-    }
-  }
-  if (!bookingPlatform && BOOKING_LINK_RE.test(html)) {
-    bookingPlatform = 'Embedded/custom booking'
-  }
+
+  // Visible text with scripts/styles/tags removed. A page that is almost all script and has little
+  // readable text (+ no form / no viewport) is a JS-rendered SHELL (Wix/Squarespace/React) whose real
+  // content loads client-side — we CANNOT judge its booking/mobile from raw HTML, so we won't guess.
+  const htmlNoScripts = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    // A <script>/<style> block cut off by the 400KB size cap has no closing tag — strip to end so its
+    // raw JS isn't counted as "visible text" (would make a JS-shell page look readable).
+    .replace(/<script[\s\S]*$/i, ' ')
+    .replace(/<style[\s\S]*$/i, ' ')
+  const visibleText = htmlNoScripts.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  // Detect forms in the REAL markup only — a big JS bundle often contains "<form" inside its code,
+  // which would otherwise make a JS-shell page look like it has a real on-page form.
+  const hasForm = CONTACT_FORM_RE.test(htmlNoScripts)
+
+  // 1. Mobile viewport (accept attribute-order variants + device-width in content)
+  const hasMobileViewport = /<meta[^>]+viewport/i.test(html) || /width\s*=\s*device-width/i.test(html)
+
+  // Sparse readable text + no on-page form = a JS-rendered shell (Wix/Squarespace/Showit/React) whose
+  // real content loads client-side. A viewport tag in the static <head> does NOT make it readable —
+  // solene-spa.com is 2MB of JS with ~90 chars of text yet has a viewport. So don't require no-viewport.
+  const jsShell = visibleText.length < 600 && !hasForm
+
+  // 2. Booking / contact online: a named platform, a booking link, an embedded form platform,
+  //    an on-page <form>, a contact/appointment page link, or a contact/booking CTA in the text.
+  //    A contact/appointment FORM counts as "reachable online" — NOT a "no booking" weakness.
+  let bookingPlatform: string | null = null
+  for (const { name, pattern } of BOOKING_PLATFORMS) { if (htmlLower.includes(pattern)) { bookingPlatform = name; break } }
+  if (!bookingPlatform && FORM_PLATFORM_RE.test(html)) bookingPlatform = 'Embedded form/scheduler'
+  if (!bookingPlatform && BOOKING_LINK_RE.test(html)) bookingPlatform = 'Booking link'
+  if (!bookingPlatform && CONTACT_LINK_RE.test(html)) bookingPlatform = 'Contact/appointment page'
+  if (!bookingPlatform && hasForm) bookingPlatform = 'On-page form'
+  if (!bookingPlatform && CONTACT_KEYWORD_RE.test(visibleText)) bookingPlatform = 'Contact/booking CTA'
   const hasBookingWidget = bookingPlatform !== null
-  // NOTE: booking is frequently injected by JavaScript and invisible to this raw-HTML scan.
-  // We therefore flag a *possible* gap for the AI to weigh — never as a confirmed weakness.
-  if (!hasBookingWidget) issues.push('No online booking detected in page source — UNCERTAIN: may be a JS-injected widget, verify before treating as a weakness')
 
-  // 3. Slow load time (>4s = definitely slow; 2-4s = borderline)
-  if (loadTimeMs > 4000) issues.push(`Very slow load time (${loadTimeMs}ms) — Google penalises slow sites and visitors bounce`)
-  else if (loadTimeMs > 2000) issues.push(`Slow load time (${loadTimeMs}ms) — noticeably slow on mobile connections`)
+  // Contact/booking: when we can READ the page and found NO form, no contact/appointment page, no
+  // booking widget and no contact CTA, that's a CONFIRMED weakness (phone-only, no online contact).
+  if (!hasBookingWidget && !jsShell) {
+    issues.push('CONFIRMED no online contact: a readable homepage with no contact form, booking widget, or contact/appointment page — patients can only reach the clinic by phone')
+  }
+  // Mobile: only assert not-mobile-friendly when we can read the page.
+  if (!hasMobileViewport && !jsShell) {
+    issues.push('No mobile viewport tag — the site may not be mobile-friendly (text can be tiny on phones)')
+  }
 
-  // 4. Copyright year — old year suggests unmaintained site
+  // 3. Load time — 2s is fine; only clearly slow loads matter.
+  if (loadTimeMs > 6000) issues.push(`Very slow load (${loadTimeMs}ms) — visitors bounce and Google ranks slow sites lower`)
+  else if (loadTimeMs > 3500) issues.push(`Somewhat slow load (${loadTimeMs}ms)`)
+
+  // 4. Copyright year — ONLY an OLD year signals neglect. A current/recent year is GOOD, never "dated".
   const copyrightMatch = html.match(/©\s*(\d{4})/g)
   let copyrightYear: number | null = null
   if (copyrightMatch) {
-    // Take the most recent year found (some sites show © 2018-2024)
-    const years = copyrightMatch.map((m) => parseInt(m.replace(/©\s*/, '')))
-    copyrightYear = Math.max(...years)
-    if (copyrightYear < 2021) {
-      issues.push(`Copyright year ${copyrightYear} — site appears unmaintained and dated`)
+    const years = copyrightMatch.map((m) => parseInt(m.replace(/©\s*/, ''))).filter((y) => y >= 2000 && y <= 2100)
+    if (years.length) {
+      copyrightYear = Math.max(...years)
+      const currentYear = new Date().getFullYear()
+      if (copyrightYear <= currentYear - 3) {
+        issues.push(`Copyright year ${copyrightYear} — ${currentYear - copyrightYear} years out of date; the site looks unmaintained`)
+      }
     }
   }
 
   // 5. Table-based layout — a reliable indicator of very old web design
   const tableLayoutSignals = (html.match(/<table[^>]*(width=["']100%["']|cellpadding|cellspacing)/gi) ?? []).length
-  if (tableLayoutSignals >= 2) issues.push('Table-based page layout — classic sign of a very outdated website')
+  if (tableLayoutSignals >= 2) issues.push('Table-based page layout — a sign of a very outdated website')
 
-  return { hasMobileViewport, hasBookingWidget, bookingPlatform, copyrightYear, detectedIssues: issues }
+  // 6. SEO basics — missing title / meta description / H1 hurts Google visibility (readable pages only).
+  if (!jsShell) {
+    const missing: string[] = []
+    if (!/<title[^>]*>\s*\S[^<]*<\/title>/i.test(html)) missing.push('page title')
+    if (!/<meta[^>]+name=["']?description["']?/i.test(html)) missing.push('meta description')
+    if (!/<h1[\s>]/i.test(html)) missing.push('H1 heading')
+    if (missing.length >= 2) issues.push(`Missing SEO basics (${missing.join(', ')}) — the site is hard to find on Google`)
+  }
+
+  // 7. Social presence — med spa patients expect an active Instagram; no IG/FB link is a weak signal.
+  if (!jsShell && !/instagram\.com/i.test(html) && !/facebook\.com/i.test(html)) {
+    issues.push('No Instagram or Facebook linked on the site — weak social presence for a med spa')
+  }
+
+  if (jsShell) issues.push('Site content is JavaScript-rendered — booking, mobile, SEO and social could not be verified from the page source; treat those as UNKNOWN, not weaknesses')
+
+  return {
+    hasMobileViewport, hasBookingWidget, bookingPlatform, copyrightYear, detectedIssues: issues,
+    // The site's own words — what a visitor actually reads. Grounds the AI's niche judgment and
+    // lets pain points / hooks quote the clinic's real copy. Null for shells (nothing readable).
+    visibleTextExcerpt: jsShell ? null : visibleText.slice(0, 1200),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cheap / DIY website-builder detection. Fingerprints live in the static shell, so this works even
+// on JS-rendered sites (unlike booking/mobile). A FREE subdomain is a real weakness; a DIY builder
+// on a custom domain is a softer signal + a good pitch angle.
+// ---------------------------------------------------------------------------
+const FREE_HOST_SUFFIXES = ['business.site', 'wixsite.com', 'godaddysites.com', 'weebly.com', 'mystrikingly.com', 'square.site', 'wordpress.com', 'blogspot.com', 'jimdosite.com', 'site123.me', 'webnode.com', 'yolasite.com', 'webs.com', 'simplesite.com', 'ucraft.site']
+const BUILDER_FINGERPRINTS: Array<{ name: string; re: RegExp }> = [
+  { name: 'Wix', re: /wixstatic\.com|static\.parastorage\.com|X-Wix|content=["'][^"']*Wix\.com/i },
+  { name: 'Squarespace', re: /static1\.squarespace\.com|squarespace-cdn\.com|["']Squarespace["']/i },
+  { name: 'GoDaddy Website Builder', re: /img1\.wsimg\.com|GoDaddy Website Builder/i },
+  { name: 'Weebly', re: /cdn\d?\.editmysite\.com|weeblycloud|["']Weebly["']/i },
+  { name: 'Google Sites', re: /gstatic\.com\/atari|sites\.google\.com\/embed/i },
+  { name: 'Jimdo', re: /jimstatic\.com|["']Jimdo["']/i },
+  { name: 'Site123', re: /s123-cdn|["']SITE123["']/i },
+  { name: 'Strikingly', re: /strikingly(?:cdn)?\.com/i },
+  { name: 'Duda', re: /irp\.cdn-website\.com|dudamobile|dudaone/i },
+]
+
+function detectBuilder(html: string, domain: string): { builder: string | null; freeTier: boolean } {
+  const freeSuffix = FREE_HOST_SUFFIXES.find((s) => domain === s || domain.endsWith('.' + s))
+  if (freeSuffix) {
+    const label = /wixsite/.test(freeSuffix) ? 'free Wix subdomain'
+      : /business\.site/.test(freeSuffix) ? 'auto-generated Google Business site'
+      : /godaddysites/.test(freeSuffix) ? 'free GoDaddy subdomain'
+      : /weebly/.test(freeSuffix) ? 'free Weebly subdomain'
+      : /square\.site/.test(freeSuffix) ? 'free Square Online subdomain'
+      : /wordpress\.com/.test(freeSuffix) ? 'free WordPress.com subdomain'
+      : `free builder subdomain (${freeSuffix})`
+    return { builder: label, freeTier: true }
+  }
+  for (const { name, re } of BUILDER_FINGERPRINTS) { if (re.test(html)) return { builder: name, freeTier: false } }
+  return { builder: null, freeTier: false }
 }
 
 // ---------------------------------------------------------------------------
@@ -289,7 +423,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     email: null, emailSource: 'none', emailConfidence: 'none',
     reachable: false, loadTimeMs: 0,
     hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null,
-    copyrightYear: null, detectedIssues: [], chainSignals: [],
+    copyrightYear: null, detectedIssues: [], chainSignals: [], visibleTextExcerpt: null,
   }
 
   if (!websiteUri) return noResult
@@ -305,13 +439,15 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
   let emailConfidence: 'high' | 'low' | 'none' = 'none'
   let homepageHtml: string | null = null
   let homepageLoadMs = 0
+  let homepageFinalUrl = base
   let reachable = false
   let pagesChecked = 0
 
   for (const pageUrl of pagesToTry) {
     if (pagesChecked >= MAX_PAGES) break
-    const { html, loadTimeMs } = await fetchPage(pageUrl)
+    const { html, loadTimeMs, finalUrl } = await fetchPage(pageUrl)
     pagesChecked++
+    if (pagesChecked === 1 && finalUrl) homepageFinalUrl = finalUrl
     if (!html) {
       // If the homepage itself is unreachable, the whole domain is down/blocked — don't burn
       // more timeouts probing contact/about pages on the same dead host. Bounds a dead domain
@@ -351,8 +487,78 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
   // Quality + chain signals come from the homepage only
   const qualitySignals = homepageHtml
     ? detectQualitySignals(homepageHtml, homepageLoadMs)
-    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [] }
+    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], visibleTextExcerpt: null as string | null }
   const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
+
+  // ---------------------------------------------------------------------------
+  // Headless-render fallback: for JS-shell pages (content invisible in raw HTML) and unreachable/
+  // bot-blocked sites, fetch the RENDERED page text and recover the signals we couldn't see.
+  // ---------------------------------------------------------------------------
+  const isJsShell = qualitySignals.detectedIssues.some((i) => i.startsWith('Site content is JavaScript-rendered'))
+  if (!homepageHtml || isJsShell) {
+    const rendered = await fetchRendered(websiteUri)
+    if (rendered) {
+      reachable = true
+      // Booking/contact from the rendered text: CTAs, or links to booking/contact pages.
+      if (!qualitySignals.hasBookingWidget) {
+        const bookingInText = CONTACT_KEYWORD_RE.test(rendered)
+          || /\(https?:\/\/[^)]*(?:book|schedul|appointment|contact)[^)]*\)/i.test(rendered)
+        if (bookingInText) {
+          qualitySignals.hasBookingWidget = true
+          qualitySignals.bookingPlatform = 'Booking/contact found on rendered page'
+        }
+      }
+      // Email from the rendered text (raw HTML had none).
+      if (!email) {
+        const found = filterEmails((rendered.match(EMAIL_REGEX) ?? []).map(cleanEmail).filter((e) => STRICT_EMAIL_RE.test(e)), siteDomain)
+        if (found.length > 0) { email = rankEmails(found)[0]; emailSource = 'text_match'; emailConfidence = 'low' }
+      }
+      // Copyright year from rendered text.
+      if (!qualitySignals.copyrightYear) {
+        const m = rendered.match(/©\s*(20\d{2})/g)
+        if (m) {
+          const years = m.map((x) => parseInt(x.replace(/©\s*/, ''))).filter((y) => y >= 2000 && y <= 2100)
+          if (years.length) qualitySignals.copyrightYear = Math.max(...years)
+        }
+      }
+      // Page-text excerpt from the rendered content (skip jina's header, drop markdown link URLs).
+      if (!qualitySignals.visibleTextExcerpt) {
+        const bodyStart = rendered.indexOf('Markdown Content:')
+        const body = (bodyStart >= 0 ? rendered.slice(bodyStart + 17) : rendered)
+          .replace(/\]\((https?:\/\/|mailto:)[^)]*\)/g, ']')
+          .replace(/[#*_>\[\]]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (body.length > 80) qualitySignals.visibleTextExcerpt = body.slice(0, 1200)
+      }
+
+      // Replace the "couldn't verify" messaging with what the render actually established.
+      qualitySignals.detectedIssues = qualitySignals.detectedIssues.filter((i) => !i.startsWith('Site content is JavaScript-rendered'))
+      qualitySignals.detectedIssues.push('Assessed via headless-render fallback — booking/contact and email were read from the RENDERED page; layout, load speed, SSL and mobile could not be verified (treat those as UNKNOWN)')
+      if (!qualitySignals.hasBookingWidget) {
+        qualitySignals.detectedIssues.push('CONFIRMED no online contact: even the fully rendered page shows no booking or contact option — patients can only phone')
+      }
+    }
+  }
+
+  // No email published anywhere on the site is itself a real weakness (patients can't email).
+  if (reachable && !email) {
+    qualitySignals.detectedIssues.push('No email address published anywhere on the site — patients cannot reach the clinic by email')
+  }
+  // No SSL — the site loads over http:// (didn't upgrade to https). Insecure + browsers warn visitors.
+  // Only assert when we actually fetched the page ourselves (not via the render fallback).
+  if (homepageHtml && /^http:\/\//i.test(homepageFinalUrl)) {
+    qualitySignals.detectedIssues.push('No SSL certificate — the site loads over insecure http:// and browsers show a "Not Secure" warning')
+  }
+  // Cheap / DIY website builder — a free subdomain is a real weakness; a DIY builder is a pitch angle.
+  if (homepageHtml) {
+    const { builder, freeTier } = detectBuilder(homepageHtml, siteDomain)
+    if (freeTier) {
+      qualitySignals.detectedIssues.push(`Site is a ${builder} — a free, auto-generated/template page with no custom domain; a clear sign the clinic has not invested in its web presence (strong weakness)`)
+    } else if (builder) {
+      qualitySignals.detectedIssues.push(`Built on ${builder} (a DIY website builder) — likely a generic template rather than a custom-designed site (a pitch angle; not automatically a flaw)`)
+    }
+  }
 
   return {
     email,
