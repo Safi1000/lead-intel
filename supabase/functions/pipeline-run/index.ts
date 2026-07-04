@@ -201,10 +201,27 @@ async function chainNextChunk(payload: Record<string, unknown>): Promise<void> {
   await Promise.race([fetchPromise, timeout])
 }
 
+// PostgREST caps any single select at 1000 rows — a 1792-lead run silently reported stats/XLSX
+// for only the first 1000 (run showed 153 imported when 304 were). Page through everything.
+async function dbSelectAll<T = Record<string, unknown>>(table: string, qs: string): Promise<T[]> {
+  const pageSize = 1000
+  const out: T[] = []
+  for (let from = 0; ; from += pageSize) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${qs}`, {
+      headers: svcHeaders({ 'Range-Unit': 'items', Range: `${from}-${from + pageSize - 1}` }),
+    })
+    if (!res.ok) throw new Error(`dbSelectAll ${table}: ${res.status} ${await res.text()}`)
+    const page = (await res.json()) as T[]
+    out.push(...page)
+    if (page.length < pageSize) break
+  }
+  return out
+}
+
 // Cumulative run totals, computed from the DB at finalize (chunk counters are per-invocation).
 async function computeRunTotals(runId: string): Promise<Record<string, number>> {
-  const rows = await dbSelect<{ website_status: string | null; crm_lead_id: string | null; email: string | null; website: string | null }>(
-    'sourced_places', `pipeline_run_id=eq.${runId}&select=website_status,crm_lead_id,email,website`,
+  const rows = await dbSelectAll<{ website_status: string | null; crm_lead_id: string | null; email: string | null; website: string | null }>(
+    'sourced_places', `pipeline_run_id=eq.${runId}&select=website_status,crm_lead_id,email,website&order=place_id`,
   )
   return {
     total_searched: rows.length,
@@ -218,9 +235,9 @@ async function computeRunTotals(runId: string): Promise<Record<string, number>> 
 
 // Rebuild the export rows for a whole (chained) run from the DB, since each chunk only holds its own.
 async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[]> {
-  const rows = await dbSelect<Record<string, unknown>>(
+  const rows = await dbSelectAll<Record<string, unknown>>(
     'sourced_places',
-    `pipeline_run_id=eq.${runId}&order=created_at&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
+    `pipeline_run_id=eq.${runId}&order=created_at,place_id&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
   )
   return rows.map((r) => ({
     place_id: r.place_id, name: r.name, address: r.address, phone: r.phone ?? '', website: r.website ?? '',
@@ -235,12 +252,20 @@ async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[
 // Google Places helpers
 // ---------------------------------------------------------------------------
 
+// Text Search (New) returns ALL enrichment fields we need in one request. Requesting them here —
+// instead of a per-place Place Details call — is ~12x cheaper: Text Search bills per request
+// (~20 places), Place Details bills per place. See placesTextSearch field mask.
 interface RawPlace {
   id: string
   displayName?: { text: string }
   formattedAddress?: string
   primaryType?: string
   types?: string[]
+  websiteUri?: string
+  internationalPhoneNumber?: string
+  rating?: number
+  businessStatus?: string
+  reviews?: Array<{ text?: { text?: string }; rating?: number }>
 }
 
 interface PlaceDetails {
@@ -251,6 +276,19 @@ interface PlaceDetails {
   rating: number | null
   businessStatus: string | null // OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY
   reviews: Array<{ text: string; rating: number }>
+}
+
+// Build the enrichment record from the search result itself — no extra Place Details call needed.
+function detailsFromRawPlace(p: RawPlace): PlaceDetails {
+  return {
+    id: p.id,
+    name: p.displayName?.text ?? '',
+    phone: p.internationalPhoneNumber ?? null,
+    website: p.websiteUri ?? null,
+    rating: p.rating ?? null,
+    businessStatus: p.businessStatus ?? null,
+    reviews: (p.reviews ?? []).map((r) => ({ text: r.text?.text ?? '', rating: r.rating ?? 0 })),
+  }
 }
 
 // Google business types that are DEFINITELY not our niche — skipped BEFORE Place Details + website
@@ -284,7 +322,10 @@ async function placesTextSearch(
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': GOOGLE_KEY,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,nextPageToken',
+      // Enterprise+Atmosphere fields (websiteUri/phone/rating/reviews) fold the old per-place Place
+      // Details call into this one request — ~12x cheaper per place. Bills the request at the
+      // highest tier of any field requested, but each request covers ~20 places.
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.websiteUri,places.internationalPhoneNumber,places.rating,places.businessStatus,places.reviews,nextPageToken',
     },
     body: JSON.stringify(body),
   })
@@ -342,29 +383,6 @@ async function enqueueReviewTasks(placeId: string, orgId: string, isCanada: bool
     }
   } catch (e) {
     console.error(`[reviews] enqueue failed for ${placeId}:`, (e as Error).message)
-  }
-}
-
-async function getPlaceDetails(placeId: string): Promise<PlaceDetails> {
-  const res = await fetch(`${PLACES_BASE}/places/${placeId}`, {
-    headers: {
-      'X-Goog-Api-Key': GOOGLE_KEY,
-      'X-Goog-FieldMask': 'id,displayName,internationalPhoneNumber,websiteUri,rating,businessStatus,reviews',
-    },
-  })
-  if (!res.ok) throw new Error(`Place Details ${placeId}: ${res.status} ${await res.text()}`)
-  const d = await res.json()
-  return {
-    id: placeId,
-    name: d.displayName?.text ?? '',
-    phone: d.internationalPhoneNumber ?? null,
-    website: d.websiteUri ?? null,
-    rating: d.rating ?? null,
-    businessStatus: d.businessStatus ?? null,
-    reviews: (d.reviews ?? []).map((r: { text?: { text?: string }; rating?: number }) => ({
-      text: r.text?.text ?? '',
-      rating: r.rating ?? 0,
-    })),
   }
 }
 
@@ -611,14 +629,10 @@ Deno.serve(async (req: Request) => {
         return
       }
 
-      // Phase 3: Place Details (expensive — only for new places)
-      try {
-        details = await getPlaceDetails(placeId)
-        totalEnriched++
-      } catch (e) {
-        rowError = `Place Details failed: ${(e as Error).message}`
-        console.error(`[${placeId}] ${rowError}`)
-      }
+      // Phase 3: Enrichment — now comes FREE with the search result (no per-place Place Details
+      // call). website/phone/rating/reviews/businessStatus were already returned by placesTextSearch.
+      details = detailsFromRawPlace(result)
+      totalEnriched++
 
       // Permanently closed businesses are dead leads — record for dedup and skip.
       if (details?.businessStatus === 'CLOSED_PERMANENTLY') {
