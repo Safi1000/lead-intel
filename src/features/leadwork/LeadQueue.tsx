@@ -103,7 +103,11 @@ export function LeadQueuePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const bulkUnassign = useMutation({
     mutationFn: (ids: string[]) => manualLeadsApi.unassignMany(ids),
-    onSuccess: (n) => { toast.success(`Unassigned ${n} lead${n === 1 ? '' : 's'}`); setSelected(new Set()); qc.invalidateQueries() },
+    onSuccess: ({ unassigned, locked }) => {
+      if (unassigned > 0) toast.success(`Unassigned ${unassigned} lead${unassigned === 1 ? '' : 's'}${locked > 0 ? ` — ${locked} skipped (Done leads stay with their setter)` : ''}`)
+      else toast.info('Nothing unassigned — Done leads stay with their setter forever.')
+      setSelected(new Set()); qc.invalidateQueries()
+    },
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const [setterFilter, setSetterFilter] = useState('all')

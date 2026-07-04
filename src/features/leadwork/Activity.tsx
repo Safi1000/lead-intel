@@ -27,9 +27,9 @@ const TYPE_STYLES: Record<string, string> = {
 const typeBadge = (type: string) => TYPE_STYLES[type] ?? 'bg-slate-500/10 text-[var(--color-text-secondary)]'
 
 const NOTE_TYPES = new Set(['Note', 'Remark'])
-const GROUP_WINDOW_MS = 10 * 60_000 // same lead + same person within 10 min = one row
 
-/** One feed row: a burst of actions by one person on one lead (e.g. stage change + note). */
+/** One feed row = one person's work on ONE lead within the selected period. Status change only,
+ * note only, or both — always a single row, so 14 leads worked never looks like 28. */
 interface FeedGroup {
   key: string
   lead_id: string
@@ -38,33 +38,39 @@ interface FeedGroup {
   at: string // newest timestamp in the group
   types: string[] // distinct non-note types, display order
   detail: string | null // inline detail (e.g. "Contacted → Booked")
+  events: Array<{ label: string; at: string }> // each non-note action with ITS OWN timestamp
   notes: Array<{ type: string; text: string; at: string }>
 }
 
 function groupItems(items: ActivityFeedItem[]): FeedGroup[] {
   const groups: FeedGroup[] = []
-  const open = new Map<string, FeedGroup & { _oldest: number }>()
+  const byKey = new Map<string, FeedGroup>()
   for (const i of items) { // items arrive newest-first
     const key = `${i.lead_id}|${i.author ?? ''}`
-    const t = new Date(i.at).getTime()
-    let g = open.get(key)
-    if (!g || g._oldest - t > GROUP_WINDOW_MS) {
-      g = { key: `${key}|${i.id}`, lead_id: i.lead_id, lead_name: i.lead_name, author: i.author, at: i.at, types: [], detail: null, notes: [], _oldest: t }
-      open.set(key, g)
-      groups.push(g)
+    let g = byKey.get(key)
+    if (!g) {
+      g = { key, lead_id: i.lead_id, lead_name: i.lead_name, author: i.author, at: i.at, types: [], detail: null, events: [], notes: [] }
+      byKey.set(key, g)
+      groups.push(g) // ordered by each lead's most recent action (newest first)
     }
-    g._oldest = t
     if (NOTE_TYPES.has(i.type)) {
       if (i.note) g.notes.push({ type: i.type, text: i.note, at: i.at })
     } else {
       if (!g.types.includes(i.type)) g.types.push(i.type)
-      if (!g.detail && i.note) g.detail = i.note // e.g. "New → Contacted", "Marked warm"
+      if (!g.detail && i.note) g.detail = i.note // most recent, e.g. "New → Contacted"
+      g.events.push({ label: i.note ? `${i.type}: ${i.note}` : i.type, at: i.at })
     }
   }
-  // Note-only groups still need a label
-  for (const g of groups) if (g.types.length === 0) g.types.push(g.notes.length > 0 ? 'Note' : '—')
+  // Note-only groups still need a label; notes get their own badge alongside other types.
+  for (const g of groups) {
+    if (g.notes.length > 0 && !g.types.includes('Note')) g.types.push('Note')
+    if (g.types.length === 0) g.types.push('—')
+  }
   return groups
 }
+
+const fmtWhen = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 
 function timeAgo(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000
@@ -97,18 +103,18 @@ export function ActivityPage() {
   }, [feedQ.data, who])
 
   const rollup = useMemo(() => {
-    const by = new Map<string, { total: number; calls: number; stages: number; notes: number; booked: number }>()
+    const by = new Map<string, { leads: Set<string>; calls: number; stages: number; notes: number; booked: number }>()
     for (const i of feedQ.data ?? []) {
       const k = i.author ?? 'Unknown'
-      const e = by.get(k) ?? { total: 0, calls: 0, stages: 0, notes: 0, booked: 0 }
-      e.total++
+      const e = by.get(k) ?? { leads: new Set<string>(), calls: 0, stages: 0, notes: 0, booked: 0 }
+      e.leads.add(i.lead_id) // headline = DISTINCT leads worked, not raw action count
       if (i.type.startsWith('Called') || i.type === 'Left Voicemail') e.calls++
       if (i.type === 'Stage Change') e.stages++
       if (NOTE_TYPES.has(i.type)) e.notes++
       if (i.type === 'Booked') e.booked++
       by.set(k, e)
     }
-    return [...by.entries()].sort((a, b) => b[1].total - a[1].total)
+    return [...by.entries()].sort((a, b) => b[1].leads.size - a[1].leads.size)
   }, [feedQ.data])
 
   return (
@@ -149,7 +155,7 @@ export function ActivityPage() {
           {rollup.slice(0, 8).map(([name, s]) => (
             <Card key={name} className="p-4">
               <div className="truncate text-sm font-medium">{name}</div>
-              <div className="mt-1 text-2xl font-semibold">{s.total}</div>
+              <div className="mt-1 text-2xl font-semibold">{s.leads.size} <span className="text-sm font-normal text-[var(--color-text-muted)]">leads</span></div>
               <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                 {s.calls} calls · {s.stages} stage moves · {s.notes} notes{s.booked > 0 ? ` · ${s.booked} booked` : ''}
               </div>
@@ -185,25 +191,36 @@ export function ActivityPage() {
       ) : (
         <Card className="divide-y divide-[var(--color-border)]">
           {groups.map((g) => (
-            <div key={g.key} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-              <span className="w-32 shrink-0 text-xs text-[var(--color-text-muted)]">{timeAgo(g.at)}</span>
-              <span className="w-28 shrink-0 truncate font-medium">{g.author ?? '—'}</span>
-              <span className="flex shrink-0 items-center gap-1">
-                {g.types.map((t) => (
-                  <span key={t} className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeBadge(t)}`}>{t}</span>
-                ))}
-              </span>
-              <Link to={`/leads/manual/${g.lead_id}`} className="min-w-0 flex-1 truncate text-[var(--color-primary)] hover:underline">
-                {g.lead_name}
-              </Link>
-              {g.detail && <span className="hidden max-w-[14rem] shrink-0 truncate text-xs text-[var(--color-text-muted)] md:block">{g.detail}</span>}
-              {g.notes.length > 0 && (
-                <button
-                  onClick={() => setNoteOpen(g)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs hover:bg-[var(--color-surface-2)]"
-                >
-                  <FileText className="h-3.5 w-3.5" /> View note{g.notes.length > 1 ? `s (${g.notes.length})` : ''}
-                </button>
+            <div key={g.key} className="px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-3">
+                <span className="w-32 shrink-0 text-xs text-[var(--color-text-muted)]">{timeAgo(g.at)}</span>
+                <span className="w-28 shrink-0 truncate font-medium">{g.author ?? '—'}</span>
+                <span className="flex shrink-0 items-center gap-1">
+                  {g.types.map((t) => (
+                    <span key={t} className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeBadge(t)}`}>{t}</span>
+                  ))}
+                </span>
+                <Link to={`/leads/manual/${g.lead_id}`} className="min-w-0 flex-1 truncate text-[var(--color-primary)] hover:underline">
+                  {g.lead_name}
+                </Link>
+                {g.notes.length > 0 && (
+                  <button
+                    onClick={() => setNoteOpen(g)}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs hover:bg-[var(--color-surface-2)]"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> View note{g.notes.length > 1 ? `s (${g.notes.length})` : ''}
+                  </button>
+                )}
+              </div>
+              {(g.events.length > 0 || g.notes.length > 0) && (
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 pl-[8.75rem] text-[11px] text-[var(--color-text-muted)]">
+                  {g.events.map((e, idx) => (
+                    <span key={idx}>{e.label} · <span className="tabular-nums">{fmtWhen(e.at)}</span></span>
+                  ))}
+                  {g.notes.map((n, idx) => (
+                    <span key={`n${idx}`}>Note added · <span className="tabular-nums">{fmtWhen(n.at)}</span></span>
+                  ))}
+                </div>
               )}
             </div>
           ))}

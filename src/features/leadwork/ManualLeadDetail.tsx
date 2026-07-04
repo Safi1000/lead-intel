@@ -326,9 +326,9 @@ export function ManualLeadDetailPage() {
           <Card className="p-5">
             <h2 className="mb-3 text-[15px] font-semibold">Assignment</h2>
             <dl className="space-y-2 text-sm">
-              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Setter</dt><dd className="flex items-center gap-1">{lead.setter ?? '—'}{lead.setter && <CopyButton text={lead.setter} />}{lead.setter && (role === 'manager' || role === 'superadmin' || role === 'admin') && (
+              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Setter</dt><dd className="flex items-center gap-1">{lead.setter ?? '—'}{lead.setter && <CopyButton text={lead.setter} />}{lead.setter && !lead.done_at && (role === 'manager' || role === 'superadmin' || role === 'admin') && (
                 <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'setter'} onClick={() => unassign.mutate('setter')}>Unassign</Button>
-              )}</dd></div>
+              )}{lead.setter && lead.done_at && <span className="text-[11px] text-[var(--color-text-muted)]" title="Done leads stay with their setter forever">🔒</span>}</dd></div>
               <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Closer</dt><dd className="flex items-center gap-1">{lead.closer ?? '—'}{lead.closer && <CopyButton text={lead.closer} />}{lead.closer && (role === 'manager' || role === 'superadmin' || role === 'admin') && (
                 <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'closer'} onClick={() => unassign.mutate('closer')}>Unassign</Button>
               )}</dd></div>

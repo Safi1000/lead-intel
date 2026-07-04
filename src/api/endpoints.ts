@@ -454,28 +454,34 @@ export const manualLeadsApi = {
     if (error) throw new Error(error.message)
     await logSystemActivity(id, 'Verdict', verdict === 'warm' ? 'Closer confirmed: lead was genuinely warm' : 'Closer flagged: lead was NOT warm (qualified only)').catch(() => {})
   },
-  /** Manager/superadmin: pull a lead back from its setter and/or closer. */
+  /** Manager/superadmin: pull a lead back from its setter and/or closer.
+   * DONE leads are locked to their setter forever (DB trigger enforces; we surface a clear error). */
   unassign: async (id: string, which: 'setter' | 'closer' | 'both'): Promise<void> => {
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (which === 'setter' || which === 'both') { patch.setter = null; patch.setter_id = null; patch.status = 'new' }
     if (which === 'closer' || which === 'both') { patch.closer = null; patch.closer_id = null }
-    const { error } = await supabase.from('leads').update(patch).eq('id', id)
+    const { data, error } = await supabase.from('leads').update(patch).eq('id', id).is('done_at', null).select('id')
     if (error) throw new Error(error.message)
+    if ((data ?? []).length === 0) throw new Error('This lead is marked Done — it stays with its setter and cannot be unassigned.')
     await logSystemActivity(id, 'Unassigned', `Lead unassigned (${which}) by manager`).catch(() => {})
   },
-  /** Bulk unassign: return the selected leads to the unclaimed pool (clears setter + closer). */
-  unassignMany: async (ids: string[]): Promise<number> => {
-    if (ids.length === 0) return 0
-    const { error } = await supabase.from('leads')
+  /** Bulk unassign: return the selected leads to the unclaimed pool (clears setter + closer).
+   * DONE leads are skipped — they stay with their setter forever. Returns {unassigned, locked}. */
+  unassignMany: async (ids: string[]): Promise<{ unassigned: number; locked: number }> => {
+    if (ids.length === 0) return { unassigned: 0, locked: 0 }
+    const { data, error } = await supabase.from('leads')
       .update({ setter: null, setter_id: null, closer: null, closer_id: null, status: 'new', updated_at: new Date().toISOString() })
-      .in('id', ids)
+      .in('id', ids).is('done_at', null).select('id')
     if (error) throw new Error(error.message)
-    const author = useAuthStore.getState().user?.name ?? null
-    const author_id = useAuthStore.getState().user?.id ?? null
-    await supabase.from('lead_activities').insert(
-      ids.map((lead_id) => ({ lead_id, type: 'Unassigned', note: 'Bulk unassigned by manager', author, author_id })),
-    )
-    return ids.length
+    const doneIds = (data ?? []).map((r) => r.id as string)
+    if (doneIds.length > 0) {
+      const author = useAuthStore.getState().user?.name ?? null
+      const author_id = useAuthStore.getState().user?.id ?? null
+      await supabase.from('lead_activities').insert(
+        doneIds.map((lead_id) => ({ lead_id, type: 'Unassigned', note: 'Bulk unassigned by manager', author, author_id })),
+      )
+    }
+    return { unassigned: doneIds.length, locked: ids.length - doneIds.length }
   },
   /** Mark a lead processed / un-processed (throughput tracking). */
   markDone: async (id: string, done: boolean): Promise<void> => {
@@ -595,6 +601,7 @@ const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
   template_name: (r.template_name as string) ?? '', file_name: (r.file_name as string) ?? 'Upload',
   total_rows: Number(r.total_rows ?? 0), imported_count: Number(r.imported_count ?? 0), rejected_count: Number(r.rejected_count ?? 0),
   created_by: (r.created_by as string) ?? null, created_at: r.created_at as string,
+  archived_at: (r.archived_at as string) ?? null,
   lead_count: Number(r.lead_count ?? 0),
   assigned_count: Number(r.assigned_count ?? 0), unassigned_count: Number(r.unassigned_count ?? 0),
   new_count: Number(r.new_count ?? 0), contacted_count: Number(r.contacted_count ?? 0),
@@ -615,6 +622,17 @@ export const leadBatchesApi = {
     const { data, error } = await supabase.from('batch_stats').select('*').eq('id', id).single()
     if (error || !data) throw new Error('Batch not found.')
     return mapBatch(data)
+  },
+  /** Archive: hides the batch from active lists; ALL leads, notes and performance history survive. */
+  setArchived: async (id: string, archived: boolean): Promise<void> => {
+    const { error } = await supabase.from('batches').update({ archived_at: archived ? new Date().toISOString() : null }).eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+  /** TRUE delete (superadmin only, RLS-enforced): cascades — permanently erases the batch,
+   * every lead in it, and all their notes/activities/verdicts. Prefer setArchived. */
+  remove: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('batches').delete().eq('id', id)
+    if (error) throw new Error(error.message)
   },
 }
 

@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { FileSpreadsheet, FileUp, Layers, Search } from 'lucide-react'
+import { Archive, ArchiveRestore, FileSpreadsheet, FileUp, Layers, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { leadBatchesApi } from '../../api/endpoints'
+import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input } from '../../components/ui/primitives'
+import { ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader, StatCard } from '../shared/bits'
 import { cn } from '../../lib/utils'
@@ -14,14 +17,32 @@ import type { LeadBatch } from '../../api/types'
 
 export function BatchesPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { role } = useAuth()
   const isGenerator = role === 'manager' || role === 'lead_generator' || role === 'admin' || role === 'superadmin'
+  const canArchive = role === 'manager' || role === 'superadmin'
+  const canDelete = role === 'superadmin'
 
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['lead-batches'], queryFn: leadBatchesApi.list })
   const [searchRaw, setSearchRaw] = useState('')
   const search = useDebounce(searchRaw, 200).toLowerCase()
+  const [showArchived, setShowArchived] = useState(false)
+  const [deleteFor, setDeleteFor] = useState<LeadBatch | null>(null)
 
-  const batches = data ?? []
+  const setArchived = useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => leadBatchesApi.setArchived(id, archived),
+    onSuccess: (_d, v) => { toast.success(v.archived ? 'Batch archived — leads and history preserved' : 'Batch restored'); qc.invalidateQueries({ queryKey: ['lead-batches'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  const removeBatch = useMutation({
+    mutationFn: (id: string) => leadBatchesApi.remove(id),
+    onSuccess: () => { toast.success('Batch permanently deleted'); setDeleteFor(null); qc.invalidateQueries({ queryKey: ['lead-batches'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
+  const all = data ?? []
+  const archivedCount = all.filter((b) => b.archived_at).length
+  const batches = useMemo(() => all.filter((b) => (showArchived ? !!b.archived_at : !b.archived_at)), [all, showArchived])
   const totals = useMemo(() => ({
     batches: batches.length,
     leads: batches.reduce((s, b) => s + b.lead_count, 0),
@@ -53,9 +74,20 @@ export function BatchesPage() {
         </div>
       )}
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
-        <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search batches…" className="pl-9" />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative max-w-sm flex-1 sm:min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search batches…" className="pl-9" />
+        </div>
+        {canArchive && (archivedCount > 0 || showArchived) && (
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
+              showArchived ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100')}
+          >
+            <Archive className="h-3.5 w-3.5" /> Archived <span className="tabular-nums opacity-70">{archivedCount}</span>
+          </button>
+        )}
       </div>
 
       <Card>
@@ -80,17 +112,35 @@ export function BatchesPage() {
                   <th className="px-3 py-2.5 font-medium">Pipeline</th>
                   <th className="px-3 py-2.5 font-medium">Assigned</th>
                   <th className="px-3 py-2.5 font-medium">Uploaded</th>
+                  {(canArchive || canDelete) && <th className="px-3 py-2.5" />}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((b) => (
-                  <BatchRow key={b.id} batch={b} onOpen={() => navigate(`/leads/batch/${b.id}`)} />
+                  <BatchRow
+                    key={b.id} batch={b} onOpen={() => navigate(`/leads/batch/${b.id}`)}
+                    canArchive={canArchive} canDelete={canDelete}
+                    onArchive={(archived) => setArchived.mutate({ id: b.id, archived })}
+                    onDelete={() => setDeleteFor(b)}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={!!deleteFor}
+        onOpenChange={(v) => { if (!v) setDeleteFor(null) }}
+        title="Permanently delete this batch?"
+        message={deleteFor ? `"${deleteFor.file_name}" and ALL ${deleteFor.lead_count} of its leads will be erased forever — including every note, activity record, Done credit and closer verdict. Setter performance history for these leads disappears from the Activity page. This cannot be undone. Consider Archive instead.` : ''}
+        confirmLabel="Delete forever"
+        requireText={deleteFor?.file_name}
+        destructive
+        loading={removeBatch.isPending}
+        onConfirm={() => deleteFor && removeBatch.mutate(deleteFor.id)}
+      />
     </div>
   )
 }
@@ -100,14 +150,18 @@ function Pill({ label, value, className }: { label: string; value: number; class
   return <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', className)}>{value} {label}</span>
 }
 
-function BatchRow({ batch: b, onOpen }: { batch: LeadBatch; onOpen: () => void }) {
+function BatchRow({ batch: b, onOpen, canArchive, canDelete, onArchive, onDelete }: {
+  batch: LeadBatch; onOpen: () => void
+  canArchive: boolean; canDelete: boolean
+  onArchive: (archived: boolean) => void; onDelete: () => void
+}) {
   return (
     <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50" onClick={onOpen}>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-blue-50 text-[var(--color-primary)]"><FileSpreadsheet className="h-4 w-4" /></span>
           <div className="min-w-0">
-            <p className="truncate font-medium text-[var(--color-text)]">{b.file_name}</p>
+            <p className="truncate font-medium text-[var(--color-text)]">{b.file_name}{b.archived_at && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Archived</span>}</p>
             <p className="truncate text-[12px] text-[var(--color-text-muted)]">{b.template_name}{b.created_by ? ` · by ${b.created_by}` : ''}</p>
           </div>
         </div>
@@ -132,6 +186,22 @@ function BatchRow({ batch: b, onOpen }: { batch: LeadBatch; onOpen: () => void }
         <span className="text-[12px] text-[var(--color-text-muted)]"> / {b.lead_count}</span>
       </td>
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}</td>
+      {(canArchive || canDelete) && (
+        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-end gap-1">
+            {canArchive && (
+              <Button size="sm" variant="ghost" title={b.archived_at ? 'Restore batch' : 'Archive batch (leads + history preserved)'} onClick={() => onArchive(!b.archived_at)}>
+                {b.archived_at ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              </Button>
+            )}
+            {canDelete && (
+              <Button size="sm" variant="ghost" className="text-red-600" title="Delete forever (superadmin)" onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   )
 }

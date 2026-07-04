@@ -628,6 +628,7 @@ export interface LeadBatch {
   rejected_count: number
   created_by: string | null
   created_at: string
+  archived_at: string | null // archived batches hide from active lists; leads + history preserved
   // live stats (from batch_stats view)
   lead_count: number
   assigned_count: number
