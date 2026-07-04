@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Activity as ActivityIcon, FileText, Flame, Snowflake, X } from 'lucide-react'
+import { Activity as ActivityIcon, FileText, Flame, Snowflake } from 'lucide-react'
 import { activityFeedApi, usersApi, type ActivityFeedItem } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
+import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 
@@ -15,17 +16,54 @@ const PERIODS: Array<{ key: Period; label: string; days: number }> = [
 ]
 
 const TYPE_STYLES: Record<string, string> = {
-  'Stage Change': 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  'Temperature': 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  'Verdict': 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-  'Unassigned': 'bg-red-500/10 text-red-600 dark:text-red-400',
-  'Remark': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  'Note': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  'Booked': 'bg-green-500/10 text-green-600 dark:text-green-400',
+  'Stage Change': 'bg-blue-500/10 text-blue-600',
+  'Temperature': 'bg-orange-500/10 text-orange-600',
+  'Verdict': 'bg-purple-500/10 text-purple-600',
+  'Unassigned': 'bg-red-500/10 text-red-600',
+  'Remark': 'bg-amber-500/10 text-amber-600',
+  'Note': 'bg-amber-500/10 text-amber-600',
+  'Booked': 'bg-green-500/10 text-green-600',
+}
+const typeBadge = (type: string) => TYPE_STYLES[type] ?? 'bg-slate-500/10 text-[var(--color-text-secondary)]'
+
+const NOTE_TYPES = new Set(['Note', 'Remark'])
+const GROUP_WINDOW_MS = 10 * 60_000 // same lead + same person within 10 min = one row
+
+/** One feed row: a burst of actions by one person on one lead (e.g. stage change + note). */
+interface FeedGroup {
+  key: string
+  lead_id: string
+  lead_name: string
+  author: string | null
+  at: string // newest timestamp in the group
+  types: string[] // distinct non-note types, display order
+  detail: string | null // inline detail (e.g. "Contacted → Booked")
+  notes: Array<{ type: string; text: string; at: string }>
 }
 
-function typeBadge(type: string) {
-  return TYPE_STYLES[type] ?? 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400'
+function groupItems(items: ActivityFeedItem[]): FeedGroup[] {
+  const groups: FeedGroup[] = []
+  const open = new Map<string, FeedGroup & { _oldest: number }>()
+  for (const i of items) { // items arrive newest-first
+    const key = `${i.lead_id}|${i.author ?? ''}`
+    const t = new Date(i.at).getTime()
+    let g = open.get(key)
+    if (!g || g._oldest - t > GROUP_WINDOW_MS) {
+      g = { key: `${key}|${i.id}`, lead_id: i.lead_id, lead_name: i.lead_name, author: i.author, at: i.at, types: [], detail: null, notes: [], _oldest: t }
+      open.set(key, g)
+      groups.push(g)
+    }
+    g._oldest = t
+    if (NOTE_TYPES.has(i.type)) {
+      if (i.note) g.notes.push({ type: i.type, text: i.note, at: i.at })
+    } else {
+      if (!g.types.includes(i.type)) g.types.push(i.type)
+      if (!g.detail && i.note) g.detail = i.note // e.g. "New → Contacted", "Marked warm"
+    }
+  }
+  // Note-only groups still need a label
+  for (const g of groups) if (g.types.length === 0) g.types.push(g.notes.length > 0 ? 'Note' : '—')
+  return groups
 }
 
 function timeAgo(iso: string): string {
@@ -37,8 +75,8 @@ function timeAgo(iso: string): string {
 
 export function ActivityPage() {
   const [period, setPeriod] = useState<Period>('1d')
-  const [who, setWho] = useState<string>('all') // author name ('all' = everyone)
-  const [noteOpen, setNoteOpen] = useState<ActivityFeedItem | null>(null)
+  const [who, setWho] = useState<string>('all')
+  const [noteOpen, setNoteOpen] = useState<FeedGroup | null>(null)
 
   const since = useMemo(() => {
     const days = PERIODS.find((p) => p.key === period)!.days
@@ -53,12 +91,11 @@ export function ActivityPage() {
     () => (usersQ.data ?? []).filter((u) => u.role === 'setter' || u.role === 'closer'),
     [usersQ.data],
   )
-  const items = useMemo(() => {
+  const groups = useMemo(() => {
     const all = feedQ.data ?? []
-    return who === 'all' ? all : all.filter((i) => i.author === who)
+    return groupItems(who === 'all' ? all : all.filter((i) => i.author === who))
   }, [feedQ.data, who])
 
-  // Per-person rollup over the filtered window
   const rollup = useMemo(() => {
     const by = new Map<string, { total: number; calls: number; stages: number; notes: number; booked: number }>()
     for (const i of feedQ.data ?? []) {
@@ -67,7 +104,7 @@ export function ActivityPage() {
       e.total++
       if (i.type.startsWith('Called') || i.type === 'Left Voicemail') e.calls++
       if (i.type === 'Stage Change') e.stages++
-      if (i.type === 'Note' || i.type === 'Remark') e.notes++
+      if (NOTE_TYPES.has(i.type)) e.notes++
       if (i.type === 'Booked') e.booked++
       by.set(k, e)
     }
@@ -83,12 +120,12 @@ export function ActivityPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-border overflow-hidden">
+        <div className="flex overflow-hidden rounded-[10px] border border-[var(--color-border)]">
           {PERIODS.map((p) => (
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${period === p.key ? 'bg-primary text-primary-foreground' : 'bg-transparent hover:bg-muted'}`}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${period === p.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]'}`}
             >
               {p.label}
             </button>
@@ -97,7 +134,7 @@ export function ActivityPage() {
         <select
           value={who}
           onChange={(e) => setWho(e.target.value)}
-          className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+          className="h-9 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm focus:border-[var(--color-primary)] focus-visible:outline-none"
         >
           <option value="all">Everyone</option>
           {team.map((u) => (
@@ -111,9 +148,9 @@ export function ActivityPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {rollup.slice(0, 8).map(([name, s]) => (
             <Card key={name} className="p-4">
-              <div className="font-medium text-sm truncate">{name}</div>
+              <div className="truncate text-sm font-medium">{name}</div>
               <div className="mt-1 text-2xl font-semibold">{s.total}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
+              <div className="mt-1 text-xs text-[var(--color-text-muted)]">
                 {s.calls} calls · {s.stages} stage moves · {s.notes} notes{s.booked > 0 ? ` · ${s.booked} booked` : ''}
               </div>
             </Card>
@@ -129,9 +166,9 @@ export function ActivityPage() {
             {(verdictQ.data ?? []).map((v) => (
               <div key={v.setter} className="flex items-center gap-2 text-sm">
                 <span className="font-medium">{v.setter}</span>
-                <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400"><Flame className="h-3.5 w-3.5" />{v.warm} warm</span>
+                <span className="inline-flex items-center gap-1 text-green-600"><Flame className="h-3.5 w-3.5" />{v.warm} warm</span>
                 <span className="inline-flex items-center gap-1 text-red-500"><Snowflake className="h-3.5 w-3.5" />{v.not_warm} not warm</span>
-                <span className="text-muted-foreground text-xs">({Math.round((v.warm / Math.max(1, v.warm + v.not_warm)) * 100)}% genuine)</span>
+                <span className="text-xs text-[var(--color-text-muted)]">({Math.round((v.warm / Math.max(1, v.warm + v.not_warm)) * 100)}% genuine)</span>
               </div>
             ))}
           </div>
@@ -143,50 +180,62 @@ export function ActivityPage() {
         <LoadingState label="Loading activity…" />
       ) : feedQ.isError ? (
         <ErrorState onRetry={() => feedQ.refetch()} />
-      ) : items.length === 0 ? (
+      ) : groups.length === 0 ? (
         <EmptyState icon={ActivityIcon} title="No activity" message="Nothing recorded in this window for the selected filters." />
       ) : (
-        <Card className="divide-y divide-border">
-          {items.map((i) => (
-            <div key={`${i.kind}-${i.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-              <span className="w-32 shrink-0 text-xs text-muted-foreground">{timeAgo(i.at)}</span>
-              <span className="w-28 shrink-0 truncate font-medium">{i.author ?? '—'}</span>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${typeBadge(i.type)}`}>{i.type}</span>
-              <Link to={`/leads/manual/${i.lead_id}`} className="min-w-0 flex-1 truncate text-primary hover:underline">
-                {i.lead_name}
+        <Card className="divide-y divide-[var(--color-border)]">
+          {groups.map((g) => (
+            <div key={g.key} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+              <span className="w-32 shrink-0 text-xs text-[var(--color-text-muted)]">{timeAgo(g.at)}</span>
+              <span className="w-28 shrink-0 truncate font-medium">{g.author ?? '—'}</span>
+              <span className="flex shrink-0 items-center gap-1">
+                {g.types.map((t) => (
+                  <span key={t} className={`rounded-full px-2 py-0.5 text-xs font-medium ${typeBadge(t)}`}>{t}</span>
+                ))}
+              </span>
+              <Link to={`/leads/manual/${g.lead_id}`} className="min-w-0 flex-1 truncate text-[var(--color-primary)] hover:underline">
+                {g.lead_name}
               </Link>
-              {i.note ? (
-                (i.type === 'Note' || i.type === 'Remark') ? (
-                  <button
-                    onClick={() => setNoteOpen(i)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-                  >
-                    <FileText className="h-3.5 w-3.5" /> View note
-                  </button>
-                ) : (
-                  <span className="hidden max-w-[16rem] truncate text-xs text-muted-foreground md:block">{i.note}</span>
-                )
-              ) : null}
+              {g.detail && <span className="hidden max-w-[14rem] shrink-0 truncate text-xs text-[var(--color-text-muted)] md:block">{g.detail}</span>}
+              {g.notes.length > 0 && (
+                <button
+                  onClick={() => setNoteOpen(g)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs hover:bg-[var(--color-surface-2)]"
+                >
+                  <FileText className="h-3.5 w-3.5" /> View note{g.notes.length > 1 ? `s (${g.notes.length})` : ''}
+                </button>
+              )}
             </div>
           ))}
         </Card>
       )}
 
       {/* Note viewer */}
-      {noteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setNoteOpen(null)}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-1 flex items-center justify-between">
-              <div className="text-sm font-semibold">{noteOpen.type} — {noteOpen.author ?? 'Unknown'}</div>
-              <button onClick={() => setNoteOpen(null)} className="rounded-md p-1 hover:bg-muted"><X className="h-4 w-4" /></button>
+      <Dialog
+        open={!!noteOpen}
+        onOpenChange={(v) => { if (!v) setNoteOpen(null) }}
+        title={noteOpen ? `${noteOpen.author ?? 'Unknown'} on ${noteOpen.lead_name}` : ''}
+        description={noteOpen ? (
+          <>
+            {noteOpen.types.filter((t) => t !== 'Note' && t !== '—').join(' · ')}
+            {noteOpen.detail ? ` — ${noteOpen.detail}` : ''}
+          </>
+        ) : undefined}
+      >
+        {noteOpen && (
+          <div className="space-y-3">
+            {noteOpen.notes.map((n, idx) => (
+              <div key={idx} className="rounded-[10px] bg-[var(--color-surface-2)] p-3">
+                <div className="mb-1 text-xs text-[var(--color-text-muted)]">{n.type} · {new Date(n.at).toLocaleString()}</div>
+                <div className="whitespace-pre-wrap text-sm text-[var(--color-text)]">{n.text}</div>
+              </div>
+            ))}
+            <div className="text-right">
+              <Link to={`/leads/manual/${noteOpen.lead_id}`} className="text-sm text-[var(--color-primary)] hover:underline">Open lead →</Link>
             </div>
-            <div className="mb-3 text-xs text-muted-foreground">
-              on <Link to={`/leads/manual/${noteOpen.lead_id}`} className="text-primary hover:underline">{noteOpen.lead_name}</Link> · {new Date(noteOpen.at).toLocaleString()}
-            </div>
-            <div className="whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm">{noteOpen.note}</div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
     </div>
   )
 }

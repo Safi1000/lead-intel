@@ -463,6 +463,20 @@ export const manualLeadsApi = {
     if (error) throw new Error(error.message)
     await logSystemActivity(id, 'Unassigned', `Lead unassigned (${which}) by manager`).catch(() => {})
   },
+  /** Bulk unassign: return the selected leads to the unclaimed pool (clears setter + closer). */
+  unassignMany: async (ids: string[]): Promise<number> => {
+    if (ids.length === 0) return 0
+    const { error } = await supabase.from('leads')
+      .update({ setter: null, setter_id: null, closer: null, closer_id: null, status: 'new', updated_at: new Date().toISOString() })
+      .in('id', ids)
+    if (error) throw new Error(error.message)
+    const author = useAuthStore.getState().user?.name ?? null
+    const author_id = useAuthStore.getState().user?.id ?? null
+    await supabase.from('lead_activities').insert(
+      ids.map((lead_id) => ({ lead_id, type: 'Unassigned', note: 'Bulk unassigned by manager', author, author_id })),
+    )
+    return ids.length
+  },
   /** Mark a lead processed / un-processed (throughput tracking). */
   markDone: async (id: string, done: boolean): Promise<void> => {
     const { error } = await supabase.rpc('mark_lead_done', { p_lead: id, p_done: done })

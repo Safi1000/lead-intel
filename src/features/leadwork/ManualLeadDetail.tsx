@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
 import { activitiesApi, manualLeadsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -61,8 +61,33 @@ export function ManualLeadDetailPage() {
   const canWork = canWorkLeads(role)
   const canBook = useCan('create', 'bookings')
 
+  const navigate = useNavigate()
   const { data: lead, isLoading, isError, refetch } = useQuery({ queryKey: ['manual-lead', id], queryFn: () => manualLeadsApi.get(id as string), enabled: !!id })
   const { data: activities } = useQuery({ queryKey: ['activities', id], queryFn: () => activitiesApi.list(id as string), enabled: !!id })
+
+  // Prev / Next within the same batch — call, click Next, keep dialing (no round-trip to the list).
+  // Ordered by created_at (stable), scoped by RLS to the leads this user can see.
+  const { data: batchLeads } = useQuery({
+    queryKey: ['manual-leads', 'nav', lead?.batch_id],
+    queryFn: () => manualLeadsApi.list({ batch_id: lead!.batch_id! }),
+    enabled: !!lead?.batch_id,
+    staleTime: 60_000,
+  })
+  const leadNav = useMemo(() => {
+    // Setters/closers walk only THEIR assigned leads (50 of 200, not the whole batch);
+    // managers walk everything.
+    let rows = batchLeads?.data ?? []
+    if (role === 'setter') rows = rows.filter((r) => r.setter_id === user?.id || r.id === id)
+    else if (role === 'closer') rows = rows.filter((r) => r.closer_id === user?.id || r.id === id)
+    rows = [...rows].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+    const i = rows.findIndex((r) => r.id === id)
+    return {
+      prev: i > 0 ? rows[i - 1].id : null,
+      next: i >= 0 && i < rows.length - 1 ? rows[i + 1].id : null,
+      pos: i + 1,
+      total: rows.length,
+    }
+  }, [batchLeads, id, role, user?.id])
 
   const [remark, setRemark] = useState('')
   const [logType, setLogType] = useState<ActivityType | null>(null)
@@ -110,7 +135,16 @@ export function ManualLeadDetailPage() {
 
   return (
     <div className="reveal mx-auto max-w-4xl">
-      <Link to={backTo} className="mb-4 inline-flex items-center gap-1 text-[13px] text-[var(--color-primary)] hover:underline"><ArrowLeft className="h-4 w-4" /> Back to batch</Link>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Link to={backTo} className="inline-flex items-center gap-1 text-[13px] text-[var(--color-primary)] hover:underline"><ArrowLeft className="h-4 w-4" /> Back to batch</Link>
+        {leadNav.total > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] tabular-nums text-[var(--color-text-muted)]">{leadNav.pos > 0 ? `${leadNav.pos} of ${leadNav.total}` : ''}</span>
+            <Button size="sm" variant="outline" disabled={!leadNav.prev} onClick={() => leadNav.prev && navigate(`/leads/manual/${leadNav.prev}`)}><ArrowLeft className="h-3.5 w-3.5" /> Prev</Button>
+            <Button size="sm" variant="outline" disabled={!leadNav.next} onClick={() => leadNav.next && navigate(`/leads/manual/${leadNav.next}`)}>Next <ArrowRight className="h-3.5 w-3.5" /></Button>
+          </div>
+        )}
+      </div>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="group min-w-0">

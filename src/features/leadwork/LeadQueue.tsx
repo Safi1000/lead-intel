@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CheckCircle2, Search, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Search, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { assignmentApi, leadBatchesApi, manualLeadsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
@@ -101,7 +101,11 @@ export function LeadQueuePage() {
   const search = useDebounce(searchRaw, 200).toLowerCase()
   const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [assignCloserFor, setAssignCloserFor] = useState<string[] | null>(null)
+  const bulkUnassign = useMutation({
+    mutationFn: (ids: string[]) => manualLeadsApi.unassignMany(ids),
+    onSuccess: (n) => { toast.success(`Unassigned ${n} lead${n === 1 ? '' : 's'}`); setSelected(new Set()); qc.invalidateQueries() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
   const [setterFilter, setSetterFilter] = useState('all')
   const [closerFilter, setCloserFilter] = useState('all')
 
@@ -202,7 +206,7 @@ export function LeadQueuePage() {
         <div className="mb-3 flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-primary)] bg-blue-50/50 px-4 py-2.5 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setAssignCloserFor([...selected])}><UserPlus className="h-3.5 w-3.5" /> Assign to closer</Button>
+            <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
             <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-slate-100"><X className="h-4 w-4" /></button>
           </div>
         </div>
@@ -242,9 +246,6 @@ export function LeadQueuePage() {
 
       {assignSetterOpen && batchId && batch && (
         <AssignToSetterDialog batchId={batchId} unassigned={batch.unassigned_count} onClose={() => setAssignSetterOpen(false)} onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }} />
-      )}
-      {assignCloserFor && batchId && (
-        <AssignToCloserDialog batchId={batchId} leadIds={assignCloserFor} onClose={() => setAssignCloserFor(null)} onDone={() => { setAssignCloserFor(null); setSelected(new Set()); qc.invalidateQueries() }} />
       )}
     </div>
   )
@@ -350,30 +351,3 @@ function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchI
   )
 }
 
-function AssignToCloserDialog({ batchId, leadIds, onClose, onDone }: { batchId: string; leadIds: string[]; onClose: () => void; onDone: () => void }) {
-  const closers = useOrgMembers('closer')
-  const [closerId, setCloserId] = useState('')
-  const assign = useMutation({
-    mutationFn: () => assignmentApi.assignLeadsToCloser(batchId, closerId, leadIds),
-    onSuccess: (n) => { toast.success(`Assigned ${n} lead${n === 1 ? '' : 's'} to closer`); onDone() },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Assign ${leadIds.length} lead${leadIds.length === 1 ? '' : 's'} to a closer`} description="The selected leads become visible to the closer and move into their queue.">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="ac-closer">Closer</Label>
-          <select id="ac-closer" value={closerId} onChange={(e) => setCloserId(e.target.value)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">Select a closer…</option>
-            {closers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-          {closers.length === 0 && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">No closers in this organization yet — add one in Users.</p>}
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button loading={assign.isPending} disabled={!closerId} onClick={() => assign.mutate()}>Assign to closer</Button>
-        </div>
-      </div>
-    </Dialog>
-  )
-}
