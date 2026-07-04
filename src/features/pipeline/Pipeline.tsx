@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Download, Info, Play, RefreshCw, Square } from 'lucide-react'
+import { Download, Info, Play, RefreshCw, Square, Timer } from 'lucide-react'
 import { format } from 'date-fns'
 import { pipelineApi, pipelineOrgId } from '../../api/pipeline'
 import type { PipelineConfig, PipelineRun } from '../../api/pipeline'
@@ -115,6 +115,26 @@ function ConfigPanel({ orgId }: { orgId: string }) {
 // ---------------------------------------------------------------------------
 // Status badge
 // ---------------------------------------------------------------------------
+
+/** Live elapsed clock for a run: ticks every second while running, freezes at the final
+ * duration once the run completes (uses completed_at when available). */
+function ElapsedTimer({ startedAt, completedAt, running }: { startedAt: string; completedAt: string | null; running: boolean }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!running) return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [running])
+  const end = completedAt ? new Date(completedAt).getTime() : running ? now : Date.now()
+  const s = Math.max(0, Math.floor((end - new Date(startedAt).getTime()) / 1000))
+  const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60
+  const label = hh > 0 ? `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}` : `${mm}:${String(ss).padStart(2, '0')}`
+  return (
+    <span className="inline-flex items-center gap-1 text-[12px] tabular-nums text-[var(--color-text-secondary)]" title={running ? 'Elapsed time' : 'Total run time'}>
+      <Timer className="h-3.5 w-3.5" /> {label}
+    </span>
+  )
+}
 
 function StatusBadge({ status }: { status: PipelineRun['status'] }) {
   const styles: Record<PipelineRun['status'], string> = {
@@ -263,7 +283,10 @@ function RunTrigger({ orgId }: { orgId: string }) {
         )}>
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="font-medium">Current run</span>
-            <StatusBadge status={liveRun.status} />
+            <div className="flex items-center gap-3">
+              <ElapsedTimer startedAt={liveRun.started_at} completedAt={liveRun.completed_at} running={liveRun.status === 'running' || liveRun.status === 'queued'} />
+              <StatusBadge status={liveRun.status} />
+            </div>
           </div>
           {liveRun.qualified_target != null && (
             <div className="mb-3">
