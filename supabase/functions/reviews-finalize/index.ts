@@ -47,12 +47,15 @@ const INSIGHTS_PROMPT = `You are a lead-qualification analyst for a web design a
 
 Return:
 
-pain_points — the single most sellable outreach angle:
-- STRONGEST possible angle: review friction that CORROBORATES a detected website defect (e.g. reviewers say they can't get through to book AND the site has no booking flow; reviewers say nobody replies AND the site publishes no email). When reviews and the website findings line up, connect them EXPLICITLY — that one-two punch is the pitch. Never invent website defects that are not in the findings.
-- Otherwise: friction from the reviews we can fix with a better website — hard to book, phone never answered, no online booking, slow replies, scheduling chaos, communication problems. Say roughly how many reviewers mention it.
-- Distinguish website-fixable friction (booking/contact/communication) from service complaints (bad injections, rude staff, results) — mention service complaints only as context, they are NOT our pitch.
-- Use the dates: the MOST RECENT reviews show current reality — friction there is hot. If ALL reviews are years old, say the business looks dormant.
-- If there is no real friction anywhere (low-rated are still 4-5★ or trivial gripes), say the reputation is uniformly strong and give the dominant praise theme from the recent reviews (name the provider/treatment reviewers mention).
+pain_points — ALL the sellable outreach angles for this lead, most compelling first.
+FORMAT: if there is more than one angle, output a NUMBERED list with each on its OWN line ("1. …\n2. …\n3. …"). If there is only one, output it as a single plain sentence (no number). Keep each point to one tight sentence a setter can say on a call.
+Which angles to include (in priority order):
+- If the WEBSITE FINDINGS say there is NO REAL WEBSITE (only a 3rd-party booking page like Square/Fresha/Vagaro/Facebook), make THIS point #1: they have no website of their own — just a rented booking link that isn't truly theirs and looks unprofessional next to competitors.
+- If the WEBSITE FINDINGS say the business is RUNNING GOOGLE ADS, that is a top point: they are paying Google to send clicks to a weak site that cannot convert them (wasted ad spend) — pair it with a concrete site defect.
+- Review friction that CORROBORATES a detected website defect (reviewers can't get through to book AND the site has no booking flow; nobody replies AND no email published). Connect them explicitly. Never invent website defects not in the findings.
+- Other review friction we can fix with a better website — hard to book, phone never answered, no online booking, slow replies, scheduling chaos. Say roughly how many reviewers mention it. Distinguish website-fixable friction from service complaints (bad injections, rude staff) — service complaints are context, NOT our pitch.
+- Use dates: recent friction is hot; if ALL reviews are years old, note the business looks dormant.
+- If there is genuinely no friction anywhere, give the dominant praise theme from recent reviews (name the provider/treatment) — as a single point, no numbering.
 
 personalization_notes — 1-2 short, specific cold-outreach hooks quoting or referencing actual review content (names, treatments, phrases). No fabrication, no generic flattery.
 
@@ -102,6 +105,66 @@ ${fmt(low) || '(none)'}`
   if (!res.ok) { console.error(`[insights] OpenAI ${res.status}: ${await res.text()}`); return null }
   const data = await res.json()
   try { return JSON.parse(data?.choices?.[0]?.message?.content ?? '') } catch { return null }
+}
+
+// ---------------------------------------------------------------------------
+// Core Web Vitals via Google PageSpeed Insights (free API). Runs here — post-import, async — because
+// a PSI run takes 10-25s, far too slow for the import chunk. Gives REAL mobile render performance
+// (vs the scraper's raw-fetch timing) for honest "slow site" pain points.
+// ---------------------------------------------------------------------------
+const GOOGLE_KEY = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? ''
+
+async function fetchCwv(siteUrl: string): Promise<{ performance: number; lcpMs: number | null } | null> {
+  const call = async (withKey: boolean) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 45_000)
+    const u = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(siteUrl)}&strategy=mobile&category=performance${withKey && GOOGLE_KEY ? `&key=${GOOGLE_KEY}` : ''}`
+    const res = await fetch(u, { signal: controller.signal })
+    clearTimeout(timer)
+    return res
+  }
+  try {
+    let res = await call(true)
+    if (res.status === 403 || res.status === 400) res = await call(false) // key not enabled for PSI — keyless quota is fine at our volume
+    if (!res.ok) return null
+    const j = await res.json()
+    const score = j?.lighthouseResult?.categories?.performance?.score
+    if (score == null) return null
+    const lcp = j?.lighthouseResult?.audits?.['largest-contentful-paint']?.numericValue
+    return { performance: Math.round(score * 100), lcpMs: lcp != null ? Math.round(lcp) : null }
+  } catch {
+    return null
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Google Ads task retrieval (posted at import by pipeline-run, standard queue). Exact-domain match
+// in the Ads Transparency result = the business is running Google ads.
+// ---------------------------------------------------------------------------
+async function resolveAdsTask(taskId: string, domain: string): Promise<{ runsAds: boolean; adsCount: number } | null> {
+  if (!DFS_LOGIN || !DFS_PASSWORD) return null
+  try {
+    const res = await fetch(`https://api.dataforseo.com/v3/serp/google/ads_advertisers/task_get/advanced/${taskId}`, {
+      headers: { Authorization: 'Basic ' + btoa(`${DFS_LOGIN}:${DFS_PASSWORD}`) },
+    })
+    if (!res.ok) return null
+    const task = (await res.json())?.tasks?.[0]
+    if (!task || task.status_code !== 20000) return null // still queued / failed — leave unresolved, retry next time
+    const items: Array<{ type?: string; domain?: string; approx_ads_count?: number }> = task.result?.[0]?.items ?? []
+    // The task's keyword IS the domain we queried; match against it (fallback to passed domain).
+    const bare = String(task.data?.keyword ?? domain).replace(/^www\./, '').toLowerCase()
+    let runsAds = false, adsCount = 0
+    for (const it of items) {
+      if (it.type === 'ads_domain' && String(it.domain ?? '').replace(/^www\./, '').toLowerCase() === bare) runsAds = true
+      if ((it.type === 'ads_advertiser' || it.type === 'ads_multi_account_advertiser') && it.approx_ads_count) {
+        adsCount = Math.max(adsCount, it.approx_ads_count)
+      }
+    }
+    return { runsAds, adsCount: runsAds ? adsCount : 0 }
+  } catch (e) {
+    console.error('[ads] resolve failed:', (e as Error).message)
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -160,13 +223,36 @@ Deno.serve(async (req: Request) => {
 
     // 4. Re-score pain points + personalization on the balanced sample, cross-checked against the
     // site defects our scanner actually found (so reviews + website connect into ONE narrative).
-    const place = (await dbSelect<{ name: string; crm_lead_id: string | null; website_status: string | null; site_issue_note: string | null; status_reason: string | null }>(
-      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id,website_status,site_issue_note,status_reason`))[0]
+    const place = (await dbSelect<{ name: string; crm_lead_id: string | null; website: string | null; website_status: string | null; site_issue_note: string | null; status_reason: string | null; runs_google_ads: boolean | null; google_ads_count: number | null; ads_task_id: string | null; cwv_performance: number | null }>(
+      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id,website,website_status,site_issue_note,status_reason,runs_google_ads,google_ads_count,ads_task_id,cwv_performance`))[0]
     if (!place) return new Response(JSON.stringify({ ok: true, note: 'place not found' }), { status: 200 })
+
+    // Core Web Vitals (once per place): real mobile render performance from Google PageSpeed.
+    if (place.website && place.cwv_performance == null && place.website_status !== 'none') {
+      const cwv = await fetchCwv(place.website)
+      if (cwv) {
+        place.cwv_performance = cwv.performance
+        await dbUpdate('sourced_places', { cwv_performance: cwv.performance }, `place_id=eq.${placeId}`)
+      }
+    }
+
+    // Resolve the Google Ads task posted at import (standard queue — done by now). Sets runs_google_ads.
+    if (place.ads_task_id && place.runs_google_ads == null) {
+      const ads = await resolveAdsTask(place.ads_task_id, '')
+      if (ads) {
+        place.runs_google_ads = ads.runsAds
+        place.google_ads_count = ads.adsCount || null
+        await dbUpdate('sourced_places', { runs_google_ads: ads.runsAds, google_ads_count: ads.adsCount || null }, `place_id=eq.${placeId}`)
+      }
+    }
+    const adsLabel = place.runs_google_ads == null ? null
+      : place.runs_google_ads ? `Yes${place.google_ads_count ? ` (~${place.google_ads_count} ads)` : ''}` : 'No / not detected'
 
     const siteContext = [
       place.website_status ? `Website status: ${place.website_status}` : '',
       place.site_issue_note && place.site_issue_note !== 'N/A' ? `Detected site issues: ${place.site_issue_note}` : '',
+      place.runs_google_ads ? `RUNNING GOOGLE ADS: yes${place.google_ads_count ? ` (~${place.google_ads_count} active ads)` : ''} — paying for clicks into this weak site` : '',
+      place.cwv_performance != null && place.cwv_performance < 50 ? `Mobile performance score ${place.cwv_performance}/100 (Google PageSpeed) — the site is measurably slow on phones` : '',
       place.status_reason ? `Assessment: ${place.status_reason}` : '',
     ].filter(Boolean).join('\n')
 
@@ -182,9 +268,10 @@ Deno.serve(async (req: Request) => {
     if (place.crm_lead_id) {
       const lead = (await dbSelect<{ data: Record<string, unknown> }>('leads', `id=eq.${place.crm_lead_id}&select=data`))[0]
       if (lead) {
-        await dbUpdate('leads', {
-          data: { ...lead.data, 'Pain Points': insights.pain_points, 'Personalization Notes': insights.personalization_notes },
-        }, `id=eq.${place.crm_lead_id}`)
+        const data: Record<string, unknown> = { ...lead.data, 'Pain Points': insights.pain_points, 'Personalization Notes': insights.personalization_notes }
+        if (adsLabel != null) data['Running Google Ads'] = adsLabel
+        if (place.cwv_performance != null) data['Performance Score'] = `${place.cwv_performance}/100 (Google PageSpeed, mobile)`
+        await dbUpdate('leads', { data }, `id=eq.${place.crm_lead_id}`)
       }
     }
 

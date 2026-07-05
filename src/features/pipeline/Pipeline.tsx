@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { pipelineApi, pipelineOrgId } from '../../api/pipeline'
 import type { PipelineConfig, PipelineRun } from '../../api/pipeline'
 import { normalizeError } from '../../api/client'
+import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
@@ -154,6 +155,67 @@ function StatusBadge({ status }: { status: PipelineRun['status'] }) {
 // ---------------------------------------------------------------------------
 // Run trigger
 // ---------------------------------------------------------------------------
+
+/** Superadmin-only: the 8:00 AM (PKT) daily auto-run. Server rejects changes from other roles. */
+function DailyRunPanel({ orgId }: { orgId: string }) {
+  const qc = useQueryClient()
+  const { data: cfg } = useQuery({ queryKey: ['pipeline-config', orgId], queryFn: () => pipelineApi.getConfig(orgId) })
+  const [target, setTarget] = useState<string | null>(null) // null = not edited yet
+
+  const save = useMutation({
+    mutationFn: (patch: { daily_run_enabled?: boolean; daily_run_target?: number }) =>
+      pipelineApi.saveConfig({ ...(cfg as PipelineConfig), ...patch }),
+    onSuccess: (_d, patch) => {
+      qc.invalidateQueries({ queryKey: ['pipeline-config', orgId] })
+      if (patch.daily_run_enabled !== undefined) {
+        toast.success(patch.daily_run_enabled ? 'Daily auto-run ON — next run tomorrow 8:00 AM' : 'Daily auto-run OFF')
+      } else {
+        toast.success('Daily target saved')
+      }
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
+  if (!cfg) return null
+  const enabled = !!cfg.daily_run_enabled
+  const targetValue = target ?? String(cfg.daily_run_target ?? 50)
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-[15px] font-semibold">Daily auto-run <span className="ml-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">Superadmin</span></h2>
+          <p className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">
+            Every day at 8:00 AM, automatically create the day's batch (named by date) and run until the qualified target is met. Untick to skip — it stays off until you re-enable it.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div>
+            <Label htmlFor="daily-target">Qualified target</Label>
+            <Input
+              id="daily-target" type="number" min={1} max={1000} className="w-28"
+              value={targetValue}
+              onChange={(e) => setTarget(e.target.value)}
+              onBlur={() => { const n = Number(targetValue); if (n >= 1 && n !== cfg.daily_run_target) save.mutate({ daily_run_target: n }) }}
+              disabled={save.isPending}
+            />
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 pt-5">
+            <input
+              type="checkbox" className="h-5 w-5 rounded border-slate-300 accent-[var(--color-primary)]"
+              checked={enabled}
+              onChange={(e) => save.mutate({ daily_run_enabled: e.target.checked })}
+              disabled={save.isPending}
+            />
+            <span className={cn('text-sm font-medium', enabled ? 'text-green-700' : 'text-[var(--color-text-muted)]')}>
+              {enabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </label>
+        </div>
+      </div>
+    </Card>
+  )
+}
 
 function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
@@ -447,6 +509,7 @@ function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
 
 export function PipelinePage() {
   const orgId = pipelineOrgId()
+  const { role } = useAuth()
 
   if (!orgId) {
     return (
@@ -466,6 +529,7 @@ export function PipelinePage() {
         subtitle="Searches 20 US metros for med spas, scores each website, and imports ready-to-call leads."
       />
       <NicheBanner />
+      {role === 'superadmin' && <DailyRunPanel orgId={orgId} />}
       <ConfigPanel orgId={orgId} />
       <RunTrigger orgId={orgId} />
       <RunHistory orgId={orgId} />

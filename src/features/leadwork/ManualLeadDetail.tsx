@@ -48,7 +48,8 @@ function LeadValue({ value }: { value: string }) {
   if (!v) return <span className="text-[var(--color-text-muted)]">—</span>
   if (looksEmail(v)) return <a href={`mailto:${v}`} className="break-all text-[var(--color-primary)] hover:underline">{value}</a>
   if (looksUrl(v)) return <a href={hrefFor(v)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{value}<ExternalLink className="h-3 w-3 shrink-0" /></a>
-  return <span className="break-words">{value}</span>
+  // whitespace-pre-line preserves the newlines in multi-point fields (numbered Pain Points).
+  return <span className="whitespace-pre-line break-words">{value}</span>
 }
 
 const toLocalInput = (iso: string | null) => (iso ? format(new Date(iso), "yyyy-MM-dd'T'HH:mm") : '')

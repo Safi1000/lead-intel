@@ -139,37 +139,69 @@ function shuffle<T>(arr: T[]): T[] {
   return arr
 }
 
+// Minimum places a combo must have been scanned before we trust its qualify-rate (avoid ranking a
+// combo #1 off a single lucky hit). Below this, it uses the global-average prior.
+const QUALIFY_MIN_SAMPLE = 12
+
 async function buildYieldAwareSearches(): Promise<Array<{ search_term: string; location: string }>> {
   let locations: string[] = TARGET_METROS
   const yieldMap = new Map<string, { last_new: number; last_searched_at: string | null }>()
+  const qualMap = new Map<string, { scanned: number; qualified: number }>()
+  let globalRate = 0.15 // prior for never/under-sampled combos
   try {
     const locs = await dbSelect<{ location: string }>('search_locations', 'active=is.true&select=location')
     if (locs.length > 0) locations = locs.map((l) => l.location)
     const yields = await dbSelect<{ search_term: string; location: string; last_new: number; last_searched_at: string | null }>(
       'search_yield', 'select=search_term,location,last_new,last_searched_at')
     for (const y of yields) yieldMap.set(`${y.search_term}|${y.location}`, y)
+    // #1 qualify-rate: how many of each combo's scans actually became importable leads.
+    const quals = await dbSelectAll<{ search_term: string; search_location: string; scanned: number; qualified: number }>(
+      'search_combo_quality', 'select=search_term,search_location,scanned,qualified')
+    let totScanned = 0, totQual = 0
+    for (const q of quals) {
+      qualMap.set(`${q.search_term}|${q.search_location}`, { scanned: q.scanned, qualified: q.qualified })
+      totScanned += q.scanned; totQual += q.qualified
+    }
+    if (totScanned > 200) globalRate = totQual / totScanned
   } catch (e) {
-    console.error('[search] yield/location load failed, using static pool:', (e as Error).message)
+    console.error('[search] yield/quality/location load failed, using static pool:', (e as Error).message)
+  }
+
+  // Qualify-rate for a combo: its own rate once well-sampled, else the global prior.
+  const rateFor = (key: string): number => {
+    const q = qualMap.get(key)
+    if (!q || q.scanned < QUALIFY_MIN_SAMPLE) return globalRate
+    return q.qualified / q.scanned
   }
 
   const cooldownMs = YIELD_COOLDOWN_DAYS * 24 * 3600 * 1000
   const fresh: Array<{ search_term: string; location: string }> = []      // never searched
-  const productive: Array<{ search_term: string; location: string; ln: number }> = [] // yielded last time
+  const productive: Array<{ search_term: string; location: string; rate: number; ln: number }> = []
   let skipped = 0
   for (const term of SEARCH_TERMS) {
     for (const location of locations) {
-      const y = yieldMap.get(`${term}|${location}`)
+      const key = `${term}|${location}`
+      const y = yieldMap.get(key)
       if (!y) { fresh.push({ search_term: term, location }); continue }
       const age = y.last_searched_at ? Date.now() - new Date(y.last_searched_at).getTime() : Infinity
       if (y.last_new === 0 && age < cooldownMs) { skipped++; continue } // recently dry — don't pay to re-search
       if (y.last_new === 0) fresh.push({ search_term: term, location }) // cooldown expired — re-explore
-      else productive.push({ search_term: term, location, ln: y.last_new })
+      else productive.push({ search_term: term, location, rate: rateFor(key), ln: y.last_new })
     }
   }
-  // Explore new ground first (shuffled for geographic diversity), then best-known producers.
-  productive.sort((a, b) => b.ln - a.ln)
-  const ordered = [...shuffle(fresh), ...productive.map(({ search_term, location }) => ({ search_term, location }))]
-  console.log(`[search] combos: ${ordered.length} usable (${fresh.length} fresh, ${productive.length} productive), ${skipped} skipped as dry`)
+  // EXPLORE fresh ground first — never-searched combos are GUARANTEED to have new places, so they
+  // can't waste the chunk on dupes. (A "productive" combo from history may now be fully saturated —
+  // e.g. big metros already scanned by a kept batch — which would burn the empty-streak budget and
+  // exhaust the run before it ever reaches fresh cities.) Within each tier, rank by qualify-rate so
+  // the highest-yielding combos come first. #1's qualify signal steers ordering; exploration guards
+  // against dupe-exhaustion.
+  productive.sort((a, b) => b.rate - a.rate || b.ln - a.ln)
+  const ordered = [
+    ...shuffle(fresh),
+    ...productive.map(({ search_term, location }) => ({ search_term, location })),
+  ]
+  const topRate = productive[0] ? `${Math.round(productive[0].rate * 100)}%` : 'n/a'
+  console.log(`[search] combos: ${ordered.length} usable (${productive.length} productive [top qualify ${topRate}], ${fresh.length} fresh), ${skipped} dry-skipped, globalRate ${Math.round(globalRate * 100)}%`)
   return ordered
 }
 
@@ -237,12 +269,14 @@ async function computeRunTotals(runId: string): Promise<Record<string, number>> 
 async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[]> {
   const rows = await dbSelectAll<Record<string, unknown>>(
     'sourced_places',
-    `pipeline_run_id=eq.${runId}&order=created_at,place_id&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
+    `pipeline_run_id=eq.${runId}&order=created_at,place_id&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,email_mx_ok,seo_score,tech_stack,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
   )
   return rows.map((r) => ({
     place_id: r.place_id, name: r.name, address: r.address, phone: r.phone ?? '', website: r.website ?? '',
     website_status: r.website_status ?? '', status_reason: r.status_reason ?? '', is_correct_niche: r.is_correct_niche ?? '',
     site_issue_note: r.site_issue_note ?? '', email: r.email ?? '', email_source: r.email_source ?? '', email_confidence: r.email_confidence ?? '',
+    email_verified: r.email_mx_ok === true ? 'yes' : r.email_mx_ok === false ? 'NO — domain has no mail records' : '',
+    seo_score: r.seo_score ?? '', tech_stack: r.tech_stack ?? '',
     rating: r.rating ?? '', quality_score: r.quality_score ?? '', low_fit: r.low_fit ?? '', pain_points: r.pain_points ?? '',
     personalization_notes: r.personalization_notes ?? '', search_query: r.search_term ?? '', search_location: r.search_location ?? '', error: r.error ?? '',
   }))
@@ -264,6 +298,7 @@ interface RawPlace {
   websiteUri?: string
   internationalPhoneNumber?: string
   rating?: number
+  userRatingCount?: number
   businessStatus?: string
   reviews?: Array<{ text?: { text?: string }; rating?: number }>
 }
@@ -309,6 +344,12 @@ const INFERRED_BOOKING_LABELS = new Set([
   'Contact/booking CTA', 'Embedded/custom booking', 'Booking/contact found on rendered page',
 ])
 
+// #2 cheap pre-gates — from FREE search-response data (rating, review count, businessStatus).
+// Skip near-certain rejects BEFORE the expensive website scan + OpenAI, so each chunk covers more
+// real candidates. Conservative on purpose (recall matters): thresholds catch only clear rejects.
+const MIN_RATING = 3.5        // below this a spa reads as struggling; rubric rejects as "unproven"
+const MIN_REVIEW_COUNT = 3    // 0-2 reviews = brand-new/dead listing, can't assess as a real business
+
 async function placesTextSearch(
   searchTerm: string,
   location: string,
@@ -325,7 +366,7 @@ async function placesTextSearch(
       // Enterprise+Atmosphere fields (websiteUri/phone/rating/reviews) fold the old per-place Place
       // Details call into this one request — ~12x cheaper per place. Bills the request at the
       // highest tier of any field requested, but each request covers ~20 places.
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.websiteUri,places.internationalPhoneNumber,places.rating,places.businessStatus,places.reviews,nextPageToken',
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.websiteUri,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.businessStatus,places.reviews,nextPageToken',
     },
     body: JSON.stringify(body),
   })
@@ -342,6 +383,42 @@ async function placesTextSearch(
 // DataForSEO pings our reviews-finalize edge function when each task completes (~≤45 min).
 // Cost: ~$0.0045/lead. Skipped entirely when DATAFORSEO_* secrets are unset.
 // ---------------------------------------------------------------------------
+
+// When a lead's "website" is actually a third-party booking/marketplace/link host (not the clinic's
+// own domain), an ads query returns the PLATFORM's ads, not the clinic's — a false positive.
+// Skip ads detection for these. Matches the bare domain OR any subdomain of it.
+const BOOKING_PLATFORM_DOMAINS = [
+  'fresha.com', 'booksy.com', 'booksy.net', 'vagaro.com', 'square.site', 'squareup.com',
+  'glossgenius.com', 'styleseat.com', 'schedulicity.com', 'mindbodyonline.com', 'setmore.com',
+  'janeapp.com', 'calendly.com', 'acuityscheduling.com', 'simplybook.me', 'simplybook.it',
+  'noterro.com', 'timetap.com', 'linktr.ee', 'instagram.com', 'facebook.com', 'linktree.com', 'carrd.co',
+]
+function isBookingPlatformDomain(domain: string): boolean {
+  const d = domain.replace(/^www\./, '').toLowerCase()
+  return BOOKING_PLATFORM_DOMAINS.some((p) => d === p || d.endsWith('.' + p))
+}
+
+// Google Ads detection via DataForSEO Ads Transparency (reads Google's official public ad registry
+// — catches even small local advertisers). "Running ads + weak site" = our strongest hook.
+// Standard queue (task_post ~$0.0006/lead, ~5 min) — reviews-finalize retrieves the result later
+// (by which time reviews, always slower, are done too). Returns the task_id or null; non-fatal.
+async function postAdsTask(domain: string, isCanada: boolean): Promise<string | null> {
+  if (!DFS_LOGIN || !DFS_PASSWORD || !domain) return null
+  try {
+    const res = await fetch('https://api.dataforseo.com/v3/serp/google/ads_advertisers/task_post', {
+      method: 'POST',
+      headers: { Authorization: 'Basic ' + btoa(`${DFS_LOGIN}:${DFS_PASSWORD}`), 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ keyword: domain, location_code: isCanada ? 2124 : 2840, language_code: 'en', tag: domain }]),
+    })
+    if (!res.ok) { console.error(`[ads] task_post HTTP ${res.status}`); return null }
+    const data = await res.json()
+    const t = data?.tasks?.[0]
+    return (t?.id && (t.status_code === 20100 || t.status_code === 20000)) ? t.id : null
+  } catch (e) {
+    console.error(`[ads] task_post failed for ${domain}:`, (e as Error).message)
+    return null
+  }
+}
 
 async function enqueueReviewTasks(placeId: string, orgId: string, isCanada: boolean): Promise<void> {
   if (!DFS_LOGIN || !DFS_PASSWORD) return
@@ -406,6 +483,7 @@ async function buildAndUploadXlsx(orgId: string, runId: string, rows: Record<str
         apikey: SERVICE_KEY,
         Authorization: `Bearer ${SERVICE_KEY}`,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'x-upsert': 'true', // allow regeneration to overwrite the original export at the same path
       },
       body: buf,
     })
@@ -439,6 +517,21 @@ Deno.serve(async (req: Request) => {
           batch_name: batchName, chunk_index: chunkIndex = 0 } = body
   if (!runId || !orgId) {
     return new Response(JSON.stringify({ error: 'run_id and org_id are required' }), { status: 400 })
+  }
+
+  // Maintenance action: rebuild a completed run's XLSX from CURRENT DB state — picks up review
+  // enrichment / ads verdicts / corrections that landed after finalize, and (via dbSelectAll)
+  // includes ALL rows for >1000-place runs. Overwrites the same storage path, refreshes totals.
+  if ((body as { action?: string }).action === 'regenerate_xlsx') {
+    const rows = await fetchRunXlsxRows(runId)
+    if (rows.length === 0) return new Response(JSON.stringify({ ok: false, error: 'no rows for run' }), { status: 200 })
+    const path = await buildAndUploadXlsx(orgId, runId, rows)
+    const totals = await computeRunTotals(runId)
+    await dbUpdate('pipeline_runs', {
+      ...(path ? { xlsx_path: path } : {}), ...totals, xlsx_regenerated_at: new Date().toISOString(),
+    }, `id=eq.${runId}`)
+    console.log(`[pipeline-run] regenerated XLSX for ${runId}: ${rows.length} rows`)
+    return new Response(JSON.stringify({ ok: true, regenerated: !!path, rows: rows.length }), { status: 200 })
   }
 
   // Chaining job when a target is set. Two modes:
@@ -634,23 +727,44 @@ Deno.serve(async (req: Request) => {
       details = detailsFromRawPlace(result)
       totalEnriched++
 
-      // Permanently closed businesses are dead leads — record for dedup and skip.
-      if (details?.businessStatus === 'CLOSED_PERMANENTLY') {
+      // #2 pre-gates — record for dedup and skip BEFORE the website scan + OpenAI. Uses only the
+      // free search data (rating, review count, businessStatus). Conservative to protect recall.
+      const preGateReason =
+        details.businessStatus === 'CLOSED_PERMANENTLY' ? 'Permanently closed on Google Maps' :
+        details.businessStatus === 'CLOSED_TEMPORARILY' ? 'Temporarily closed on Google Maps' :
+        (result.userRatingCount != null && result.userRatingCount < MIN_REVIEW_COUNT)
+          ? `Only ${result.userRatingCount} Google reviews — not an established business` :
+        (details.rating != null && details.rating < MIN_RATING)
+          ? `Google rating ${details.rating} below ${MIN_RATING} — unproven business` :
+        null
+      if (preGateReason) {
         try {
           await dbInsert('sourced_places', {
             place_id: placeId, org_id: orgId, pipeline_run_id: runId,
             search_term: result._search_term, search_location: result._location,
             name: details.name, address: result._address, phone: details.phone,
             website: details.website, rating: details.rating,
-            is_correct_niche: false, quality_score: 1, low_fit: true,
-            status_reason: 'Permanently closed on Google Maps',
+            is_correct_niche: false, quality_score: 1, low_fit: true, status_reason: preGateReason,
           })
-        } catch (e) { console.error(`[${placeId}] closed insert failed:`, (e as Error).message) }
-        console.log(`[${placeId}] skipped (permanently closed)`)
+        } catch (e) { console.error(`[${placeId}] pre-gate insert failed:`, (e as Error).message) }
+        console.log(`[${placeId}] pre-gated: ${preGateReason}`)
         return
       }
 
-      const hasWebsite = !!details?.website
+      // A "website" that's actually a 3rd-party booking/marketplace/social page (Square, Fresha,
+      // Vagaro, a Facebook page…) means the clinic has NO real site of their own. Treat it as a
+      // no-website lead: route to the build-from-scratch batch, and make the platform the pitch.
+      let platformHost: string | null = null
+      if (details?.website) {
+        try {
+          const dom = new URL(details.website).hostname.replace(/^www\./, '').toLowerCase()
+          if (isBookingPlatformDomain(dom)) {
+            platformHost = BOOKING_PLATFORM_DOMAINS.find((p) => dom === p || dom.endsWith('.' + p)) ?? dom
+          }
+        } catch { /* unparseable */ }
+      }
+      const realWebsite = !!details?.website && !platformHost // their own site (not a platform link)
+      const hasWebsite = realWebsite
       if (!hasWebsite) totalNoWebsite++
 
       // Insert into sourced_places now (marks the place as seen even if later steps fail).
@@ -727,7 +841,7 @@ Deno.serve(async (req: Request) => {
             name: details.name,
             address: result._address,
             phone: details.phone,
-            website: details.website,
+            website: hasWebsite ? details.website : null, // platform-only → score as no-website
             rating: details.rating,
             businessType: placeType || null,
             reviews: details.reviews,
@@ -737,12 +851,21 @@ Deno.serve(async (req: Request) => {
           const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY)
           aiScore = score
           aiRaw = raw
-          // Pin website_status to reality regardless of the model's guess: no website → 'none';
-          // has a website but model says 'none' → coerce to 'unknown' (prevents a with-website lead
-          // being misrouted into the No-Website batch).
+          // Pin website_status to reality regardless of the model's guess: no real website → 'none';
+          // has a real website but model says 'none' → coerce to 'unknown' (prevents misrouting).
           if (aiScore) {
             if (!hasWebsite) aiScore.website_status = 'none'
             else if (aiScore.website_status === 'none') aiScore.website_status = 'unknown'
+          }
+          // Platform-only lead: make the fake-website the lead pain point (it's the pitch), so the
+          // setter knows before calling. Prepends to whatever review-based angle the AI produced.
+          if (platformHost && aiScore) {
+            const fakeSiteNote = `They have no real website of their own — their only web presence is a ${platformHost} booking page (a rented 3rd-party link, easily lost and not truly theirs).`
+            aiScore.site_issue_note = fakeSiteNote
+            aiScore.pain_points = aiScore.pain_points && !/insufficient/i.test(aiScore.pain_points)
+              ? `${fakeSiteNote}\n${aiScore.pain_points}`
+              : fakeSiteNote
+            aiScore.status_reason = `No real website — only a ${platformHost} booking page (3rd-party).`
           }
         } catch (e) {
           console.error(`[${placeId}] AI scoring failed:`, (e as Error).message)
@@ -758,6 +881,9 @@ Deno.serve(async (req: Request) => {
             email: emailResult.email,
             email_source: emailResult.emailSource,
             email_confidence: emailResult.emailConfidence,
+            seo_score: websiteResult?.seoScore ?? null,
+            tech_stack: websiteResult?.techStack ?? null,
+            email_mx_ok: websiteResult?.emailMxOk ?? null,
             website_status: aiScore?.website_status ?? 'unknown',
             status_reason: aiScore?.status_reason ?? null,
             is_correct_niche: aiScore?.is_correct_niche ?? null,
@@ -801,6 +927,19 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!dryRun && importBatchId && details) {
+        const isCanada = /Canada/i.test(result._location) || /Canada/i.test(result._address)
+        // Google Ads detection — only for WEBSITE-batch imports (weak site + real domain), where
+        // "paying for ads → weak site" is the killer hook. Standard queue: post the task now, and
+        // reviews-finalize retrieves the verdict + weaves it into pain_points later.
+        let adsTaskId: string | null = null
+        let adsDomain = ''
+        let adsIsPlatform = false
+        if (importBatchId === batchId && details.website) {
+          try { adsDomain = new URL(details.website).hostname.replace(/^www\./, '').toLowerCase() } catch { /* skip */ }
+          if (adsDomain && isBookingPlatformDomain(adsDomain)) adsIsPlatform = true // their "site" is a platform link — skip
+          else if (adsDomain) adsTaskId = await postAdsTask(adsDomain, isCanada)
+        }
+        const adsLabel = adsTaskId ? 'Checking…' : adsIsPlatform ? 'N/A (booking-platform link)' : 'No / not detected'
         // Import immediately (per-lead) so a chunk killed mid-way never strands qualified leads.
         try {
           const inserted = await dbInsert<{ id: string }>('leads', {
@@ -818,11 +957,15 @@ Deno.serve(async (req: Request) => {
               'Phone': details.phone ?? '',
               'Website': details.website ?? '',
               'Email': emailResult.email ?? '',
+              'Email Verified': websiteResult?.emailMxOk === true ? 'Yes (MX)' : websiteResult?.emailMxOk === false ? 'No — domain cannot receive mail' : '',
+              'SEO Score': websiteResult?.seoScore != null ? `${websiteResult.seoScore}/100` : '',
+              'Tech Stack': websiteResult?.techStack ?? '',
               'Rating': details.rating != null ? String(details.rating) : '',
               'Website Status': aiScore?.website_status ?? '',
               'Why This Status': aiScore?.status_reason ?? '',
               'Site Issue Note': aiScore?.site_issue_note ?? '',
               'Pain Points': aiScore?.pain_points ?? '',
+              'Running Google Ads': adsLabel,
               'Quality Score': aiScore?.quality_score != null ? String(aiScore.quality_score) : '',
               'Personalization Notes': aiScore?.personalization_notes ?? '',
               'Source': 'Google Maps Pipeline',
@@ -833,10 +976,13 @@ Deno.serve(async (req: Request) => {
           })
           const leadId = inserted[0]?.id
           if (leadId) {
-            await dbUpdate('sourced_places', { crm_lead_id: leadId, imported_at: new Date().toISOString() }, `place_id=eq.${placeId}`)
+            await dbUpdate('sourced_places', {
+              crm_lead_id: leadId, imported_at: new Date().toISOString(),
+              ads_task_id: adsTaskId,
+            }, `place_id=eq.${placeId}`)
             totalImported++
             // Two-pass review enrichment: only for leads worth selling to (i.e., the ones we import).
-            await enqueueReviewTasks(placeId, orgId, /Canada/i.test(result._location) || /Canada/i.test(result._address))
+            await enqueueReviewTasks(placeId, orgId, isCanada)
           }
         } catch (e) {
           console.error(`[${placeId}] import failed:`, (e as Error).message)

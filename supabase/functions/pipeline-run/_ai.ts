@@ -110,6 +110,7 @@ Google returns only ~5 reviews, so treat whatever is shown as your full evidence
 - Otherwise, state the recurring THEME clients praise, naming the specific provider/treatment/result (e.g. "clients repeatedly praise Dr. X's natural-looking Botox results and the welcoming staff").
 - Ground every word in the actual review text; never invent complaints OR praise.
 "insufficient data" is a LAST RESORT, allowed ONLY when there are genuinely fewer than 3 reviews or under 200 characters total. If reviews are present above that bar, returning "insufficient data" is a mistake.
+FORMAT: if you have more than one distinct angle worth saying, output pain_points as a NUMBERED list, each on its own line ("1. …\n2. …"). If there is only one, output a single plain sentence with no number.
 
 PERSONALIZATION NOTES:
 One or two short, specific hooks for cold outreach grounded ONLY in actual review content, the website URL, or business details provided. Do not fabricate.
@@ -200,6 +201,8 @@ function buildUserPrompt(place: PlaceForScoring, qualityThreshold: number): stri
       ? ws.detectedIssues.map((i) => `  • ${i}`).join('\n')
       : '  • No major issues auto-detected.'
     websiteSection = `Website URL: ${place.website}
+Site health score: ${ws.seoScore != null ? `${ws.seoScore}/100 (from verified signals)` : 'not scored (unverifiable page)'}
+Platform: ${ws.techStack ?? 'not detected'}
 Website load time: ${ws.loadTimeMs}ms
 Mobile viewport present: ${ws.hasMobileViewport ? 'YES' : 'NO'}
 Online booking widget detected: ${ws.hasBookingWidget ? `YES (${ws.bookingPlatform})` : 'NO'}
@@ -232,7 +235,7 @@ SCORING RULES — follow exactly:
 4. site_issue_note: our main sales hook — ONE sentence naming the corroborated problem AND its business consequence, if website_status is 'weak'. Otherwise "N/A".
 5. quality_score: integer 1-10 = LEAD FIT (how good a target FOR US). Only 'weak' sites score above 3; good/none/unknown/wrong-niche → 1-3. Chains capped at 4. (A low score for 'none' does NOT mean wrong niche — no-website med spas are still imported for the first-website pitch via is_correct_niche=true.)
 6. low_fit: true if quality_score < ${qualityThreshold}, or if the business is a chain / multi-location.
-7. pain_points: best outreach angle from reviews — real complaints/friction first (esp. digital), else the recurring theme clients praise (name the specific provider/treatment/result). Only "insufficient data" if reviews < 3 or total review text < 200 chars. Never fabricate.
+7. pain_points: all sellable angles from reviews — real complaints/friction first (esp. digital), else the recurring theme clients praise (name the specific provider/treatment/result). If more than one angle, output a NUMBERED list, one per line ("1. …\n2. …"); if only one, a plain sentence. Only "insufficient data" if reviews < 3 or total review text < 200 chars. Never fabricate.
 8. personalization_notes: 1-2 hooks, real data only, no fabrication.`
 }
 

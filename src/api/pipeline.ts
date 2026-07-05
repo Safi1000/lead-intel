@@ -21,6 +21,8 @@ export interface PipelineConfig {
   quality_threshold: number
   max_places_per_run: number
   openai_model: string
+  daily_run_enabled?: boolean // superadmin-only: 8:00 AM (PKT) auto-run
+  daily_run_target?: number
 }
 
 export interface PipelineRun {

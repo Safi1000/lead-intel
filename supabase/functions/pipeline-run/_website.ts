@@ -25,6 +25,9 @@ export interface WebsiteResult {
   detectedIssues: string[] // human-readable sentences, pasted into the AI prompt
   chainSignals: string[] // multi-location / chain evidence, pasted into the AI prompt (empty = looks single-site)
   visibleTextExcerpt: string | null // first ~1200 chars of the page's readable text — grounds the AI's niche call and lets hooks quote the site's own wording
+  seoScore: number | null // 0-100 site-health score from verified signals; null when unverifiable (JS shell / render fallback)
+  techStack: string | null // detected platform/builder ("WordPress (theme: x)", "Shopify", "Wix", ...)
+  emailMxOk: boolean | null // MX record exists for the found email's domain (null = no email / not checked)
 }
 
 // ---------------------------------------------------------------------------
@@ -302,6 +305,10 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   bookingPlatform: string | null
   copyrightYear: number | null
   detectedIssues: string[]
+  hasTitle: boolean
+  hasMetaDescription: boolean
+  hasH1: boolean
+  jsShell: boolean
   visibleTextExcerpt: string | null
 } {
   const issues: string[] = []
@@ -375,11 +382,14 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   if (tableLayoutSignals >= 2) issues.push('Table-based page layout — a sign of a very outdated website')
 
   // 6. SEO basics — missing title / meta description / H1 hurts Google visibility (readable pages only).
+  const hasTitle = /<title[^>]*>\s*\S[^<]*<\/title>/i.test(html)
+  const hasMetaDescription = /<meta[^>]+name=["']?description["']?/i.test(html)
+  const hasH1 = /<h1[\s>]/i.test(html)
   if (!jsShell) {
     const missing: string[] = []
-    if (!/<title[^>]*>\s*\S[^<]*<\/title>/i.test(html)) missing.push('page title')
-    if (!/<meta[^>]+name=["']?description["']?/i.test(html)) missing.push('meta description')
-    if (!/<h1[\s>]/i.test(html)) missing.push('H1 heading')
+    if (!hasTitle) missing.push('page title')
+    if (!hasMetaDescription) missing.push('meta description')
+    if (!hasH1) missing.push('H1 heading')
     if (missing.length >= 2) issues.push(`Missing SEO basics (${missing.join(', ')}) — the site is hard to find on Google`)
   }
 
@@ -392,6 +402,8 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
 
   return {
     hasMobileViewport, hasBookingWidget, bookingPlatform, copyrightYear, detectedIssues: issues,
+    // Granular SEO flags feed the 0-100 site-health score (null-able upstream when jsShell).
+    hasTitle, hasMetaDescription, hasH1, jsShell,
     // The site's own words — what a visitor actually reads. Grounds the AI's niche judgment and
     // lets pain points / hooks quote the clinic's real copy. Null for shells (nothing readable).
     visibleTextExcerpt: jsShell ? null : visibleText.slice(0, 1200),
@@ -416,7 +428,17 @@ const BUILDER_FINGERPRINTS: Array<{ name: string; re: RegExp }> = [
   { name: 'Duda', re: /irp\.cdn-website\.com|dudamobile|dudaone/i },
 ]
 
-function detectBuilder(html: string, domain: string): { builder: string | null; freeTier: boolean } {
+// Professional platforms — recorded as tech stack (NOT a weakness or pitch angle by themselves).
+// WordPress theme name is extracted when present ("WordPress (theme: bridge)").
+const PLATFORM_FINGERPRINTS: Array<{ name: string; re: RegExp }> = [
+  { name: 'Shopify', re: /cdn\.shopify\.com|myshopify\.com/i },
+  { name: 'Webflow', re: /assets(?:-global)?\.website-files\.com|data-wf-page/i },
+  { name: 'Framer', re: /framerusercontent\.com|framer\.website/i },
+  { name: 'GoHighLevel', re: /leadconnectorhq|msgsndr\.com|widgets\.leadconnector/i },
+  { name: 'Showit', re: /showit\.co|cdn\.showit/i },
+]
+
+function detectBuilder(html: string, domain: string): { builder: string | null; freeTier: boolean; techStack: string | null } {
   const freeSuffix = FREE_HOST_SUFFIXES.find((s) => domain === s || domain.endsWith('.' + s))
   if (freeSuffix) {
     const label = /wixsite/.test(freeSuffix) ? 'free Wix subdomain'
@@ -426,10 +448,46 @@ function detectBuilder(html: string, domain: string): { builder: string | null; 
       : /square\.site/.test(freeSuffix) ? 'free Square Online subdomain'
       : /wordpress\.com/.test(freeSuffix) ? 'free WordPress.com subdomain'
       : `free builder subdomain (${freeSuffix})`
-    return { builder: label, freeTier: true }
+    return { builder: label, freeTier: true, techStack: label }
   }
-  for (const { name, re } of BUILDER_FINGERPRINTS) { if (re.test(html)) return { builder: name, freeTier: false } }
-  return { builder: null, freeTier: false }
+  for (const { name, re } of BUILDER_FINGERPRINTS) { if (re.test(html)) return { builder: name, freeTier: false, techStack: name } }
+  // WordPress: platform, with theme extraction (Elementor noted — common DIY-on-WP signal)
+  if (/wp-content|wp-includes/i.test(html)) {
+    const theme = html.match(/\/wp-content\/themes\/([a-z0-9_-]+)\//i)?.[1] ?? null
+    const elementor = /elementor/i.test(html) ? ' + Elementor' : ''
+    return { builder: null, freeTier: false, techStack: `WordPress${theme ? ` (theme: ${theme})` : ''}${elementor}` }
+  }
+  for (const { name, re } of PLATFORM_FINGERPRINTS) { if (re.test(html)) return { builder: null, freeTier: false, techStack: name } }
+  return { builder: null, freeTier: false, techStack: null }
+}
+
+// MX lookup for the found email's domain. Deno.resolveDns in the edge runtime; DNS-over-HTTPS
+// fallback (also the Node test-harness path). true/false = definitive; null = couldn't check.
+async function checkMx(email: string | null): Promise<boolean | null> {
+  if (!email) return null
+  const domain = email.split('@')[1]
+  if (!domain) return null
+  try {
+    // @ts-ignore — Deno global absent under the Node test harness
+    if (typeof Deno !== 'undefined' && Deno.resolveDns) {
+      // @ts-ignore
+      const recs = await Deno.resolveDns(domain, 'MX')
+      if (Array.isArray(recs) && recs.length > 0) return true
+      // fall through to DoH — resolveDns can return empty on some resolvers
+    }
+  } catch { /* NXDOMAIN or resolver error — confirm via DoH */ }
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
+    const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=MX`, { signal: controller.signal })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    const j = await res.json()
+    if (j.Status === 3) return false // NXDOMAIN — domain doesn't exist
+    return Array.isArray(j.Answer) && j.Answer.some((a: { type?: number }) => a.type === 15)
+  } catch {
+    return null // network failure — unknown, never claim "dead" without proof
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -442,6 +500,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     reachable: false, loadTimeMs: 0,
     hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null,
     copyrightYear: null, detectedIssues: [], chainSignals: [], visibleTextExcerpt: null,
+    seoScore: null, techStack: null, emailMxOk: null,
   }
 
   if (!websiteUri) return noResult
@@ -516,7 +575,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
   // Quality + chain signals come from the homepage only
   const qualitySignals = homepageHtml
     ? detectQualitySignals(homepageHtml, homepageLoadMs)
-    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], visibleTextExcerpt: null as string | null }
+    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], hasTitle: false, hasMetaDescription: false, hasH1: false, jsShell: false, visibleTextExcerpt: null as string | null }
   const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
 
   // ---------------------------------------------------------------------------
@@ -586,14 +645,46 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
   if (homepageHtml && /^http:\/\//i.test(homepageFinalUrl)) {
     qualitySignals.detectedIssues.push('No SSL certificate — the site loads over insecure http:// and browsers show a "Not Secure" warning')
   }
-  // Cheap / DIY website builder — a free subdomain is a real weakness; a DIY builder is a pitch angle.
+  // Cheap / DIY website builder — a free subdomain is a real weakness; a DIY builder is a pitch
+  // angle. Professional platforms (WordPress/Shopify/Webflow…) are recorded as tech stack only.
+  let techStack: string | null = null
+  let isFreeTier = false
   if (homepageHtml) {
-    const { builder, freeTier } = detectBuilder(homepageHtml, siteDomain)
-    if (freeTier) {
-      qualitySignals.detectedIssues.push(`Site is a ${builder} — a free, auto-generated/template page with no custom domain; a clear sign the clinic has not invested in its web presence (strong weakness)`)
-    } else if (builder) {
-      qualitySignals.detectedIssues.push(`Built on ${builder} (a DIY website builder) — likely a generic template rather than a custom-designed site (a pitch angle; not automatically a flaw)`)
+    const det = detectBuilder(homepageHtml, siteDomain)
+    techStack = det.techStack
+    isFreeTier = det.freeTier
+    if (det.freeTier) {
+      qualitySignals.detectedIssues.push(`Site is a ${det.builder} — a free, auto-generated/template page with no custom domain; a clear sign the clinic has not invested in its web presence (strong weakness)`)
+    } else if (det.builder) {
+      qualitySignals.detectedIssues.push(`Built on ${det.builder} (a DIY website builder) — likely a generic template rather than a custom-designed site (a pitch angle; not automatically a flaw)`)
     }
+  }
+
+  // Email deliverability: does the address's domain have MX records at all? A dead domain means
+  // the published email silently bounces — itself a sellable defect.
+  const emailMxOk = await checkMx(email)
+  if (email && emailMxOk === false) {
+    qualitySignals.detectedIssues.push(`The published email ${email} is on a domain with no mail records (MX) — messages to it bounce; patients emailing the clinic get silence`)
+  }
+
+  // 0-100 site-health score — ONLY from verified signals (never for JS shells / render fallbacks,
+  // where honesty demands "unknown" rather than a guessed number).
+  let seoScore: number | null = null
+  const verifiable = !!homepageHtml && !qualitySignals.jsShell && !renderFallbackUsed
+  if (verifiable) {
+    const currentYear = new Date().getFullYear()
+    const ssl = !/^http:\/\//i.test(homepageFinalUrl)
+    const load = homepageLoadMs < 2500 ? 10 : homepageLoadMs < 4000 ? 6 : homepageLoadMs < 6000 ? 3 : 0
+    seoScore =
+      (ssl ? 15 : 0) +
+      (qualitySignals.hasMobileViewport ? 20 : 0) +
+      (qualitySignals.hasTitle ? 10 : 0) +
+      (qualitySignals.hasMetaDescription ? 10 : 0) +
+      (qualitySignals.hasH1 ? 10 : 0) +
+      (qualitySignals.hasBookingWidget ? 15 : 0) +
+      load +
+      (qualitySignals.copyrightYear == null || qualitySignals.copyrightYear > currentYear - 3 ? 5 : 0) +
+      (isFreeTier ? 0 : 5)
   }
 
   return {
@@ -604,5 +695,8 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
     loadTimeMs: homepageLoadMs,
     ...qualitySignals,
     chainSignals,
+    seoScore,
+    techStack,
+    emailMxOk,
   }
 }
