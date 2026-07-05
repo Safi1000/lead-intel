@@ -268,21 +268,107 @@ async function computeRunTotals(runId: string): Promise<Record<string, number>> 
 // Human tag so setters can read the score at a glance without knowing the bands.
 function seoTag(n: number): string { return n >= 80 ? 'Good' : n >= 50 ? 'Weak' : 'Critical' }
 
+// ---------------------------------------------------------------------------
+// Business hours → Pakistan Standard Time. Google returns opening periods in the PLACE's local
+// time (day 0=Sun..6=Sat). Setters dial from PKT (UTC+5, no DST), so we convert:
+//   offsetDiff = PKT(+300 min) − place's utcOffsetMinutes.  e.g. Toronto EDT(−240) → +540 (9h).
+// Computed at import; accurate for the week the batch is worked. (The stored IANA timezone_id lets
+// the CRM recompute live to stay DST-exact for leads dialed months later.)
+// The shift window is 7 PM–2 AM PKT (covers both the 8→2 and 7→1 rosters).
+// ---------------------------------------------------------------------------
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const PKT_OFFSET_MIN = 300
+const SHIFT_START_MIN = 19 * 60 // 7 PM PKT
+const SHIFT_END_MIN = 26 * 60   // 2 AM PKT (next day)
+
+function fmtClock(totalMin: number): string {
+  const m = ((Math.round(totalMin) % 1440) + 1440) % 1440
+  let h = Math.floor(m / 60)
+  const ap = h < 12 ? 'AM' : 'PM'
+  h = h % 12; if (h === 0) h = 12
+  return `${h}:${String(m % 60).padStart(2, '0')} ${ap}`
+}
+
+// Compact local weekly schedule: "Mon–Fri 9:00 AM–7:30 PM · Sat 9:00 AM–5:00 PM · Sun closed".
+// Split shifts (lunch closures) list every block for the day: "Mon 8:30 AM–12:00 PM, 1:15 PM–5:00 PM".
+function formatLocalHours(periods: HoursPeriod[]): string {
+  const byDay = new Map<number, string[]>()
+  for (const p of periods) {
+    if (!p.open || p.open.day == null) continue
+    const o = (p.open.hour ?? 0) * 60 + (p.open.minute ?? 0)
+    const c = (p.close?.hour ?? 0) * 60 + (p.close?.minute ?? 0)
+    const arr = byDay.get(p.open.day) ?? []
+    arr.push(`${fmtClock(o)}–${fmtClock(c)}`)
+    byDay.set(p.open.day, arr)
+  }
+  const dayStr = (d: number) => byDay.has(d) ? byDay.get(d)!.join(', ') : 'closed'
+  const order = [1, 2, 3, 4, 5, 6, 0] // Mon..Sun
+  const parts: string[] = []
+  for (let i = 0; i < order.length;) {
+    const hrs = dayStr(order[i])
+    let j = i
+    while (j + 1 < order.length && dayStr(order[j + 1]) === hrs) j++
+    const label = i === j ? DOW[order[i]] : `${DOW[order[i]]}–${DOW[order[j]]}`
+    parts.push(hrs === 'closed' ? `${label} closed` : `${label} ${hrs}`)
+    i = j + 1
+  }
+  return parts.join(' · ')
+}
+
+// The typical weekday window, mapped to PKT, with a shift-fit note for the setter. Uses each
+// weekday's full envelope (earliest open → latest close) so split-shift days collapse to one span.
+function formatPktCallWindow(periods: HoursPeriod[], utcOffsetMin: number | null): string {
+  if (utcOffsetMin == null) return ''
+  const env = new Map<number, { o: number; c: number }>()
+  for (const p of periods) {
+    if (!p.open || p.open.day == null || p.open.day < 1 || p.open.day > 5) continue // Mon–Fri only
+    const o = (p.open.hour ?? 0) * 60 + (p.open.minute ?? 0)
+    let c = (p.close?.hour ?? 0) * 60 + (p.close?.minute ?? 0)
+    if (c <= o) c += 1440 // closes after local midnight
+    const e = env.get(p.open.day)
+    if (!e) env.set(p.open.day, { o, c })
+    else { e.o = Math.min(e.o, o); e.c = Math.max(e.c, c) }
+  }
+  const tally = new Map<string, { o: number; c: number; n: number }>()
+  for (const e of env.values()) {
+    const key = `${e.o}-${e.c}`
+    const t = tally.get(key) ?? { o: e.o, c: e.c, n: 0 }; t.n++; tally.set(key, t)
+  }
+  let best: { o: number; c: number; n: number } | null = null
+  for (const t of tally.values()) if (!best || t.n > best.n) best = t
+  if (!best) return ''
+  const diff = PKT_OFFSET_MIN - utcOffsetMin
+  const openPkt = best.o + diff
+  const closePkt = best.c + diff
+  const range = `${fmtClock(openPkt)}–${fmtClock(closePkt)}${closePkt >= 1440 ? ' (next day)' : ''}`
+  const overlaps = openPkt < SHIFT_END_MIN && closePkt > SHIFT_START_MIN
+  let note: string
+  if (!overlaps) note = closePkt <= SHIFT_START_MIN ? 'closed before your shift' : 'opens after your shift ends'
+  else if (openPkt > SHIFT_START_MIN) note = `call after ${fmtClock(openPkt)}`
+  else if (closePkt < SHIFT_END_MIN) note = `call before ${fmtClock(closePkt)} — closes early`
+  else note = 'open through your shift'
+  return `${range} · ${note}`
+}
+
 // Rebuild the export rows for a whole (chained) run from the DB, since each chunk only holds its own.
 async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[]> {
   const rows = await dbSelectAll<Record<string, unknown>>(
     'sourced_places',
-    `pipeline_run_id=eq.${runId}&order=created_at,place_id&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,email_mx_ok,seo_score,tech_stack,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
+    `pipeline_run_id=eq.${runId}&order=created_at,place_id&select=place_id,name,address,phone,website,website_status,status_reason,is_correct_niche,site_issue_note,email,email_source,email_confidence,email_mx_ok,seo_score,tech_stack,hours_periods,utc_offset_minutes,rating,quality_score,low_fit,pain_points,personalization_notes,search_term,search_location,error`,
   )
-  return rows.map((r) => ({
+  return rows.map((r) => {
+    const periods = (r.hours_periods as HoursPeriod[] | null) ?? []
+    return {
     place_id: r.place_id, name: r.name, address: r.address, phone: r.phone ?? '', website: r.website ?? '',
     website_status: r.website_status ?? '', status_reason: r.status_reason ?? '', is_correct_niche: r.is_correct_niche ?? '',
     site_issue_note: r.site_issue_note ?? '', email: r.email ?? '', email_source: r.email_source ?? '', email_confidence: r.email_confidence ?? '',
     email_verified: r.email_mx_ok === true ? 'yes' : r.email_mx_ok === false ? 'NO — domain has no mail records' : '',
     seo_score: r.seo_score != null ? `${r.seo_score}/100 — ${seoTag(r.seo_score as number)}` : '', tech_stack: r.tech_stack ?? '',
+    business_hours: periods.length ? formatLocalHours(periods) : '',
+    best_time_to_call_pkt: periods.length ? formatPktCallWindow(periods, (r.utc_offset_minutes as number | null) ?? null) : '',
     rating: r.rating ?? '', quality_score: r.quality_score ?? '', low_fit: r.low_fit ?? '', pain_points: r.pain_points ?? '',
     personalization_notes: r.personalization_notes ?? '', search_query: r.search_term ?? '', search_location: r.search_location ?? '', error: r.error ?? '',
-  }))
+  } })
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +378,8 @@ async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[
 // Text Search (New) returns ALL enrichment fields we need in one request. Requesting them here —
 // instead of a per-place Place Details call — is ~12x cheaper: Text Search bills per request
 // (~20 places), Place Details bills per place. See placesTextSearch field mask.
+interface HoursPeriod { open?: { day: number; hour?: number; minute?: number }; close?: { day: number; hour?: number; minute?: number } }
+
 interface RawPlace {
   id: string
   displayName?: { text: string }
@@ -304,6 +392,9 @@ interface RawPlace {
   userRatingCount?: number
   businessStatus?: string
   reviews?: Array<{ text?: { text?: string }; rating?: number }>
+  regularOpeningHours?: { periods?: HoursPeriod[] }
+  timeZone?: { id?: string }
+  utcOffsetMinutes?: number
 }
 
 interface PlaceDetails {
@@ -314,6 +405,9 @@ interface PlaceDetails {
   rating: number | null
   businessStatus: string | null // OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY
   reviews: Array<{ text: string; rating: number }>
+  hoursPeriods: HoursPeriod[] | null // open/close in the PLACE's local time (day 0=Sun..6=Sat)
+  timezoneId: string | null          // IANA, e.g. America/Toronto — lets the CRM recompute PKT live
+  utcOffsetMinutes: number | null    // place's offset at import time (DST-aware snapshot)
 }
 
 // Build the enrichment record from the search result itself — no extra Place Details call needed.
@@ -326,6 +420,9 @@ function detailsFromRawPlace(p: RawPlace): PlaceDetails {
     rating: p.rating ?? null,
     businessStatus: p.businessStatus ?? null,
     reviews: (p.reviews ?? []).map((r) => ({ text: r.text?.text ?? '', rating: r.rating ?? 0 })),
+    hoursPeriods: p.regularOpeningHours?.periods ?? null,
+    timezoneId: p.timeZone?.id ?? null,
+    utcOffsetMinutes: p.utcOffsetMinutes ?? null,
   }
 }
 
@@ -369,7 +466,9 @@ async function placesTextSearch(
       // Enterprise+Atmosphere fields (websiteUri/phone/rating/reviews) fold the old per-place Place
       // Details call into this one request — ~12x cheaper per place. Bills the request at the
       // highest tier of any field requested, but each request covers ~20 places.
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.websiteUri,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.businessStatus,places.reviews,nextPageToken',
+      // regularOpeningHours + timeZone + utcOffsetMinutes ride along free — the request is already
+      // billed at the top (Atmosphere) tier for reviews, and hours are a lower (Enterprise) tier.
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.primaryType,places.types,places.websiteUri,places.internationalPhoneNumber,places.rating,places.userRatingCount,places.businessStatus,places.reviews,places.regularOpeningHours,places.timeZone,places.utcOffsetMinutes,nextPageToken',
     },
     body: JSON.stringify(body),
   })
@@ -887,6 +986,9 @@ Deno.serve(async (req: Request) => {
             seo_score: websiteResult?.seoScore ?? null,
             tech_stack: websiteResult?.techStack ?? null,
             email_mx_ok: websiteResult?.emailMxOk ?? null,
+            hours_periods: details?.hoursPeriods ?? null,
+            timezone_id: details?.timezoneId ?? null,
+            utc_offset_minutes: details?.utcOffsetMinutes ?? null,
             website_status: aiScore?.website_status ?? 'unknown',
             status_reason: aiScore?.status_reason ?? null,
             is_correct_niche: aiScore?.is_correct_niche ?? null,
@@ -964,6 +1066,8 @@ Deno.serve(async (req: Request) => {
               'SEO Score': websiteResult?.seoScore != null ? `${websiteResult.seoScore}/100 — ${seoTag(websiteResult.seoScore)}` : '',
               'Tech Stack': websiteResult?.techStack ?? '',
               'Rating': details.rating != null ? String(details.rating) : '',
+              'Business Hours': details.hoursPeriods?.length ? formatLocalHours(details.hoursPeriods) : 'Not listed on Google',
+              'Best Time to Call (PKT)': details.hoursPeriods?.length ? formatPktCallWindow(details.hoursPeriods, details.utcOffsetMinutes) : '',
               'Website Status': aiScore?.website_status ?? '',
               'Why This Status': aiScore?.status_reason ?? '',
               'Site Issue Note': aiScore?.site_issue_note ?? '',
