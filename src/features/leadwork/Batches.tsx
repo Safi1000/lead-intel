@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { Archive, ArchiveRestore, FileSpreadsheet, FileUp, Layers, Search, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Download, FileSpreadsheet, FileUp, Layers, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { leadBatchesApi } from '../../api/endpoints'
+import { leadBatchesApi, manualLeadsApi } from '../../api/endpoints'
+import { exportLeadsToXlsx } from './exportBatch'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input } from '../../components/ui/primitives'
@@ -22,6 +23,7 @@ export function BatchesPage() {
   const isGenerator = role === 'manager' || role === 'lead_generator' || role === 'admin' || role === 'superadmin'
   const canArchive = role === 'manager' || role === 'superadmin'
   const canDelete = role === 'superadmin'
+  const canExport = isGenerator
 
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['lead-batches'], queryFn: leadBatchesApi.list })
   const [searchRaw, setSearchRaw] = useState('')
@@ -37,6 +39,16 @@ export function BatchesPage() {
   const removeBatch = useMutation({
     mutationFn: (id: string) => leadBatchesApi.remove(id),
     onSuccess: () => { toast.success('Batch permanently deleted'); setDeleteFor(null); qc.invalidateQueries({ queryKey: ['lead-batches'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  const exportBatch = useMutation({
+    mutationFn: async (b: LeadBatch) => {
+      const res = await manualLeadsApi.list({ batch_id: b.id })
+      if (!res.data.length) throw new Error('This batch has no leads to export.')
+      exportLeadsToXlsx(res.data, b.file_name)
+      return res.data.length
+    },
+    onSuccess: (n) => toast.success(`Exported ${n} lead${n === 1 ? '' : 's'} to Excel`),
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
@@ -112,16 +124,18 @@ export function BatchesPage() {
                   <th className="px-3 py-2.5 font-medium">Pipeline</th>
                   <th className="px-3 py-2.5 font-medium">Assigned</th>
                   <th className="px-3 py-2.5 font-medium">Uploaded</th>
-                  {(canArchive || canDelete) && <th className="px-3 py-2.5" />}
+                  {(canArchive || canDelete || canExport) && <th className="px-3 py-2.5" />}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((b) => (
                   <BatchRow
                     key={b.id} batch={b} onOpen={() => navigate(`/leads/batch/${b.id}`)}
-                    canArchive={canArchive} canDelete={canDelete}
+                    canArchive={canArchive} canDelete={canDelete} canExport={canExport}
+                    exporting={exportBatch.isPending && exportBatch.variables?.id === b.id}
                     onArchive={(archived) => setArchived.mutate({ id: b.id, archived })}
                     onDelete={() => setDeleteFor(b)}
+                    onExport={() => exportBatch.mutate(b)}
                   />
                 ))}
               </tbody>
@@ -150,10 +164,10 @@ function Pill({ label, value, className }: { label: string; value: number; class
   return <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', className)}>{value} {label}</span>
 }
 
-function BatchRow({ batch: b, onOpen, canArchive, canDelete, onArchive, onDelete }: {
+function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exporting, onArchive, onDelete, onExport }: {
   batch: LeadBatch; onOpen: () => void
-  canArchive: boolean; canDelete: boolean
-  onArchive: (archived: boolean) => void; onDelete: () => void
+  canArchive: boolean; canDelete: boolean; canExport: boolean; exporting: boolean
+  onArchive: (archived: boolean) => void; onDelete: () => void; onExport: () => void
 }) {
   return (
     <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50" onClick={onOpen}>
@@ -186,9 +200,14 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, onArchive, onDelete
         <span className="text-[12px] text-[var(--color-text-muted)]"> / {b.lead_count}</span>
       </td>
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}</td>
-      {(canArchive || canDelete) && (
+      {(canArchive || canDelete || canExport) && (
         <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-1">
+            {canExport && (
+              <Button size="sm" variant="ghost" title="Export leads to Excel" disabled={b.lead_count === 0} loading={exporting} onClick={onExport}>
+                <Download className="h-4 w-4" />
+              </Button>
+            )}
             {canArchive && (
               <Button size="sm" variant="ghost" title={b.archived_at ? 'Restore batch' : 'Archive batch (leads + history preserved)'} onClick={() => onArchive(!b.archived_at)}>
                 {b.archived_at ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}

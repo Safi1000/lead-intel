@@ -365,7 +365,8 @@ async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[
     email_verified: r.email_mx_ok === true ? 'yes' : r.email_mx_ok === false ? 'NO — domain has no mail records' : '',
     seo_score: r.seo_score != null ? `${r.seo_score}/100 — ${seoTag(r.seo_score as number)}` : '', tech_stack: r.tech_stack ?? '',
     business_hours: periods.length ? formatLocalHours(periods) : '',
-    best_time_to_call_pkt: periods.length ? formatPktCallWindow(periods, (r.utc_offset_minutes as number | null) ?? null) : '',
+    // "Best Time to Call (PKT)" intentionally omitted from exports — it's Pakistan time, only useful
+    // to the internal team via the CRM, not to the (US) recipients of an exported sheet.
     rating: r.rating ?? '', quality_score: r.quality_score ?? '', low_fit: r.low_fit ?? '', pain_points: r.pain_points ?? '',
     personalization_notes: r.personalization_notes ?? '', search_query: r.search_term ?? '', search_location: r.search_location ?? '', error: r.error ?? '',
   } })
