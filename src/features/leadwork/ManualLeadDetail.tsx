@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, ArrowRight, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
 import { activitiesApi, manualLeadsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -172,6 +172,9 @@ export function ManualLeadDetailPage() {
               <Button variant="outline" size="sm"><CalendarClock className="h-4 w-4" /> Book a meeting</Button>
             </Link>
           )}
+          <Link to={`/leads/manual/${lead.id}/audit?print=1`} target="_blank" rel="noreferrer" title="Open a branded, client-ready audit PDF">
+            <Button variant="outline" size="sm"><FileText className="h-4 w-4" /> Audit PDF</Button>
+          </Link>
           <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => update.mutate({ stage: s })} />
         </div>
       </div>

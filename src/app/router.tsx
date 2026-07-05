@@ -48,6 +48,7 @@ const DueTodayPage = lazyPage(() => import('../features/leadwork/DueToday').then
 const ActivityPage = lazyPage(() => import('../features/leadwork/Activity').then((m) => ({ default: m.ActivityPage })))
 const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
+const AuditReportPage = lazyPage(() => import('../features/leadwork/AuditReport').then((m) => ({ default: m.AuditReportPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -213,6 +214,8 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      // Standalone print page (auth required, no app shell) — the client-facing white-label audit PDF.
+      { path: 'leads/manual/:id/audit', element: L(<AuditReportPage />) },
     ],
   },
 
