@@ -265,6 +265,9 @@ async function computeRunTotals(runId: string): Promise<Record<string, number>> 
   }
 }
 
+// Human tag so setters can read the score at a glance without knowing the bands.
+function seoTag(n: number): string { return n >= 80 ? 'Good' : n >= 50 ? 'Weak' : 'Critical' }
+
 // Rebuild the export rows for a whole (chained) run from the DB, since each chunk only holds its own.
 async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[]> {
   const rows = await dbSelectAll<Record<string, unknown>>(
@@ -276,7 +279,7 @@ async function fetchRunXlsxRows(runId: string): Promise<Record<string, unknown>[
     website_status: r.website_status ?? '', status_reason: r.status_reason ?? '', is_correct_niche: r.is_correct_niche ?? '',
     site_issue_note: r.site_issue_note ?? '', email: r.email ?? '', email_source: r.email_source ?? '', email_confidence: r.email_confidence ?? '',
     email_verified: r.email_mx_ok === true ? 'yes' : r.email_mx_ok === false ? 'NO — domain has no mail records' : '',
-    seo_score: r.seo_score ?? '', tech_stack: r.tech_stack ?? '',
+    seo_score: r.seo_score != null ? `${r.seo_score}/100 — ${seoTag(r.seo_score as number)}` : '', tech_stack: r.tech_stack ?? '',
     rating: r.rating ?? '', quality_score: r.quality_score ?? '', low_fit: r.low_fit ?? '', pain_points: r.pain_points ?? '',
     personalization_notes: r.personalization_notes ?? '', search_query: r.search_term ?? '', search_location: r.search_location ?? '', error: r.error ?? '',
   }))
@@ -958,7 +961,7 @@ Deno.serve(async (req: Request) => {
               'Website': details.website ?? '',
               'Email': emailResult.email ?? '',
               'Email Verified': websiteResult?.emailMxOk === true ? 'Yes (MX)' : websiteResult?.emailMxOk === false ? 'No — domain cannot receive mail' : '',
-              'SEO Score': websiteResult?.seoScore != null ? `${websiteResult.seoScore}/100` : '',
+              'SEO Score': websiteResult?.seoScore != null ? `${websiteResult.seoScore}/100 — ${seoTag(websiteResult.seoScore)}` : '',
               'Tech Stack': websiteResult?.techStack ?? '',
               'Rating': details.rating != null ? String(details.rating) : '',
               'Website Status': aiScore?.website_status ?? '',

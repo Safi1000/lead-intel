@@ -10,11 +10,17 @@
  *   3. FAIL chains running >12h (safety net against infinite loops).
  *   4. REGENERATE the XLSX of runs completed 45+ min ago (once) — by then review enrichment and
  *      ads verdicts have landed, so the export matches the CRM instead of finalize-time data.
+ *   5. RESOLVE pending Google Ads verdicts. reviews-finalize tries once, minutes after import, but
+ *      DataForSEO's standard queue can take ~45 min — most verdicts aren't ready yet and the lead
+ *      stays on "Checking…" forever. This sweep retries until resolved (or gives up after 48h).
  */
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const PIPELINE_SECRET = Deno.env.get('PIPELINE_SECRET') ?? ''
+const DFS_LOGIN = Deno.env.get('DATAFORSEO_LOGIN') ?? ''
+const DFS_PASSWORD = Deno.env.get('DATAFORSEO_PASSWORD') ?? ''
+const ADS_GIVEUP_MS = 48 * 60 * 60 * 1000
 
 const STALL_MS = 4 * 60 * 1000
 const LEGACY_ZOMBIE_MS = 5 * 60 * 1000
@@ -51,13 +57,52 @@ async function firePipeline(body: unknown): Promise<number> {
   return await Promise.race([p, new Promise<number>((res) => setTimeout(() => res(202), 4000))])
 }
 
+// Same exact-domain matching as reviews-finalize: an ads_domain item matching the queried domain
+// in Google's Ads Transparency Center means the business is actively running Google ads.
+async function resolveAdsTask(taskId: string): Promise<{ runsAds: boolean; adsCount: number } | null> {
+  if (!DFS_LOGIN || !DFS_PASSWORD) return null
+  try {
+    const res = await fetch(`https://api.dataforseo.com/v3/serp/google/ads_advertisers/task_get/advanced/${taskId}`, {
+      headers: { Authorization: 'Basic ' + btoa(`${DFS_LOGIN}:${DFS_PASSWORD}`) },
+    })
+    if (!res.ok) return null
+    const task = (await res.json())?.tasks?.[0]
+    if (!task) return null
+    // 40102 "No Search Results" is a FINAL verdict: no advertiser exists for this domain.
+    if (task.status_code === 40102) return { runsAds: false, adsCount: 0 }
+    if (task.status_code !== 20000) return null // still queued / transient — retry next tick
+    const items: Array<{ type?: string; domain?: string; approx_ads_count?: number }> = task.result?.[0]?.items ?? []
+    const bare = String(task.data?.keyword ?? '').replace(/^www\./, '').toLowerCase()
+    let runsAds = false, adsCount = 0
+    for (const it of items) {
+      if (it.type === 'ads_domain' && String(it.domain ?? '').replace(/^www\./, '').toLowerCase() === bare) runsAds = true
+      if ((it.type === 'ads_advertiser' || it.type === 'ads_multi_account_advertiser') && it.approx_ads_count) {
+        adsCount = Math.max(adsCount, it.approx_ads_count)
+      }
+    }
+    return { runsAds, adsCount: runsAds ? adsCount : 0 }
+  } catch {
+    return null
+  }
+}
+
+async function pushAdsToLead(leadId: string, label: string) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}&select=data`, { headers: svcHeaders() })
+  const lead = res.ok ? (await res.json())[0] : null
+  if (!lead) return
+  await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+    method: 'PATCH', headers: svcHeaders({ Prefer: 'return=minimal' }),
+    body: JSON.stringify({ data: { ...lead.data, 'Running Google Ads': label } }),
+  })
+}
+
 Deno.serve(async (req: Request) => {
   const auth = req.headers.get('Authorization') ?? ''
   if (PIPELINE_SECRET && auth !== `Bearer ${PIPELINE_SECRET}`) {
     return new Response('unauthorized', { status: 401 })
   }
   const now = Date.now()
-  const report = { resumed: 0, failed_legacy: 0, failed_overrun: 0, xlsx_regenerated: 0 }
+  const report = { resumed: 0, failed_legacy: 0, failed_overrun: 0, xlsx_regenerated: 0, ads_resolved: 0, ads_gave_up: 0 }
 
   try {
     // --- running runs ---
@@ -114,6 +159,34 @@ Deno.serve(async (req: Request) => {
       console.log(`[watchdog] xlsx regeneration for ${run.id} -> ${status}`)
       report.xlsx_regenerated++
       break // one per tick
+    }
+
+    // --- pending Google Ads verdicts (imported leads still showing "Checking…") ---
+    const pendRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/sourced_places?ads_task_id=not.is.null&runs_google_ads=is.null&crm_lead_id=not.is.null&select=place_id,ads_task_id,crm_lead_id,created_at&order=created_at.desc&limit=12`,
+      { headers: svcHeaders() },
+    )
+    const pending: Array<{ place_id: string; ads_task_id: string; crm_lead_id: string; created_at: string }> =
+      pendRes.ok ? await pendRes.json() : []
+    for (const p of pending) {
+      const ads = await resolveAdsTask(p.ads_task_id)
+      if (ads) {
+        await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?place_id=eq.${p.place_id}`, {
+          method: 'PATCH', headers: svcHeaders({ Prefer: 'return=minimal' }),
+          body: JSON.stringify({ runs_google_ads: ads.runsAds, google_ads_count: ads.adsCount || null }),
+        })
+        const label = ads.runsAds ? `Yes${ads.adsCount ? ` (~${ads.adsCount} ads)` : ''}` : 'No / not detected'
+        await pushAdsToLead(p.crm_lead_id, label)
+        report.ads_resolved++
+      } else if (now - new Date(p.created_at).getTime() > ADS_GIVEUP_MS) {
+        // Task unretrievable after 48h — settle as not-detected so the CRM stops saying "Checking…".
+        await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?place_id=eq.${p.place_id}`, {
+          method: 'PATCH', headers: svcHeaders({ Prefer: 'return=minimal' }),
+          body: JSON.stringify({ runs_google_ads: false }),
+        })
+        await pushAdsToLead(p.crm_lead_id, 'No / not detected')
+        report.ads_gave_up++
+      }
     }
   } catch (e) {
     console.error('[watchdog] error:', (e as Error).message)

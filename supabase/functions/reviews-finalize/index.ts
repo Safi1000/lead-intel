@@ -149,7 +149,10 @@ async function resolveAdsTask(taskId: string, domain: string): Promise<{ runsAds
     })
     if (!res.ok) return null
     const task = (await res.json())?.tasks?.[0]
-    if (!task || task.status_code !== 20000) return null // still queued / failed — leave unresolved, retry next time
+    if (!task) return null
+    // 40102 "No Search Results" is a FINAL verdict: no advertiser exists for this domain.
+    if (task.status_code === 40102) return { runsAds: false, adsCount: 0 }
+    if (task.status_code !== 20000) return null // still queued / transient — leave unresolved, retry next time
     const items: Array<{ type?: string; domain?: string; approx_ads_count?: number }> = task.result?.[0]?.items ?? []
     // The task's keyword IS the domain we queried; match against it (fallback to passed domain).
     const bare = String(task.data?.keyword ?? domain).replace(/^www\./, '').toLowerCase()
@@ -270,7 +273,10 @@ Deno.serve(async (req: Request) => {
       if (lead) {
         const data: Record<string, unknown> = { ...lead.data, 'Pain Points': insights.pain_points, 'Personalization Notes': insights.personalization_notes }
         if (adsLabel != null) data['Running Google Ads'] = adsLabel
-        if (place.cwv_performance != null) data['Performance Score'] = `${place.cwv_performance}/100 (Google PageSpeed, mobile)`
+        if (place.cwv_performance != null) {
+          const tag = place.cwv_performance >= 90 ? 'Good' : place.cwv_performance >= 50 ? 'Slow' : 'Critical'
+          data['Performance Score'] = `${place.cwv_performance}/100 — ${tag} (Google PageSpeed, mobile)`
+        }
         await dbUpdate('leads', { data }, `id=eq.${place.crm_lead_id}`)
       }
     }
