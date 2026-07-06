@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, CheckCircle2, Search, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { assignmentApi, leadBatchesApi, manualLeadsApi, usersApi } from '../../api/endpoints'
+import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -15,6 +15,24 @@ import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isManagerRole } from './workflow'
 import type { LeadStage, ManualLead, ManagedUser, Paginated } from '../../api/types'
+
+/** Shift-time elapsed (ms) inside the PKT calling window 19:00–02:00 (= 14:00–21:00 UTC daily). */
+function shiftMsBetween(a: number, b: number): number {
+  if (b <= a) return 0
+  let total = 0
+  const day = new Date(a); day.setUTCHours(0, 0, 0, 0)
+  for (let t = day.getTime(); t < b; t += 86_400_000) {
+    const ws = t + 14 * 3_600_000, we = t + 21 * 3_600_000
+    total += Math.max(0, Math.min(b, we) - Math.max(a, ws))
+  }
+  return total
+}
+/** First-touch SLA breach: assigned, never dialled, still active, past the org's SLA window (shift-time). */
+function isSlaBreach(l: ManualLead, slaMs: number): boolean {
+  if (!l.assigned_at || l.first_touch_at) return false
+  if (l.lifecycle_state !== 'Assigned' && l.lifecycle_state !== 'In Progress') return false
+  return shiftMsBetween(new Date(l.assigned_at).getTime(), Date.now()) > slaMs
+}
 
 interface Tab { key: string; label: string; filter: (l: ManualLead) => boolean }
 
@@ -60,6 +78,20 @@ export function LeadQueuePage() {
     queryFn: () => leadBatchesApi.get(batchId as string),
     enabled: !!batchId,
   })
+  const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
+  const slaMs = (floor?.sla_hours ?? 4) * 3_600_000
+  const isSetter = role === 'setter'
+  const { data: goal = 0 } = useQuery({ queryKey: ['daily-goal'], queryFn: progressApi.getGoal, enabled: isSetter })
+  const periods = useMemo(() => {
+    const now = new Date(); const wd = (now.getDay() + 6) % 7
+    return {
+      day: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+      week: new Date(now.getFullYear(), now.getMonth(), now.getDate() - wd).toISOString(),
+      month: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+    }
+  }, [])
+  const { data: myCounts } = useQuery({ queryKey: ['my-counts', periods.day], queryFn: () => progressApi.myCounts(periods), enabled: isSetter })
+  const todayDone = myCounts?.today ?? 0
 
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof manualLeadsApi.update>[1] }) => manualLeadsApi.update(id, body),
@@ -112,24 +144,59 @@ export function LeadQueuePage() {
   })
   const [setterFilter, setSetterFilter] = useState('all')
   const [closerFilter, setCloserFilter] = useState('all')
+  const [lifecycleFilter, setLifecycleFilter] = useState('all')
+  const [attemptsFilter, setAttemptsFilter] = useState('all')
+  const [webFilter, setWebFilter] = useState('all')
+  const [dueFilter, setDueFilter] = useState('all')
+  const [hideDnc, setHideDnc] = useState(false)
+  const [scoreMin, setScoreMin] = useState('')
+  const [ratingMin, setRatingMin] = useState('all')
+  const [staleFilter, setStaleFilter] = useState('all')
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
+  const overdue = useMemo(() => leads.filter((l) => isSlaBreach(l, slaMs)).length, [leads, slaMs])
 
   // Distinct setters/closers present in this batch, for the filter dropdowns.
   const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
   const closerNames = useMemo(() => [...new Set(leads.map((l) => l.closer).filter((n): n is string => !!n))].sort(), [leads])
+  const lifecycleStates = useMemo(() => [...new Set(leads.map((l) => l.lifecycle_state).filter((s): s is NonNullable<typeof s> => s != null))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
     if (activeTab && !activeTab.filter(l)) return false
     if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
     if (closerFilter !== 'all' && l.closer !== (closerFilter === 'none' ? null : closerFilter)) return false
+    if (lifecycleFilter !== 'all' && l.lifecycle_state !== lifecycleFilter) return false
+    if (hideDnc && l.dnc) return false
+    if (attemptsFilter !== 'all') {
+      const a = l.attempt_count
+      if (attemptsFilter === '0' && a !== 0) return false
+      if (attemptsFilter === '12' && (a < 1 || a > 2)) return false
+      if (attemptsFilter === '3' && a < 3) return false
+    }
+    if (webFilter !== 'all') {
+      const has = !!(l.data['Website'] ?? '').trim()
+      if (webFilter === 'has' && !has) return false
+      if (webFilter === 'none' && has) return false
+    }
+    if (dueFilter !== 'all') {
+      const today = new Date().toISOString().slice(0, 10)
+      if (!l.next_follow_up) return false
+      if (dueFilter === 'overdue' && !(l.next_follow_up < today)) return false
+      if (dueFilter === 'today' && l.next_follow_up !== today) return false
+    }
+    if (scoreMin) { if (Number(l.data['Quality Score'] ?? 0) < Number(scoreMin)) return false }
+    if (ratingMin !== 'all') { if (Number(l.data['Rating'] ?? l.data['rating'] ?? 0) < Number(ratingMin)) return false }
+    if (staleFilter !== 'all') {
+      const t = l.last_touched_at ? new Date(l.last_touched_at).getTime() : 0
+      if (!(t && (Date.now() - t) / 86_400_000 > Number(staleFilter))) return false
+    }
     if (search) {
       const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, activeTab, search, setterFilter, closerFilter])
+  }), [leads, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
@@ -167,6 +234,19 @@ export function LeadQueuePage() {
 
       {isManager && batchId && <BatchAccess batchId={batchId} />}
 
+      {isManager && overdue > 0 && (
+        <div className="mb-3 rounded-[10px] border border-red-200 bg-red-50/60 px-4 py-2.5 text-[13px] font-medium text-red-700">
+          {overdue} lead{overdue === 1 ? '' : 's'} past the first-touch SLA — being auto-recycled to the pool.
+        </div>
+      )}
+
+      {isSetter && goal > 0 && (
+        <div className={cn('mb-3 rounded-[10px] border px-4 py-2.5 text-[13px] font-medium',
+          todayDone >= goal ? 'border-green-200 bg-green-50/60 text-green-700' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]')}>
+          Today: {todayDone}/{goal} leads worked {todayDone >= goal ? '· goal met 🎉' : `· ${Math.round((todayDone / goal) * 100)}% of today's target`}
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {tabs.map((t) => {
           const count = leads.filter(t.filter).length
@@ -185,6 +265,30 @@ export function LeadQueuePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
         </div>
+        {lifecycleStates.length > 0 && (
+          <select value={lifecycleFilter} onChange={(e) => setLifecycleFilter(e.target.value)} aria-label="Filter by lifecycle state"
+            className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+            <option value="all">All states</option>
+            {lifecycleStates.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        <select value={attemptsFilter} onChange={(e) => setAttemptsFilter(e.target.value)} aria-label="Filter by attempts" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any attempts</option><option value="0">0 attempts</option><option value="12">1–2</option><option value="3">3+</option>
+        </select>
+        <select value={webFilter} onChange={(e) => setWebFilter(e.target.value)} aria-label="Filter by website" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any site</option><option value="has">Has website</option><option value="none">No website</option>
+        </select>
+        <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} aria-label="Filter by follow-up" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option>
+        </select>
+        <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Hide DNC</label>
+        <Input type="number" min={0} value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} placeholder="Min score" aria-label="Minimum quality score" className="h-9 w-28" />
+        <select value={ratingMin} onChange={(e) => setRatingMin(e.target.value)} aria-label="Minimum rating" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any rating</option><option value="4">4.0+</option><option value="4.5">4.5+</option>
+        </select>
+        <select value={staleFilter} onChange={(e) => setStaleFilter(e.target.value)} aria-label="Last touched age" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any age</option><option value="7">Stale 7d+</option><option value="14">14d+</option><option value="30">30d+</option>
+        </select>
         {isManager && (
           <>
             <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter"
@@ -236,7 +340,7 @@ export function LeadQueuePage() {
               </thead>
               <tbody>
                 {filtered.map((l) => (
-                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit}
+                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit} slaMs={slaMs}
                     selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)}
                     onStage={(stage) => patch.mutate({ id: l.id, body: { stage } })}
                     onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })}
@@ -255,8 +359,8 @@ export function LeadQueuePage() {
   )
 }
 
-function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onToggle, onStage, onFollowUp, onDone }: {
-  lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean
+function LeadRow({ lead: l, role, isManager, canEdit, slaMs, selectable, checked, onToggle, onStage, onFollowUp, onDone }: {
+  lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean; slaMs: number
   selectable: boolean; checked: boolean; onToggle: () => void
   onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
@@ -265,6 +369,7 @@ function LeadRow({ lead: l, role, isManager, canEdit, selectable, checked, onTog
       {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <Link to={`/leads/manual/${l.id}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</Link>
+        {isSlaBreach(l, slaMs) && <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">SLA</span>}
       </td>
       <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={onStage} /></td>
       <td className="px-3 py-3"><FollowUpCell value={l.next_follow_up} disabled={!canEdit} onChange={onFollowUp} /></td>
@@ -326,8 +431,18 @@ function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchI
   const setters = useOrgMembers('setter')
   const [setterId, setSetterId] = useState('')
   const [count, setCount] = useState(Math.min(50, unassigned))
+  const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
+  const { data: loads } = useQuery({ queryKey: ['setter-loads'], queryFn: floorConfigApi.setterLoads })
+
+  // WIP cap: a setter can only receive up to (cap − their current active load) more leads.
+  const cap = floor?.wip_cap ?? 40
+  const currentLoad = setterId ? (loads?.[setterId] ?? 0) : 0
+  const room = Math.max(0, cap - currentLoad)
+  const maxAssign = Math.min(unassigned, room)
+  const clamped = Math.max(0, Math.min(count, maxAssign))
+
   const assign = useMutation({
-    mutationFn: () => assignmentApi.assignLeadsToSetter(batchId, setterId, count),
+    mutationFn: () => assignmentApi.assignLeadsToSetter(batchId, setterId, clamped),
     onSuccess: (n) => { toast.success(`Assigned ${n} lead${n === 1 ? '' : 's'} at random`); onDone() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
@@ -336,19 +451,24 @@ function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchI
       <div className="space-y-4">
         <div>
           <Label htmlFor="as-setter">Setter</Label>
-          <select id="as-setter" value={setterId} onChange={(e) => setSetterId(e.target.value)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <select id="as-setter" value={setterId} onChange={(e) => { setSetterId(e.target.value); setCount(Math.min(50, unassigned)) }} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
             <option value="">Select a setter…</option>
-            {setters.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            {setters.map((u) => <option key={u.id} value={u.id}>{u.name}{loads ? ` — ${loads[u.id] ?? 0}/${cap} active` : ''}</option>)}
           </select>
           {setters.length === 0 && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">No setters in this organization yet — add one in Users.</p>}
         </div>
+        {setterId && (
+          <p className={cn('text-[12px]', room === 0 ? 'font-medium text-red-600' : 'text-[var(--color-text-muted)]')}>
+            {room === 0 ? `At WIP cap (${currentLoad}/${cap}) — dispose active leads before assigning more.` : `Holding ${currentLoad}/${cap} active — room for ${room} more.`}
+          </p>
+        )}
         <div>
-          <Label htmlFor="as-count">Number of leads (max {unassigned} unassigned)</Label>
-          <Input id="as-count" type="number" min={1} max={unassigned} value={count} onChange={(e) => setCount(Math.max(1, Math.min(unassigned, Number(e.target.value) || 0)))} />
+          <Label htmlFor="as-count">Number of leads (max {maxAssign})</Label>
+          <Input id="as-count" type="number" min={1} max={maxAssign} value={clamped} onChange={(e) => setCount(Math.max(1, Math.min(maxAssign, Number(e.target.value) || 0)))} disabled={maxAssign === 0} />
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button loading={assign.isPending} disabled={!setterId || count < 1 || unassigned === 0} onClick={() => assign.mutate()}>Assign {count} randomly</Button>
+          <Button loading={assign.isPending} disabled={!setterId || clamped < 1 || maxAssign === 0} onClick={() => assign.mutate()}>Assign {clamped} randomly</Button>
         </div>
       </div>
     </Dialog>

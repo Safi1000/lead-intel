@@ -48,6 +48,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const inOrg = useAuthStore((s) => s.actingOrgId) != null
 
   const visible = CLIENT_NAV.filter((item) => {
+    // Clients are external: they only ever see items explicitly tagged for them (the portal).
+    if (role === 'client') return item.roles?.includes('client') ?? false
     if (item.orgContext && !inOrg) return false
     if (item.perm) return can(role, item.perm.action, item.perm.resource, permissions)
     if (item.roles && !(role !== null && item.roles.includes(role))) return false

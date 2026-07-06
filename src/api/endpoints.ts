@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
-import type { ActivityType, BatchAssignment, Client, LeadActivity, LeadBatch, LeadStage, TemplateColumn, User, UserRemark } from './types'
+import { TIER2_TO_STAGE } from './types'
+import type { ActivityType, Attainment, BatchAssignment, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -257,6 +258,49 @@ export const usersApi = {
   remove: (id: string) => invokeAdmin({ action: 'delete_user', id }),
 }
 
+// ---- Teams (org → manager → team → rep). RLS keeps everything org-scoped. ----
+export const teamsApi = {
+  list: async (): Promise<Team[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('teams').select('*').order('created_at')
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Team[]
+  },
+  create: async (name: string, managerId?: string | null): Promise<Team> => {
+    const { data, error } = await supabase.from('teams').insert({ org_id: effectiveOrgId(), name: name.trim(), manager_id: managerId ?? null }).select().single()
+    if (error) throw new Error(error.message)
+    return data as Team
+  },
+  update: async (id: string, body: Partial<{ name: string; manager_id: string | null }>): Promise<void> => {
+    const { error } = await supabase.from('teams').update(body).eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+  remove: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('teams').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+  members: async (teamId: string): Promise<TeamMembership[]> => {
+    const { data, error } = await supabase.from('team_members').select('*').eq('team_id', teamId)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as TeamMembership[]
+  },
+  allMemberships: async (): Promise<TeamMembership[]> => {
+    const { data, error } = await supabase.from('team_members').select('*') // RLS scopes to org
+    if (error) throw new Error(error.message)
+    return (data ?? []) as TeamMembership[]
+  },
+  addMember: async (teamId: string, userId: string, role: TeamMembership['role_in_team']): Promise<void> => {
+    const { error } = await supabase.from('team_members').upsert({ team_id: teamId, user_id: userId, role_in_team: role }, { onConflict: 'team_id,user_id' })
+    if (error) throw new Error(error.message)
+  },
+  removeMember: async (teamId: string, userId: string): Promise<void> => {
+    const { error } = await supabase.from('team_members').delete().eq('team_id', teamId).eq('user_id', userId)
+    if (error) throw new Error(error.message)
+  },
+}
+
 // ---- User remarks (manager/SA notes about a user) ----
 export const userRemarksApi = {
   list: async (profileId: string): Promise<UserRemark[]> => {
@@ -395,6 +439,14 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
   closer_verdict: (l.closer_verdict as 'warm' | 'not_warm') ?? null,
   closer_verdict_by: (l.closer_verdict_by as string) ?? null,
   closer_verdict_at: (l.closer_verdict_at as string) ?? null,
+  lifecycle_state: (l.lifecycle_state as ManualLead['lifecycle_state']) ?? null,
+  dnc: (l.dnc as boolean) ?? false,
+  attempt_count: Number(l.attempt_count ?? 0),
+  last_touched_at: (l.last_touched_at as string) ?? null,
+  nurture_wake_at: (l.nurture_wake_at as string) ?? null,
+  assigned_at: (l.assigned_at as string) ?? null,
+  first_touch_at: (l.first_touch_at as string) ?? null,
+  team_id: (l.team_id as string) ?? null,
   remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
 })
 
@@ -428,7 +480,7 @@ export const manualLeadsApi = {
     const { data: remarks } = await supabase.from('lead_remarks').select('*').eq('lead_id', id).order('at', { ascending: true })
     return mapLead(data, (remarks ?? []) as LeadRemark[])
   },
-  update: async (id: string, body: Partial<{ status: LeadStatus; stage: LeadStage; next_follow_up: string | null; call_at: string | null; temperature: Temperature; setter: string | null; closer: string | null }>): Promise<ManualLead> => {
+  update: async (id: string, body: Partial<{ status: LeadStatus; stage: LeadStage; next_follow_up: string | null; call_at: string | null; temperature: Temperature; setter: string | null; closer: string | null; team_id: string | null }>): Promise<ManualLead> => {
     // Snapshot old values first so stage/temperature changes land in the activity log with old → new.
     let prev: { stage?: string; temperature?: string | null } = {}
     if (body.stage !== undefined || body.temperature !== undefined) {
@@ -483,6 +535,17 @@ export const manualLeadsApi = {
     }
     return { unassigned: doneIds.length, locked: ids.length - doneIds.length }
   },
+  /** Rep offboarding — move a departing rep's active (not-done) leads to another rep, or to the pool. */
+  reassignFrom: async (fromId: string, toId: string | null, which: 'setter' | 'closer' = 'setter'): Promise<number> => {
+    const col = which === 'setter' ? 'setter_id' : 'closer_id'
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (which === 'setter') { patch.setter_id = toId; if (!toId) { patch.status = 'new'; patch.lifecycle_state = 'Unassigned' } }
+    else patch.closer_id = toId
+    const { data, error } = await supabase.from('leads').update(patch).eq(col, fromId).is('done_at', null).select('id')
+    if (error) throw new Error(error.message)
+    return (data ?? []).length
+  },
+
   /** Mark a lead processed / un-processed (throughput tracking). */
   markDone: async (id: string, done: boolean): Promise<void> => {
     const { error } = await supabase.rpc('mark_lead_done', { p_lead: id, p_done: done })
@@ -506,6 +569,148 @@ export const manualLeadsApi = {
       return q
     })
     return data.map((l) => mapLead(l))
+  },
+}
+
+// ---- Deals (§3/§8) — the money on a lead, for the revenue side of targets + closer KPIs. ----
+export const dealsApi = {
+  forLead: async (leadId: string): Promise<Deal[]> => {
+    const { data, error } = await supabase.from('deals').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Deal[]
+  },
+  save: async (leadId: string, body: { id?: string; stage: Deal['stage']; value: number | null; currency?: string }): Promise<Deal> => {
+    const closer = useAuthStore.getState().user?.id ?? null
+    const payload: Record<string, unknown> = {
+      lead_id: leadId, org_id: effectiveOrgId(), closer_id: closer,
+      stage: body.stage, value: body.value, currency: body.currency ?? 'USD',
+      closed_at: body.stage === 'won' || body.stage === 'lost' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }
+    const res = body.id
+      ? await supabase.from('deals').update(payload).eq('id', body.id).select().single()
+      : await supabase.from('deals').insert(payload).select().single()
+    if (res.error) throw new Error(res.error.message)
+    return res.data as Deal
+  },
+  /** All org deals with the lead name, for the pipeline kanban. */
+  board: async (): Promise<Array<Deal & { lead_name: string }>> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('deals').select('*, leads(display_name)')
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q.order('updated_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []).map((d) => ({ ...(d as Deal), lead_name: (d as { leads?: { display_name?: string } }).leads?.display_name ?? 'Lead' }))
+  },
+  updateStage: async (id: string, stage: Deal['stage']): Promise<void> => {
+    const patch: Record<string, unknown> = { stage, updated_at: new Date().toISOString() }
+    if (stage === 'won' || stage === 'lost') patch.closed_at = new Date().toISOString()
+    const { error } = await supabase.from('deals').update(patch).eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+}
+
+// ---- Targets (§8) — blended revenue + closes, versioned; attainment from won deals. ----
+export const targetsApi = {
+  forPeriod: async (period: string): Promise<TargetRow[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('targets').select('*').eq('period', period).order('set_at', { ascending: true })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data ?? []) as TargetRow[]
+  },
+  set: async (level: TargetRow['level'], ownerId: string | null, period: string, revenue: number, closes: number): Promise<void> => {
+    const by = useAuthStore.getState().user?.id ?? null
+    const { error } = await supabase.from('targets').insert({ org_id: effectiveOrgId(), level, owner_id: ownerId, period, revenue_value: revenue, closes_value: closes, set_by: by })
+    if (error) throw new Error(error.message)
+  },
+  /** Attainment for the period: won-deal totals + per-closer, plus per-setter booked meetings. */
+  attainment: async (period: string): Promise<{ org: Attainment; byCloser: Record<string, Attainment>; bySetter: Record<string, number> }> => {
+    const org = effectiveOrgId()
+    const [y, m] = period.split('-').map(Number)
+    const start = new Date(Date.UTC(y, m - 1, 1)).toISOString()
+    const end = new Date(Date.UTC(y, m, 0, 23, 59, 59)).toISOString()
+    let q = supabase.from('deals').select('closer_id,value').eq('stage', 'won').gte('closed_at', start).lte('closed_at', end)
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    const orgAtt: Attainment = { closes: 0, revenue: 0 }
+    const byCloser: Record<string, Attainment> = {}
+    for (const d of data ?? []) {
+      const val = Number(d.value ?? 0)
+      orgAtt.closes++; orgAtt.revenue += val
+      const c = d.closer_id as string | null
+      if (c) { const a = (byCloser[c] ??= { closes: 0, revenue: 0 }); a.closes++; a.revenue += val }
+    }
+    // Setter attainment = booked meetings logged this period.
+    let dq = supabase.from('disposition_events').select('rep_id').eq('tier2', 'Booked').gte('created_at', start).lte('created_at', end)
+    if (org) dq = dq.eq('org_id', org)
+    const { data: disp } = await dq
+    const bySetter: Record<string, number> = {}
+    for (const d of disp ?? []) { const r = d.rep_id as string; bySetter[r] = (bySetter[r] ?? 0) + 1 }
+    return { org: orgAtt, byCloser, bySetter }
+  },
+}
+
+// ---- Floor controls (§6) — editable per org; setter WIP loads for cap enforcement. ----
+export const floorConfigApi = {
+  get: async (): Promise<FloorConfig> => {
+    const org = effectiveOrgId()
+    if (!org) return { wip_cap: 40, sla_hours: 4, recycle_attempts: 5 }
+    const { data } = await supabase.from('pipeline_config').select('floor_wip_cap,floor_sla_hours,floor_recycle_attempts').eq('org_id', org).maybeSingle()
+    return { wip_cap: data?.floor_wip_cap ?? 40, sla_hours: data?.floor_sla_hours ?? 4, recycle_attempts: data?.floor_recycle_attempts ?? 5 }
+  },
+  update: async (body: FloorConfig): Promise<void> => {
+    const org = effectiveOrgId()
+    if (!org) throw new Error('No organization selected.')
+    const patch = { floor_wip_cap: body.wip_cap, floor_sla_hours: body.sla_hours, floor_recycle_attempts: body.recycle_attempts }
+    const { data: existing } = await supabase.from('pipeline_config').select('org_id').eq('org_id', org).maybeSingle()
+    const { error } = existing
+      ? await supabase.from('pipeline_config').update(patch).eq('org_id', org)
+      : await supabase.from('pipeline_config').insert({ org_id: org, ...patch })
+    if (error) throw new Error(error.message)
+  },
+  /** Active (unworked) lead count per setter — Assigned / In Progress, not done. For WIP caps. */
+  setterLoads: async (): Promise<Record<string, number>> => {
+    const org = effectiveOrgId()
+    const rows = await fetchAll<{ setter_id: string | null; lifecycle_state: string | null; done_at: string | null }>((from, to) => {
+      let q = supabase.from('leads').select('setter_id,lifecycle_state,done_at').not('setter_id', 'is', null).range(from, to)
+      if (org) q = q.eq('org_id', org)
+      return q
+    })
+    const load: Record<string, number> = {}
+    for (const r of rows) {
+      if (!r.setter_id || r.done_at) continue
+      if (r.lifecycle_state === 'Assigned' || r.lifecycle_state === 'In Progress') load[r.setter_id] = (load[r.setter_id] ?? 0) + 1
+    }
+    return load
+  },
+}
+
+// ---- Dispositions (§7 tier-1/tier-2). Insert drives lifecycle_state/attempts/dnc via DB trigger;
+// we also sync the legacy coarse `stage` so existing stage-based views stay coherent. ----
+export const dispositionsApi = {
+  list: async (leadId: string): Promise<DispositionEvent[]> => {
+    const { data, error } = await supabase.from('disposition_events').select('*').eq('lead_id', leadId).order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as DispositionEvent[]
+  },
+  add: async (leadId: string, body: { tier1: DispositionTier1; tier2: DispositionTier2 | null; notes?: string | null; next_action_at?: string | null }): Promise<void> => {
+    const rep = useAuthStore.getState().user?.id ?? null
+    const { error } = await supabase.from('disposition_events').insert({
+      lead_id: leadId, org_id: effectiveOrgId(), rep_id: rep,
+      tier1: body.tier1, tier2: body.tier2 ?? null,
+      notes: body.notes?.trim() || null, next_action_at: body.next_action_at ?? null,
+    })
+    if (error) throw new Error(error.message)
+    if (body.tier2) {
+      const patch: Record<string, unknown> = { stage: TIER2_TO_STAGE[body.tier2], updated_at: new Date().toISOString() }
+      if (body.next_action_at && (body.tier2 === 'Callback scheduled' || body.tier2 === 'Nurture / not now')) {
+        patch.next_follow_up = body.next_action_at.slice(0, 10)
+      }
+      await supabase.from('leads').update(patch).eq('id', leadId)
+    }
   },
 }
 
@@ -757,6 +962,191 @@ export const statsApi = {
       }
     }
     return out
+  },
+}
+
+// ---- Disposition-derived KPIs (§8). Built from disposition_events (manual capture) since we don't
+// have CloudTalk API on Essentials — so: attempts/connects/booked + rates, no talk-time yet. ----
+export interface SetterKpi {
+  rep_id: string; name: string
+  assigned: number; worked: number
+  attempts: number; connects: number; connectRate: number
+  booked: number; bookingRate: number
+  speedHrs: number; overdue: number
+}
+export const kpisApi = {
+  setterFunnel: async (sinceISO: string): Promise<SetterKpi[]> => {
+    const org = effectiveOrgId()
+    const { data: disp, error } = await supabase.from('disposition_events').select('rep_id,tier1,tier2').gte('created_at', sinceISO)
+    if (error) throw new Error(error.message)
+    const leadRows = await fetchAll<{ setter_id: string | null; attempt_count: number; assigned_at: string | null; first_touch_at: string | null; next_follow_up: string | null }>((from, to) => {
+      let q = supabase.from('leads').select('setter_id,attempt_count,assigned_at,first_touch_at,next_follow_up').not('setter_id', 'is', null).range(from, to)
+      if (org) q = q.eq('org_id', org)
+      return q
+    })
+    const users = await usersApi.list()
+    const nameFor = (id: string) => users.find((u) => u.id === id)?.name ?? 'Rep'
+    const map = new Map<string, SetterKpi>()
+    const speed = new Map<string, { sum: number; n: number }>()
+    const get = (id: string) => {
+      let k = map.get(id)
+      if (!k) { k = { rep_id: id, name: nameFor(id), assigned: 0, worked: 0, attempts: 0, connects: 0, connectRate: 0, booked: 0, bookingRate: 0, speedHrs: 0, overdue: 0 }; map.set(id, k) }
+      return k
+    }
+    for (const d of disp ?? []) { const k = get(d.rep_id as string); k.attempts++; if (d.tier1 === 'Connected') k.connects++; if (d.tier2 === 'Booked') k.booked++ }
+    const today = new Date().toISOString().slice(0, 10)
+    for (const l of leadRows) {
+      if (!l.setter_id) continue
+      const k = get(l.setter_id); k.assigned++
+      if ((l.attempt_count ?? 0) > 0) k.worked++
+      if (l.assigned_at && l.first_touch_at) { const s = speed.get(l.setter_id) ?? { sum: 0, n: 0 }; s.sum += (new Date(l.first_touch_at).getTime() - new Date(l.assigned_at).getTime()) / 3_600_000; s.n++; speed.set(l.setter_id, s) }
+      if (l.next_follow_up && l.next_follow_up < today) k.overdue++
+    }
+    for (const k of map.values()) {
+      k.connectRate = k.attempts ? Math.round((k.connects / k.attempts) * 100) : 0
+      k.bookingRate = k.connects ? Math.round((k.booked / k.connects) * 100) : 0
+      const s = speed.get(k.rep_id); k.speedHrs = s && s.n ? Math.round((s.sum / s.n) * 10) / 10 : 0
+    }
+    return [...map.values()].sort((a, b) => b.booked - a.booked || b.connects - a.connects)
+  },
+  /** Closer $ KPIs from deals: close rate, avg deal, pipeline (open value), sales-cycle days. */
+  closerFunnel: async (): Promise<CloserKpi[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('deals').select('closer_id,stage,value,created_at,closed_at')
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    const users = await usersApi.list()
+    const nameFor = (id: string) => users.find((u) => u.id === id)?.name ?? 'Closer'
+    type Acc = { deals: number; won: number; lost: number; revenue: number; cycleSum: number; cycleN: number; pipeline: number }
+    const map = new Map<string, Acc>()
+    const get = (id: string) => { let k = map.get(id); if (!k) { k = { deals: 0, won: 0, lost: 0, revenue: 0, cycleSum: 0, cycleN: 0, pipeline: 0 }; map.set(id, k) } return k }
+    for (const d of data ?? []) {
+      const id = d.closer_id as string | null; if (!id) continue
+      const k = get(id); k.deals++
+      if (d.stage === 'won') { k.won++; k.revenue += Number(d.value ?? 0); if (d.closed_at) { k.cycleSum += (new Date(d.closed_at as string).getTime() - new Date(d.created_at as string).getTime()) / 86_400_000; k.cycleN++ } }
+      else if (d.stage === 'lost') k.lost++
+      else k.pipeline += Number(d.value ?? 0)
+    }
+    return [...map.entries()].map(([id, k]) => ({
+      rep_id: id, name: nameFor(id), deals: k.deals, won: k.won, lost: k.lost,
+      closeRate: k.won + k.lost ? Math.round((k.won / (k.won + k.lost)) * 100) : 0,
+      revenue: k.revenue, avgDeal: k.won ? Math.round(k.revenue / k.won) : 0, pipeline: k.pipeline,
+      cycleDays: k.cycleN ? Math.round(k.cycleSum / k.cycleN) : 0,
+    })).sort((a, b) => b.revenue - a.revenue)
+  },
+  /** Manager-console alert counts: first-touch SLA breaches, overdue callbacks, idle reps. */
+  floorAlerts: async (slaHours: number): Promise<{ slaBreaches: number; overdueCallbacks: number; idleReps: number }> => {
+    const shiftMs = (a: number, b: number): number => {
+      if (b <= a) return 0
+      let total = 0
+      const day = new Date(a); day.setUTCHours(0, 0, 0, 0)
+      for (let t = day.getTime(); t < b; t += 86_400_000) { const ws = t + 14 * 3_600_000, we = t + 21 * 3_600_000; total += Math.max(0, Math.min(b, we) - Math.max(a, ws)) }
+      return total
+    }
+    const org = effectiveOrgId()
+    const rows = await fetchAll<{ setter_id: string | null; assigned_at: string | null; first_touch_at: string | null; lifecycle_state: string | null; done_at: string | null; next_follow_up: string | null }>((from, to) => {
+      let q = supabase.from('leads').select('setter_id,assigned_at,first_touch_at,lifecycle_state,done_at,next_follow_up').range(from, to)
+      if (org) q = q.eq('org_id', org)
+      return q
+    })
+    const now = Date.now(); const slaMs = slaHours * 3_600_000; const today = new Date().toISOString().slice(0, 10)
+    const isActive = (s: string | null) => s === 'Assigned' || s === 'In Progress'
+    let slaBreaches = 0, overdueCallbacks = 0
+    const activeSetters = new Set<string>()
+    for (const l of rows) {
+      if (l.done_at) continue
+      if (l.setter_id && isActive(l.lifecycle_state)) activeSetters.add(l.setter_id)
+      if (l.assigned_at && !l.first_touch_at && isActive(l.lifecycle_state) && shiftMs(new Date(l.assigned_at).getTime(), now) > slaMs) slaBreaches++
+      if (l.next_follow_up && l.next_follow_up < today && (isActive(l.lifecycle_state) || l.lifecycle_state === 'Nurture')) overdueCallbacks++
+    }
+    const last = await repActivityApi.last()
+    let idleReps = 0
+    for (const s of activeSetters) { const t = last[s] ? new Date(last[s]).getTime() : 0; if (now - t > 30 * 60_000) idleReps++ }
+    return { slaBreaches, overdueCallbacks, idleReps }
+  },
+  /** Total delivered leads for the current org (RLS/acting-org scoped) — for spend math. */
+  orgLeadCount: async (): Promise<number> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('leads').select('*', { count: 'exact', head: true })
+    if (org) q = q.eq('org_id', org)
+    const { count } = await q
+    return count ?? 0
+  },
+}
+export interface CloserKpi {
+  rep_id: string; name: string
+  deals: number; won: number; lost: number; closeRate: number
+  revenue: number; avgDeal: number; pipeline: number; cycleDays: number
+}
+
+// ---- Scripts / email templates (§10). Org-scoped read; managers write. ----
+export const scriptsApi = {
+  list: async (): Promise<Script[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('scripts').select('*').order('updated_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Script[]
+  },
+  save: async (body: { id?: string; kind: 'call' | 'email'; name: string; body: string }): Promise<void> => {
+    const by = useAuthStore.getState().user?.id ?? null
+    const payload = { org_id: effectiveOrgId(), kind: body.kind, name: body.name, body: body.body, updated_at: new Date().toISOString() }
+    const res = body.id
+      ? await supabase.from('scripts').update(payload).eq('id', body.id)
+      : await supabase.from('scripts').insert({ ...payload, created_by: by })
+    if (res.error) throw new Error(res.error.message)
+  },
+  remove: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('scripts').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+}
+
+// ---- Provider console (Surface 3, superadmin) + client portal (Surface 2) + billing (§13). ----
+export interface ProviderRow {
+  org_id: string; org_name: string; leads_total: number; delivered_30d: number; booked: number
+  plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number
+}
+export const providerApi = {
+  overview: async (): Promise<ProviderRow[]> => {
+    const { data, error } = await supabase.rpc('provider_overview')
+    if (error) throw new Error(error.message)
+    return (data ?? []) as ProviderRow[]
+  },
+  setBilling: async (orgId: string, body: { plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number }): Promise<void> => {
+    const { error } = await supabase.from('org_billing').upsert({ org_id: orgId, ...body, updated_at: new Date().toISOString() }, { onConflict: 'org_id' })
+    if (error) throw new Error(error.message)
+  },
+}
+export const portalApi = {
+  summary: async (): Promise<{ delivered: number; booked: number; won: number; revenue: number; recent: Array<{ id: string; name: string; city: string; booked: boolean }> }> => {
+    const { data: leads } = await supabase.from('leads').select('id,display_name,data,lifecycle_state,created_at').order('created_at', { ascending: false }).limit(2000)
+    const rows = leads ?? []
+    const recent = rows.slice(0, 50).map((l) => {
+      const d = (l.data ?? {}) as Record<string, string>
+      return { id: l.id as string, name: (l.display_name as string) ?? 'Lead', city: d.City ?? d.city ?? '', booked: l.lifecycle_state === 'Booked' }
+    })
+    const { data: deals } = await supabase.from('deals').select('value').eq('stage', 'won')
+    return {
+      delivered: rows.length,
+      booked: rows.filter((l) => l.lifecycle_state === 'Booked').length,
+      won: deals?.length ?? 0,
+      revenue: (deals ?? []).reduce((s, d) => s + Number(d.value ?? 0), 0),
+      recent,
+    }
+  },
+}
+
+/** Latest disposition timestamp per rep (for the idle-rep alert). */
+export const repActivityApi = {
+  last: async (): Promise<Record<string, string>> => {
+    const { data, error } = await supabase.from('disposition_events').select('rep_id,created_at').order('created_at', { ascending: false }).limit(500)
+    if (error) throw new Error(error.message)
+    const last: Record<string, string> = {}
+    for (const d of data ?? []) { const r = d.rep_id as string; if (!last[r]) last[r] = d.created_at as string }
+    return last
   },
 }
 

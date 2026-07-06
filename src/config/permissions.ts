@@ -80,6 +80,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   lead_generator: 'Lead Generator',
   setter: 'Setter',
   closer: 'Closer',
+  client: 'Client',
 }
 
 export const ROLE_CAPABILITIES: Record<Role, string> = {
@@ -89,4 +90,5 @@ export const ROLE_CAPABILITIES: Record<Role, string> = {
   lead_generator: 'Creates upload templates and imports leads.',
   setter: 'Tests and calls leads, leaves remarks, sets warm/cold.',
   closer: 'Closes, holds, or returns leads; sets warm/cold.',
+  client: 'External customer — read-only results portal.',
 }

@@ -46,9 +46,19 @@ const UploadPage = lazyPage(() => import('../features/upload/Upload').then((m) =
 const BatchesPage = lazyPage(() => import('../features/leadwork/Batches').then((m) => ({ default: m.BatchesPage })))
 const DueTodayPage = lazyPage(() => import('../features/leadwork/DueToday').then((m) => ({ default: m.DueTodayPage })))
 const ActivityPage = lazyPage(() => import('../features/leadwork/Activity').then((m) => ({ default: m.ActivityPage })))
+const PerformancePage = lazyPage(() => import('../features/sales/Performance').then((m) => ({ default: m.PerformancePage })))
+const TargetsPage = lazyPage(() => import('../features/sales/Targets').then((m) => ({ default: m.TargetsPage })))
 const LeadQueuePage = lazyPage(() => import('../features/leadwork/LeadQueue').then((m) => ({ default: m.LeadQueuePage })))
 const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualLeadDetail').then((m) => ({ default: m.ManualLeadDetailPage })))
 const AuditReportPage = lazyPage(() => import('../features/leadwork/AuditReport').then((m) => ({ default: m.AuditReportPage })))
+const TeamsPage = lazyPage(() => import('../features/leadwork/Teams').then((m) => ({ default: m.TeamsPage })))
+const DealsPage = lazyPage(() => import('../features/sales/Deals').then((m) => ({ default: m.DealsPage })))
+const DiscoveryPage = lazyPage(() => import('../features/pipeline/Discovery').then((m) => ({ default: m.DiscoveryPage })))
+const ConsolePage = lazyPage(() => import('../features/leadwork/Console').then((m) => ({ default: m.ConsolePage })))
+const ScriptsPage = lazyPage(() => import('../features/leadwork/Scripts').then((m) => ({ default: m.ScriptsPage })))
+const ProviderPage = lazyPage(() => import('../features/provider/Provider').then((m) => ({ default: m.ProviderPage })))
+const PortalPage = lazyPage(() => import('../features/portal/Portal').then((m) => ({ default: m.PortalPage })))
+const CockpitPage = lazyPage(() => import('../features/sales/Cockpit').then((m) => ({ default: m.CockpitPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -123,8 +133,17 @@ export const router = createBrowserRouter([
                   { path: 'today', element: L(<DueTodayPage />) },
                   {
                     element: <RequireRole roles={['superadmin', 'manager']} />,
-                    children: [{ path: 'activity', element: L(<ActivityPage />) }],
+                    children: [
+                      { path: 'activity', element: L(<ActivityPage />) },
+                      { path: 'performance', element: L(<PerformancePage />) },
+                      { path: 'targets', element: L(<TargetsPage />) },
+                      { path: 'teams', element: L(<TeamsPage />) },
+                      { path: 'console', element: L(<ConsolePage />) },
+                      { path: 'cockpit', element: L(<CockpitPage />) },
+                    ],
                   },
+                  { path: 'deals', element: L(<DealsPage />) },
+                  { path: 'scripts', element: L(<ScriptsPage />) },
                   { path: 'progress', element: L(<ProgressPage />) },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
@@ -143,7 +162,10 @@ export const router = createBrowserRouter([
                   },
                   {
                     element: <RequireRole roles={['superadmin', 'manager']} />,
-                    children: [{ path: 'pipeline', element: L(<PipelinePage />) }],
+                    children: [
+                      { path: 'pipeline', element: L(<PipelinePage />) },
+                      { path: 'discovery', element: L(<DiscoveryPage />) },
+                    ],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.
                   {
@@ -165,6 +187,16 @@ export const router = createBrowserRouter([
               {
                 element: <RequireRole roles={['superadmin', 'admin']} />,
                 children: [{ path: 'organizations', element: L(<OrganizationsPage />) }],
+              },
+              // Provider console (Surface 3) — TechxServe god-view across tenants.
+              {
+                element: <RequireRole roles={['superadmin']} />,
+                children: [{ path: 'provider', element: L(<ProviderPage />) }],
+              },
+              // Client portal (Surface 2) — external customer, read-only results.
+              {
+                element: <RequireRole roles={['client']} />,
+                children: [{ path: 'portal', element: L(<PortalPage />) }],
               },
               // Legacy enrichment screens (kept, no longer linked):
               { path: 'runs/:runId/leads', element: <LeadListPage /> },

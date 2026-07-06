@@ -11,6 +11,7 @@ export type Role =
   | 'lead_generator' // uploads leads via templates
   | 'setter' // tests/calls leads, leaves remarks, sets warm/cold
   | 'closer' // closes/keeps-open/returns leads, sets warm/cold
+  | 'client' // external customer: read-only results portal only
 
 export interface User {
   id: string
@@ -568,6 +569,96 @@ export type Temperature = 'warm' | 'cold' | null
 export type LeadStage = 'New' | 'Contacted' | 'Interested' | 'Booked' | 'Not Now' | 'Won' | 'Lost'
 export const LEAD_STAGES: LeadStage[] = ['New', 'Contacted', 'Interested', 'Booked', 'Not Now', 'Won', 'Lost']
 
+/** Disposition taxonomy (§7). Tier-1 = connection outcome; tier-2 = contact outcome (if Connected). */
+export type DispositionTier1 = 'No answer' | 'Voicemail' | 'Busy' | 'Bad/Wrong number' | 'Gatekeeper block' | 'Connected'
+export type DispositionTier2 = 'Booked' | 'Interested – follow up' | 'Callback scheduled' | 'Nurture / not now' | 'Not interested' | 'Do not call' | 'Not a fit / not DM'
+export const DISPOSITION_TIER1: DispositionTier1[] = ['No answer', 'Voicemail', 'Busy', 'Bad/Wrong number', 'Gatekeeper block', 'Connected']
+export const DISPOSITION_TIER2: DispositionTier2[] = ['Booked', 'Interested – follow up', 'Callback scheduled', 'Nurture / not now', 'Not interested', 'Do not call', 'Not a fit / not DM']
+/** Derived lifecycle_state values (trigger-maintained on the lead). */
+export type LifecycleState = 'Unassigned' | 'Assigned' | 'In Progress' | 'Booked' | 'Shown' | 'Won' | 'Lost' | 'Nurture' | 'DNC' | 'Disqualified'
+/** Keep the legacy coarse `stage` in sync when a tier-2 outcome is logged (front-end write). */
+export const TIER2_TO_STAGE: Record<DispositionTier2, LeadStage> = {
+  'Booked': 'Booked',
+  'Interested – follow up': 'Interested',
+  'Callback scheduled': 'Contacted',
+  'Nurture / not now': 'Not Now',
+  'Not interested': 'Lost',
+  'Do not call': 'Lost',
+  'Not a fit / not DM': 'Lost',
+}
+/** Which tier-2 dispositions require a date (callback/nurture wake time). */
+export const TIER2_NEEDS_DATE: DispositionTier2[] = ['Callback scheduled', 'Nurture / not now']
+
+export interface DispositionEvent {
+  id: string
+  lead_id: string
+  rep_id: string
+  tier1: DispositionTier1
+  tier2: DispositionTier2 | null
+  notes: string | null
+  next_action_at: string | null
+  created_at: string
+}
+
+/** Team layer (§2/§3) — org → manager → team → rep. */
+export interface Team {
+  id: string
+  org_id: string | null
+  manager_id: string | null
+  name: string
+  created_at: string
+}
+export interface TeamMembership {
+  team_id: string
+  user_id: string
+  role_in_team: 'setter' | 'closer' | 'manager'
+}
+
+/** Deal object (§3/§8) — one opportunity a closer works; carries the money for revenue targets. */
+export type DealStage = 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'
+export const DEAL_STAGES: DealStage[] = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']
+export interface Deal {
+  id: string
+  lead_id: string
+  org_id: string | null
+  closer_id: string | null
+  stage: DealStage
+  value: number | null
+  currency: string
+  closed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Editable floor-control settings (§6), per org. */
+export interface FloorConfig { wip_cap: number; sla_hours: number; recycle_attempts: number }
+
+/** Targets (§8) — blended revenue + closes per level/period; versioned (a change inserts a new row). */
+export interface TargetRow {
+  id: string
+  org_id: string | null
+  level: 'org' | 'manager' | 'team' | 'rep'
+  owner_id: string | null
+  period: string // YYYY-MM
+  revenue_value: number
+  closes_value: number
+  set_by: string | null
+  set_at: string
+}
+export interface Attainment { closes: number; revenue: number }
+
+/** §10 reusable call script / email template. */
+export interface Script {
+  id: string
+  org_id: string | null
+  kind: 'call' | 'email'
+  name: string
+  body: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 /** Feature 3 — structured activity-log entry types (quick buttons). */
 export type ActivityType =
   | 'Called - No Answer'
@@ -677,6 +768,15 @@ export interface ManualLead {
   closer_verdict: 'warm' | 'not_warm' | null
   closer_verdict_by: string | null
   closer_verdict_at: string | null
+  // Disposition model (§4/§7) — trigger-maintained from disposition_events.
+  lifecycle_state: LifecycleState | null
+  dnc: boolean
+  attempt_count: number
+  last_touched_at: string | null
+  nurture_wake_at: string | null
+  assigned_at: string | null
+  first_touch_at: string | null
+  team_id: string | null
   remarks: LeadRemark[]
   created_at: string
   updated_at: string
