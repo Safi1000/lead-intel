@@ -114,11 +114,16 @@ ${fmt(low) || '(none)'}`
 // ---------------------------------------------------------------------------
 const GOOGLE_KEY = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? ''
 
-async function fetchCwv(siteUrl: string): Promise<{ performance: number; lcpMs: number | null } | null> {
+function seoTag(n: number): string { return n >= 80 ? 'Good' : n >= 50 ? 'Weak' : 'Critical' }
+
+// PageSpeed renders the JavaScript, so it also scores SEO on JS-shell sites (Wix, etc.) that our
+// raw-HTML scanner had to skip. We request BOTH categories in the one call (still free) — performance
+// feeds the "slow site" signal, and Lighthouse's SEO score is a fallback when our verified score is null.
+async function fetchCwv(siteUrl: string): Promise<{ performance: number | null; seo: number | null; lcpMs: number | null } | null> {
   const call = async (withKey: boolean) => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 45_000)
-    const u = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(siteUrl)}&strategy=mobile&category=performance${withKey && GOOGLE_KEY ? `&key=${GOOGLE_KEY}` : ''}`
+    const u = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(siteUrl)}&strategy=mobile&category=performance&category=seo${withKey && GOOGLE_KEY ? `&key=${GOOGLE_KEY}` : ''}`
     const res = await fetch(u, { signal: controller.signal })
     clearTimeout(timer)
     return res
@@ -128,10 +133,16 @@ async function fetchCwv(siteUrl: string): Promise<{ performance: number; lcpMs: 
     if (res.status === 403 || res.status === 400) res = await call(false) // key not enabled for PSI — keyless quota is fine at our volume
     if (!res.ok) return null
     const j = await res.json()
-    const score = j?.lighthouseResult?.categories?.performance?.score
-    if (score == null) return null
+    const cats = j?.lighthouseResult?.categories
+    const perf = cats?.performance?.score
+    const seo = cats?.seo?.score
+    if (perf == null && seo == null) return null
     const lcp = j?.lighthouseResult?.audits?.['largest-contentful-paint']?.numericValue
-    return { performance: Math.round(score * 100), lcpMs: lcp != null ? Math.round(lcp) : null }
+    return {
+      performance: perf != null ? Math.round(perf * 100) : null,
+      seo: seo != null ? Math.round(seo * 100) : null,
+      lcpMs: lcp != null ? Math.round(lcp) : null,
+    }
   } catch {
     return null
   }
@@ -226,16 +237,22 @@ Deno.serve(async (req: Request) => {
 
     // 4. Re-score pain points + personalization on the balanced sample, cross-checked against the
     // site defects our scanner actually found (so reviews + website connect into ONE narrative).
-    const place = (await dbSelect<{ name: string; crm_lead_id: string | null; website: string | null; website_status: string | null; site_issue_note: string | null; status_reason: string | null; runs_google_ads: boolean | null; google_ads_count: number | null; ads_task_id: string | null; cwv_performance: number | null }>(
-      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id,website,website_status,site_issue_note,status_reason,runs_google_ads,google_ads_count,ads_task_id,cwv_performance`))[0]
+    const place = (await dbSelect<{ name: string; crm_lead_id: string | null; website: string | null; website_status: string | null; site_issue_note: string | null; status_reason: string | null; runs_google_ads: boolean | null; google_ads_count: number | null; ads_task_id: string | null; cwv_performance: number | null; seo_score: number | null }>(
+      'sourced_places', `place_id=eq.${placeId}&select=name,crm_lead_id,website,website_status,site_issue_note,status_reason,runs_google_ads,google_ads_count,ads_task_id,cwv_performance,seo_score`))[0]
     if (!place) return new Response(JSON.stringify({ ok: true, note: 'place not found' }), { status: 200 })
 
-    // Core Web Vitals (once per place): real mobile render performance from Google PageSpeed.
-    if (place.website && place.cwv_performance == null && place.website_status !== 'none') {
+    // Google PageSpeed (once per place): mobile performance + an SEO fallback. Runs when either the
+    // performance OR the SEO score is still missing on a real site — the latter backfills JS-shell
+    // sites (Wix, etc.) our raw-HTML SEO pass couldn't verify. lhSeo is the Lighthouse SEO score we
+    // actually wrote (null unless our verified score was absent), used to label the CRM field below.
+    let lhSeo: number | null = null
+    if (place.website && place.website_status !== 'none' && (place.cwv_performance == null || place.seo_score == null)) {
       const cwv = await fetchCwv(place.website)
       if (cwv) {
-        place.cwv_performance = cwv.performance
-        await dbUpdate('sourced_places', { cwv_performance: cwv.performance }, `place_id=eq.${placeId}`)
+        const patch: Record<string, unknown> = {}
+        if (place.cwv_performance == null && cwv.performance != null) { place.cwv_performance = cwv.performance; patch.cwv_performance = cwv.performance }
+        if (place.seo_score == null && cwv.seo != null) { place.seo_score = cwv.seo; lhSeo = cwv.seo; patch.seo_score = cwv.seo }
+        if (Object.keys(patch).length) await dbUpdate('sourced_places', patch, `place_id=eq.${placeId}`)
       }
     }
 
@@ -277,6 +294,8 @@ Deno.serve(async (req: Request) => {
           const tag = place.cwv_performance >= 90 ? 'Good' : place.cwv_performance >= 50 ? 'Slow' : 'Critical'
           data['Performance Score'] = `${place.cwv_performance}/100 — ${tag} (Google PageSpeed, mobile)`
         }
+        // Only when our verified raw-HTML score was absent — labelled so it's not conflated with it.
+        if (lhSeo != null) data['SEO Score'] = `${lhSeo}/100 — ${seoTag(lhSeo)} (Google Lighthouse)`
         await dbUpdate('leads', { data }, `id=eq.${place.crm_lead_id}`)
       }
     }
