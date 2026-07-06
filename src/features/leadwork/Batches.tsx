@@ -183,6 +183,14 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
       <td className="px-3 py-3">
         <span className="font-semibold tabular-nums">{b.lead_count}</span>
         {b.rejected_count > 0 && <span className="ml-1 text-[12px] text-[var(--color-text-muted)]">({b.rejected_count} rejected)</span>}
+        {b.lead_count > 0 && (
+          <div className="mt-1 w-24">
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${Math.round(((b.lead_count - b.new_count) / b.lead_count) * 100)}%` }} />
+            </div>
+            <span className="text-[11px] text-[var(--color-text-muted)]">{b.lead_count - b.new_count}/{b.lead_count} worked</span>
+          </div>
+        )}
       </td>
       <td className="px-3 py-3">
         <div className="flex flex-wrap gap-1">

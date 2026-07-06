@@ -26,6 +26,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Performance', to: '/performance', icon: 'BarChart3', roles: ['superadmin', 'manager'], orgContext: true },
   { label: 'Targets', to: '/targets', icon: 'Target', roles: ['superadmin', 'manager'], orgContext: true },
   { label: 'Teams', to: '/teams', icon: 'Users2', roles: ['superadmin', 'manager'], orgContext: true },
+  { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', roles: ['superadmin', 'manager'], orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', roles: ['superadmin', 'admin', 'manager', 'closer'], orgContext: true },
   { label: 'Scripts', to: '/scripts', icon: 'FileText', roles: WORKERS_NAV, orgContext: true },
   { label: 'Leads', to: '/leads', icon: 'Users', orgContext: true },

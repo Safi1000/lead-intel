@@ -446,6 +446,8 @@ const mapLead = (l: Record<string, unknown>, remarks: LeadRemark[] = []): Manual
   nurture_wake_at: (l.nurture_wake_at as string) ?? null,
   assigned_at: (l.assigned_at as string) ?? null,
   first_touch_at: (l.first_touch_at as string) ?? null,
+  last_tier1: (l.last_tier1 as ManualLead['last_tier1']) ?? null,
+  last_tier2: (l.last_tier2 as ManualLead['last_tier2']) ?? null,
   team_id: (l.team_id as string) ?? null,
   remarks, created_at: l.created_at as string, updated_at: l.updated_at as string,
 })
@@ -1251,6 +1253,16 @@ export const teamApi = {
   setRole: (id: string, role: string) =>
     api.patch(`/team/${id}/role`, { role }).then((r) => r.data),
   remove: (id: string) => api.delete(`/team/${id}`).then((r) => r.data),
+}
+
+// ---- §3 AuditLog (real, RLS-scoped). Rows are written by DB triggers; read-only here. ----
+export interface AuditRow { id: string; actor_id: string | null; action: string; target: string | null; meta: Record<string, unknown> | null; created_at: string }
+export const auditApi = {
+  list: async (limit = 100): Promise<AuditRow[]> => {
+    const { data, error } = await supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)
+    if (error) throw new Error(error.message)
+    return (data ?? []) as AuditRow[]
+  },
 }
 
 export const billingApi = {

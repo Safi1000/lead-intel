@@ -776,6 +776,8 @@ export interface ManualLead {
   nurture_wake_at: string | null
   assigned_at: string | null
   first_touch_at: string | null
+  last_tier1: DispositionTier1 | null
+  last_tier2: DispositionTier2 | null
   team_id: string | null
   remarks: LeadRemark[]
   created_at: string

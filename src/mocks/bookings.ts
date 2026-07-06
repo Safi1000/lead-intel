@@ -59,6 +59,8 @@ function mkLead(id: string, data: Record<string, string>, stage: ManualLead['sta
     nurture_wake_at: null,
     assigned_at: null,
     first_touch_at: null,
+    last_tier1: null,
+    last_tier2: null,
     team_id: null,
     remarks: [],
     created_at: iso(-12 * DAY),

@@ -59,6 +59,7 @@ const ScriptsPage = lazyPage(() => import('../features/leadwork/Scripts').then((
 const ProviderPage = lazyPage(() => import('../features/provider/Provider').then((m) => ({ default: m.ProviderPage })))
 const PortalPage = lazyPage(() => import('../features/portal/Portal').then((m) => ({ default: m.PortalPage })))
 const CockpitPage = lazyPage(() => import('../features/sales/Cockpit').then((m) => ({ default: m.CockpitPage })))
+const AuditLogPage = lazyPage(() => import('../features/leadwork/AuditLog').then((m) => ({ default: m.AuditLogPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -140,6 +141,7 @@ export const router = createBrowserRouter([
                       { path: 'teams', element: L(<TeamsPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
                       { path: 'cockpit', element: L(<CockpitPage />) },
+                      { path: 'audit-log', element: L(<AuditLogPage />) },
                     ],
                   },
                   { path: 'deals', element: L(<DealsPage />) },

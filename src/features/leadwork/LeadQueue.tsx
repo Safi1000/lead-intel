@@ -14,6 +14,8 @@ import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isManagerRole } from './workflow'
+import { LeadDrawer } from './LeadDrawer'
+import { DISPOSITION_TIER1, DISPOSITION_TIER2 } from '../../api/types'
 import type { LeadStage, ManualLead, ManagedUser, Paginated } from '../../api/types'
 
 /** Shift-time elapsed (ms) inside the PKT calling window 19:00–02:00 (= 14:00–21:00 UTC daily). */
@@ -132,6 +134,7 @@ export function LeadQueuePage() {
   const [searchRaw, setSearchRaw] = useState('')
   const search = useDebounce(searchRaw, 200).toLowerCase()
   const [assignSetterOpen, setAssignSetterOpen] = useState(false)
+  const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const bulkUnassign = useMutation({
     mutationFn: (ids: string[]) => manualLeadsApi.unassignMany(ids),
@@ -152,6 +155,8 @@ export function LeadQueuePage() {
   const [scoreMin, setScoreMin] = useState('')
   const [ratingMin, setRatingMin] = useState('all')
   const [staleFilter, setStaleFilter] = useState('all')
+  const [tier1Filter, setTier1Filter] = useState('all')
+  const [tier2Filter, setTier2Filter] = useState('all')
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
@@ -195,12 +200,14 @@ export function LeadQueuePage() {
       const t = l.last_touched_at ? new Date(l.last_touched_at).getTime() : 0
       if (!(t && (Date.now() - t) / 86_400_000 > Number(staleFilter))) return false
     }
+    if (tier1Filter !== 'all' && l.last_tier1 !== tier1Filter) return false
+    if (tier2Filter !== 'all' && l.last_tier2 !== tier2Filter) return false
     if (search) {
       const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter])
+  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter, tier1Filter, tier2Filter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
@@ -293,6 +300,12 @@ export function LeadQueuePage() {
         <select value={staleFilter} onChange={(e) => setStaleFilter(e.target.value)} aria-label="Last touched age" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any age</option><option value="7">Stale 7d+</option><option value="14">14d+</option><option value="30">30d+</option>
         </select>
+        <select value={tier1Filter} onChange={(e) => setTier1Filter(e.target.value)} aria-label="Connection outcome" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any T1</option>{DISPOSITION_TIER1.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={tier2Filter} onChange={(e) => setTier2Filter(e.target.value)} aria-label="Contact outcome" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any T2</option>{DISPOSITION_TIER2.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
         {isManager && (
           <>
             <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter"
@@ -344,7 +357,7 @@ export function LeadQueuePage() {
               </thead>
               <tbody>
                 {filtered.map((l) => (
-                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit} slaMs={slaMs}
+                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit} slaMs={slaMs} onOpen={setDrawerLeadId}
                     selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)}
                     onStage={(stage) => patch.mutate({ id: l.id, body: { stage } })}
                     onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })}
@@ -359,12 +372,14 @@ export function LeadQueuePage() {
       {assignSetterOpen && batchId && batch && (
         <AssignToSetterDialog batchId={batchId} unassigned={batch.unassigned_count} onClose={() => setAssignSetterOpen(false)} onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }} />
       )}
+
+      <LeadDrawer leadId={drawerLeadId} onClose={() => setDrawerLeadId(null)} />
     </div>
   )
 }
 
-function LeadRow({ lead: l, role, isManager, canEdit, slaMs, selectable, checked, onToggle, onStage, onFollowUp, onDone }: {
-  lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean; slaMs: number
+function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable, checked, onToggle, onStage, onFollowUp, onDone }: {
+  lead: ManualLead; role: string | null; isManager: boolean; canEdit: boolean; slaMs: number; onOpen: (id: string) => void
   selectable: boolean; checked: boolean; onToggle: () => void
   onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
@@ -372,7 +387,7 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, selectable, checked
     <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-slate-50')}>
       {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
-        <Link to={`/leads/manual/${l.id}`} className="font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</Link>
+        <button type="button" onClick={() => onOpen(l.id)} className="text-left font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</button>
         {isSlaBreach(l, slaMs) && <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">SLA</span>}
       </td>
       <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={onStage} /></td>
