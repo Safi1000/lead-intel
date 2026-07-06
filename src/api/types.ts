@@ -7,6 +7,7 @@ export type Role =
   | 'superadmin'
   | 'admin'
   // Tenant roles (manual lead-handling workflow)
+  | 'owner' // tenant owner: org-wide, above team-scoped managers (allocates batches, sets targets)
   | 'manager' // tenant admin: manages users, oversees everything
   | 'lead_generator' // uploads leads via templates
   | 'setter' // tests/calls leads, leaves remarks, sets warm/cold
@@ -720,6 +721,7 @@ export interface LeadBatch {
   created_by: string | null
   created_at: string
   archived_at: string | null // archived batches hide from active lists; leads + history preserved
+  allocated_manager_id: string | null // §5 batch allocated to a manager (owner action)
   // live stats (from batch_stats view)
   lead_count: number
   assigned_count: number

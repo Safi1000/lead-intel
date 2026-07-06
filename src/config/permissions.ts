@@ -44,7 +44,7 @@ export const permKey = (resource: Resource, action: Action) => `${resource}:${ac
 /** Effective permission check: SSA all-access, then per-user overrides, then role matrix. */
 export function can(role: Role | null, action: Action, resource: Resource, overrides?: PermissionOverrides | null): boolean {
   if (!role) return false
-  if (role === 'superadmin' || role === 'admin') return true
+  if (role === 'superadmin' || role === 'admin' || role === 'owner') return true
   const key = permKey(resource, action)
   if (overrides?.denied?.includes(key)) return false
   if (overrides?.granted?.includes(key)) return true
@@ -76,6 +76,7 @@ export const PERMISSION_CATALOG: { resource: Resource; action: Action; label: st
 export const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'Super Admin',
   admin: 'Admin',
+  owner: 'Owner',
   manager: 'Manager',
   lead_generator: 'Lead Generator',
   setter: 'Setter',
@@ -86,6 +87,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const ROLE_CAPABILITIES: Record<Role, string> = {
   superadmin: 'Full internal platform access.',
   admin: 'Internal monitoring, client oversight, audit.',
+  owner: 'Tenant owner — org-wide view, allocates batches, sets targets.',
   manager: 'Manages users and oversees the full lead pipeline.',
   lead_generator: 'Creates upload templates and imports leads.',
   setter: 'Tests and calls leads, leaves remarks, sets warm/cold.',

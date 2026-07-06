@@ -15,18 +15,18 @@ export interface NavItem {
 
 // Phase 1 manual workflow. The org-workspace items only appear when inside an
 // org (managers always are; the SA enters via the Organizations list).
-const WORKERS_NAV: Role[] = ['superadmin', 'admin', 'manager', 'setter', 'closer']
+const WORKERS_NAV: Role[] = ['superadmin', 'admin', 'manager', 'setter', 'closer', 'owner']
 export const CLIENT_NAV: NavItem[] = [
   { label: 'Home', to: '/home', icon: 'LayoutDashboard', orgContext: true },
-  { label: 'Cockpit', to: '/cockpit', icon: 'Gauge', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Console', to: '/console', icon: 'LayoutDashboard', roles: ['superadmin', 'manager'], orgContext: true },
+  { label: 'Cockpit', to: '/cockpit', icon: 'Gauge', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Console', to: '/console', icon: 'LayoutDashboard', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
   { label: 'Due Today', to: '/today', icon: 'CalendarClock', roles: WORKERS_NAV, orgContext: true },
-  { label: 'Progress', to: '/progress', icon: 'Target', roles: ['superadmin', 'admin', 'manager', 'setter'], orgContext: true },
-  { label: 'Activity', to: '/activity', icon: 'Activity', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Performance', to: '/performance', icon: 'BarChart3', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Targets', to: '/targets', icon: 'Target', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Teams', to: '/teams', icon: 'Users2', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', roles: ['superadmin', 'manager'], orgContext: true },
+  { label: 'Progress', to: '/progress', icon: 'Target', roles: ['superadmin', 'admin', 'manager', 'setter', 'owner'], orgContext: true },
+  { label: 'Activity', to: '/activity', icon: 'Activity', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Performance', to: '/performance', icon: 'BarChart3', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Targets', to: '/targets', icon: 'Target', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Teams', to: '/teams', icon: 'Users2', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', roles: ['superadmin', 'admin', 'manager', 'closer'], orgContext: true },
   { label: 'Scripts', to: '/scripts', icon: 'FileText', roles: WORKERS_NAV, orgContext: true },
   { label: 'Leads', to: '/leads', icon: 'Users', orgContext: true },
@@ -34,8 +34,8 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Book a meeting', to: '/bookings/new', icon: 'CalendarPlus', flag: 'bookings', perm: { resource: 'bookings', action: 'create' }, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
-  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', roles: ['superadmin', 'manager'], orgContext: true },
-  { label: 'Discovery', to: '/discovery', icon: 'Calculator', roles: ['superadmin', 'manager'], orgContext: true },
+  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
+  { label: 'Discovery', to: '/discovery', icon: 'Calculator', roles: ['superadmin', 'manager', 'owner'], orgContext: true },
   { label: 'Users', to: '/users', icon: 'UserCog', perm: { resource: 'users', action: 'manage' }, orgContext: true },
   { label: 'Organizations', to: '/organizations', icon: 'Building2', roles: ['superadmin', 'admin'] },
   { label: 'Provider', to: '/provider', icon: 'Globe', roles: ['superadmin'] },

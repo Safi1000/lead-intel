@@ -809,6 +809,7 @@ const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
   total_rows: Number(r.total_rows ?? 0), imported_count: Number(r.imported_count ?? 0), rejected_count: Number(r.rejected_count ?? 0),
   created_by: (r.created_by as string) ?? null, created_at: r.created_at as string,
   archived_at: (r.archived_at as string) ?? null,
+  allocated_manager_id: (r.allocated_manager_id as string) ?? null,
   lead_count: Number(r.lead_count ?? 0),
   assigned_count: Number(r.assigned_count ?? 0), unassigned_count: Number(r.unassigned_count ?? 0),
   new_count: Number(r.new_count ?? 0), contacted_count: Number(r.contacted_count ?? 0),
@@ -845,6 +846,12 @@ export const leadBatchesApi = {
 
 // ---- Batch assignment (manager → setters/closers) ----
 export const assignmentApi = {
+  /** §5 owner action — allocate a whole batch to a manager (pull-back is inherent: reclaiming
+   *  only clears the allocation; already-assigned leads keep their rep). */
+  allocateBatch: async (batchId: string, managerId: string | null): Promise<void> => {
+    const { error } = await supabase.from('batches').update({ allocated_manager_id: managerId }).eq('id', batchId)
+    if (error) throw new Error(error.message)
+  },
   /** Who can currently see this batch. */
   listForBatch: async (batchId: string): Promise<BatchAssignment[]> => {
     const { data, error } = await supabase.from('batch_assignments').select('*').eq('batch_id', batchId)

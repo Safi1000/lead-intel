@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Archive, ArchiveRestore, Download, FileSpreadsheet, FileUp, Layers, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { leadBatchesApi, manualLeadsApi } from '../../api/endpoints'
+import { assignmentApi, leadBatchesApi, manualLeadsApi, usersApi } from '../../api/endpoints'
 import { exportLeadsToXlsx } from './exportBatch'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
@@ -24,6 +24,14 @@ export function BatchesPage() {
   const canArchive = role === 'manager' || role === 'superadmin'
   const canDelete = role === 'superadmin'
   const canExport = isGenerator
+  const canAllocate = role === 'owner' || role === 'superadmin' || role === 'admin'
+  const { data: orgUsers } = useQuery({ queryKey: ['org-users-mini'], queryFn: () => usersApi.list(), enabled: canAllocate })
+  const managers = (orgUsers ?? []).filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name }))
+  const allocate = useMutation({
+    mutationFn: ({ id, mgr }: { id: string; mgr: string | null }) => assignmentApi.allocateBatch(id, mgr),
+    onSuccess: () => { toast.success('Batch allocation updated'); qc.invalidateQueries({ queryKey: ['lead-batches'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
 
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['lead-batches'], queryFn: leadBatchesApi.list })
   const [searchRaw, setSearchRaw] = useState('')
@@ -136,6 +144,8 @@ export function BatchesPage() {
                     onArchive={(archived) => setArchived.mutate({ id: b.id, archived })}
                     onDelete={() => setDeleteFor(b)}
                     onExport={() => exportBatch.mutate(b)}
+                    allocateManagers={canAllocate ? managers : undefined}
+                    onAllocate={(mgr) => allocate.mutate({ id: b.id, mgr })}
                   />
                 ))}
               </tbody>
@@ -164,10 +174,11 @@ function Pill({ label, value, className }: { label: string; value: number; class
   return <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', className)}>{value} {label}</span>
 }
 
-function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exporting, onArchive, onDelete, onExport }: {
+function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exporting, onArchive, onDelete, onExport, allocateManagers, onAllocate }: {
   batch: LeadBatch; onOpen: () => void
   canArchive: boolean; canDelete: boolean; canExport: boolean; exporting: boolean
   onArchive: (archived: boolean) => void; onDelete: () => void; onExport: () => void
+  allocateManagers?: { id: string; name: string }[]; onAllocate: (mgr: string | null) => void
 }) {
   return (
     <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50" onClick={onOpen}>
@@ -206,6 +217,15 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
       <td className="px-3 py-3">
         <span className="text-[13px] tabular-nums text-[var(--color-text-secondary)]">{b.assigned_count}</span>
         <span className="text-[12px] text-[var(--color-text-muted)]"> / {b.lead_count}</span>
+        {allocateManagers && (
+          <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+            <select value={b.allocated_manager_id ?? ''} onChange={(e) => onAllocate(e.target.value || null)}
+              className="h-7 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[12px]" title="Allocate batch to a manager">
+              <option value="">Unallocated</option>
+              {allocateManagers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+        )}
       </td>
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}</td>
       {(canArchive || canDelete || canExport) && (

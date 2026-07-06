@@ -133,7 +133,7 @@ export const router = createBrowserRouter([
                   { path: 'home', element: <WorkHomePage /> },
                   { path: 'today', element: L(<DueTodayPage />) },
                   {
-                    element: <RequireRole roles={['superadmin', 'manager']} />,
+                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [
                       { path: 'activity', element: L(<ActivityPage />) },
                       { path: 'performance', element: L(<PerformancePage />) },
@@ -163,7 +163,7 @@ export const router = createBrowserRouter([
                     children: [{ path: 'users', element: L(<UsersPage />) }],
                   },
                   {
-                    element: <RequireRole roles={['superadmin', 'manager']} />,
+                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [
                       { path: 'pipeline', element: L(<PipelinePage />) },
                       { path: 'discovery', element: L(<DiscoveryPage />) },

@@ -65,7 +65,7 @@ export function ManualLeadDetailPage() {
   const navigate = useNavigate()
   const { data: lead, isLoading, isError, refetch } = useQuery({ queryKey: ['manual-lead', id], queryFn: () => manualLeadsApi.get(id as string), enabled: !!id })
   const { data: activities } = useQuery({ queryKey: ['activities', id], queryFn: () => activitiesApi.list(id as string), enabled: !!id })
-  const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: () => teamsApi.list(), enabled: role === 'manager' || role === 'superadmin' || role === 'admin' })
+  const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: () => teamsApi.list(), enabled: role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner' })
 
   // Prev / Next within the same batch — call, click Next, keep dialing (no round-trip to the list).
   // Ordered by created_at (stable), scoped by RLS to the leads this user can see.
@@ -322,7 +322,7 @@ export function ManualLeadDetailPage() {
           )}
 
           {/* Handoff verdict — was the setter's "qualified" lead actually warm? Keeps setters honest. */}
-          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin') && (lead.closer || lead.stage === 'Booked' || lead.stage === 'Won' || lead.stage === 'Lost') && (
+          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (lead.closer || lead.stage === 'Booked' || lead.stage === 'Won' || lead.stage === 'Lost') && (
             <Card className="p-5">
               <h2 className="mb-1 text-[15px] font-semibold">Handoff verdict</h2>
               <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">Was this lead genuinely warm when the setter handed it off?</p>
@@ -334,20 +334,20 @@ export function ManualLeadDetailPage() {
             </Card>
           )}
 
-          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin') && <DealCard leadId={lead.id} />}
+          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && <DealCard leadId={lead.id} />}
 
           <Card className="p-5">
             <h2 className="mb-3 text-[15px] font-semibold">Assignment</h2>
             <dl className="space-y-2 text-sm">
-              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Setter</dt><dd className="flex items-center gap-1">{lead.setter ?? '—'}{lead.setter && <CopyButton text={lead.setter} />}{lead.setter && !lead.done_at && (role === 'manager' || role === 'superadmin' || role === 'admin') && (
+              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Setter</dt><dd className="flex items-center gap-1">{lead.setter ?? '—'}{lead.setter && <CopyButton text={lead.setter} />}{lead.setter && !lead.done_at && (role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (
                 <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'setter'} onClick={() => unassign.mutate('setter')}>Unassign</Button>
               )}{lead.setter && lead.done_at && <span className="text-[11px] text-[var(--color-text-muted)]" title="Done leads stay with their setter forever">🔒</span>}</dd></div>
-              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Closer</dt><dd className="flex items-center gap-1">{lead.closer ?? '—'}{lead.closer && <CopyButton text={lead.closer} />}{lead.closer && (role === 'manager' || role === 'superadmin' || role === 'admin') && (
+              <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Closer</dt><dd className="flex items-center gap-1">{lead.closer ?? '—'}{lead.closer && <CopyButton text={lead.closer} />}{lead.closer && (role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (
                 <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'closer'} onClick={() => unassign.mutate('closer')}>Unassign</Button>
               )}</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Updated</dt><dd>{formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}</dd></div>
             </dl>
-            {(role === 'manager' || role === 'superadmin' || role === 'admin') && teams && (
+            {(role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && teams && (
               <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                 <Label className="mb-1 text-[12px]">Team</Label>
                 <select value={lead.team_id ?? ''} onChange={(e) => update.mutate({ team_id: e.target.value || null })}

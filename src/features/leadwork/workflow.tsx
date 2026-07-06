@@ -15,7 +15,7 @@ export const STAGE_META: Record<LeadStage, { label: string; className: string; d
   Lost: { label: 'Lost', className: 'bg-red-50 text-red-600', dot: 'bg-red-500' },
 }
 
-export const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin'
+export const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin' || role === 'owner'
 
 /** Whether `role` can work leads: edit stage, log activity, leave remarks. */
 export function canWorkLeads(role: Role | null): boolean {
