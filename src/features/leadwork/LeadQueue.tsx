@@ -65,7 +65,7 @@ function tabsFor(role: string | null): Tab[] {
 export function LeadQueuePage() {
   const { batchId } = useParams()
   const qc = useQueryClient()
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   const isManager = isManagerRole(role)
   const canEdit = canWorkLeads(role)
 
@@ -163,6 +163,10 @@ export function LeadQueuePage() {
   const lifecycleStates = useMemo(() => [...new Set(leads.map((l) => l.lifecycle_state).filter((s): s is NonNullable<typeof s> => s != null))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
+    // Hard guarantee: a setter/closer only ever sees leads that belong to them, whatever the source
+    // returned (RLS already enforces this server-side; this holds against stale/mock paths too).
+    if (role === 'setter' && l.setter_id !== user?.id) return false
+    if (role === 'closer' && l.closer_id !== user?.id) return false
     if (activeTab && !activeTab.filter(l)) return false
     if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
     if (closerFilter !== 'all' && l.closer !== (closerFilter === 'none' ? null : closerFilter)) return false
@@ -196,7 +200,7 @@ export function LeadQueuePage() {
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter])
+  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')

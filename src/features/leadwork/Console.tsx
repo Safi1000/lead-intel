@@ -49,6 +49,37 @@ export function ConsolePage() {
         <StatCard label="Connects" value={totals.connects} />
         <StatCard label="Booked" value={totals.booked} />
       </div>
+
+      {(funnel?.length ?? 0) > 0 && (
+        <Card className="mb-6">
+          <div className="border-b border-[var(--color-border)] px-5 py-3"><h2 className="text-[15px] font-semibold">Setter leaderboard</h2></div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                  <th className="px-5 py-2.5 font-medium">Setter</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Connect %</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Booked</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Worked / Assigned</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Overdue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(funnel ?? []).slice(0, 8).map((r) => (
+                  <tr key={r.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                    <td className="px-5 py-3 font-medium">{r.name}</td>
+                    <td className="px-3 py-3 tabular-nums font-medium">{r.connectRate}%</td>
+                    <td className="px-3 py-3 tabular-nums font-semibold text-[var(--color-primary)]">{r.booked}</td>
+                    <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.worked}/{r.assigned}</td>
+                    <td className={cn('px-3 py-3 tabular-nums', r.overdue ? 'font-semibold text-amber-600' : 'text-[var(--color-text-secondary)]')}>{r.overdue || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {links.map((l) => (
           <Link key={l.to} to={l.to} className="inline-flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-3 py-2 text-sm font-medium hover:bg-slate-50">
