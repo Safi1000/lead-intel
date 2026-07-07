@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as RD from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { Button } from './primitives'
+import { Button, Input, Textarea } from './primitives'
 
 export function Dialog({
   open,
@@ -22,10 +22,10 @@ export function Dialog({
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
-        <RD.Overlay className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm data-[state=open]:animate-in" />
+        <RD.Overlay className="overlay-in fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm" />
         <RD.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xl focus:outline-none',
+            'dialog-in fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[0_24px_60px_-15px_rgba(10,17,36,0.4)] focus:outline-none',
             className,
           )}
         >
@@ -94,11 +94,7 @@ export function ConfirmDialog({
           <p className="mb-1.5 text-sm text-[var(--color-text-secondary)]">
             Type <span className="font-mono font-semibold">{requireText}</span> to confirm.
           </p>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="h-9 w-full rounded-[8px] border border-[var(--color-border)] px-3 text-sm focus:border-[var(--color-primary)] focus-visible:outline-none"
-          />
+          <Input value={text} onChange={(e) => setText(e.target.value)} autoFocus />
         </div>
       )}
       {requireReason && (
@@ -106,12 +102,7 @@ export function ConfirmDialog({
           <p className="mb-1.5 text-sm text-[var(--color-text-secondary)]">
             Reason (written to the audit log)
           </p>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-            className="w-full rounded-[8px] border border-[var(--color-border)] px-3 py-2 text-sm focus:border-[var(--color-primary)] focus-visible:outline-none"
-          />
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
         </div>
       )}
       <div className="mt-2 flex justify-end gap-2">
