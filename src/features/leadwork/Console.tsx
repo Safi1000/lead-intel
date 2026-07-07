@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, PhoneMissed, UserX, type LucideIcon } from 'lucide-react'
-import { floorConfigApi, kpisApi } from '../../api/endpoints'
+import { formatDistanceToNow } from 'date-fns'
+import { Activity, AlertTriangle, ArrowRight, Layers, PhoneMissed, UserX, type LucideIcon } from 'lucide-react'
+import { activityFeedApi, floorConfigApi, kpisApi, leadBatchesApi } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
 import { LoadingState } from '../../components/feedback'
 import { PageHeader, StatCard } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
 const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString() }
+const twoDaysAgo = () => new Date(Date.now() - 2 * 86_400_000).toISOString()
 
 function AlertTile({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: number; tone: 'red' | 'amber' }) {
   const active = value > 0
@@ -26,10 +28,15 @@ export function ConsolePage() {
   const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
   const { data: alerts, isLoading } = useQuery({ queryKey: ['floor-alerts', floor?.sla_hours], queryFn: () => kpisApi.floorAlerts(floor?.sla_hours ?? 4), enabled: !!floor })
   const { data: funnel } = useQuery({ queryKey: ['setter-kpis', 'console-mtd'], queryFn: () => kpisApi.setterFunnel(monthStart()) })
+  const { data: batches } = useQuery({ queryKey: ['lead-batches'], queryFn: leadBatchesApi.list })
+  const { data: feed } = useQuery({ queryKey: ['activity-feed', 'console'], queryFn: () => activityFeedApi.list(twoDaysAgo()) })
 
   if (isLoading || !alerts) return <LoadingState />
 
   const totals = (funnel ?? []).reduce((a, r) => ({ attempts: a.attempts + r.attempts, connects: a.connects + r.connects, booked: a.booked + r.booked }), { attempts: 0, connects: 0, booked: 0 })
+  const activeBatches = (batches ?? []).filter((b) => !b.archived_at && b.lead_count > 0)
+  const burn = activeBatches.reduce((a, b) => ({ total: a.total + b.lead_count, worked: a.worked + (b.lead_count - b.new_count) }), { total: 0, worked: 0 })
+  const burnPct = burn.total ? Math.round((burn.worked / burn.total) * 100) : 0
   const links = [
     { to: '/performance', label: 'Performance' }, { to: '/targets', label: 'Targets' },
     { to: '/teams', label: 'Teams' }, { to: '/deals', label: 'Deals' }, { to: '/scripts', label: 'Scripts' },
@@ -79,6 +86,52 @@ export function ConsolePage() {
           </div>
         </Card>
       )}
+
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2"><Layers className="h-4 w-4 text-[var(--color-primary)]" /><h2 className="text-[15px] font-semibold">Batch burn-down</h2></div>
+          {activeBatches.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No active batches.</p>
+          ) : (
+            <>
+              <div className="mb-1 flex items-baseline justify-between text-sm">
+                <span className="text-[var(--color-text-secondary)]">{burn.worked.toLocaleString()} / {burn.total.toLocaleString()} worked</span>
+                <span className="font-semibold tabular-nums">{burnPct}%</span>
+              </div>
+              <div className="mb-4 h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+                <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-signal)]" style={{ width: `${burnPct}%` }} />
+              </div>
+              <div className="space-y-2">
+                {activeBatches.slice(0, 4).map((b) => {
+                  const w = b.lead_count - b.new_count
+                  const p = b.lead_count ? Math.round((w / b.lead_count) * 100) : 0
+                  return (
+                    <div key={b.id}>
+                      <div className="flex items-center justify-between text-[12px]"><span className="truncate text-[var(--color-text-secondary)]">{b.file_name}</span><span className="shrink-0 tabular-nums text-[var(--color-text-muted)]">{w}/{b.lead_count}</span></div>
+                      <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-2)]"><div className="h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${p}%` }} /></div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </Card>
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2"><Activity className="h-4 w-4 text-[var(--color-primary)]" /><h2 className="text-[15px] font-semibold">Live activity</h2></div>
+          {(feed?.length ?? 0) === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)]">No activity in the last 48 hours.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {(feed ?? []).slice(0, 7).map((f) => (
+                <div key={f.id} className="flex items-start justify-between gap-3 text-[13px]">
+                  <p className="min-w-0 truncate"><span className="font-medium">{f.author ?? 'Someone'}</span> <span className="text-[var(--color-text-secondary)]">{f.type.toLowerCase()}</span> <span className="text-[var(--color-text-muted)]">· {f.lead_name}</span></p>
+                  <span className="shrink-0 text-[12px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(f.at), { addSuffix: true })}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {links.map((l) => (
