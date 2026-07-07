@@ -35,8 +35,9 @@ const MATRIX: Partial<Record<Resource, Partial<Record<Action, Role[]>>>> = {
   // Only managers manage users and the account.
   users: { view: ['manager'], manage: ['manager'] },
   account: { view: TENANT_ALL, manage: ['manager'] },
-  // Pipeline: managers and lead generators can view and trigger runs.
-  pipeline: { view: GENERATOR, create: GENERATOR },
+  // §2 matrix: scraping / the global lead pool is Owner-only (owner + SA get it via the
+  // short-circuit in can()); managers and lead generators do NOT scrape.
+  pipeline: {},
 }
 
 export const permKey = (resource: Resource, action: Action) => `${resource}:${action}`

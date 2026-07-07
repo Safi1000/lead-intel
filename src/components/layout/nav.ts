@@ -19,11 +19,12 @@ export const NAV_SECTIONS = ['Overview', 'Work', 'Sales', 'Sourcing', 'Operation
 
 const WORKERS_NAV: Role[] = ['superadmin', 'admin', 'manager', 'setter', 'closer', 'owner']
 const OVERSEERS: Role[] = ['superadmin', 'manager', 'owner']
+const OWNER: Role[] = ['superadmin', 'owner'] // §2: scrape + all-managers/teams views are owner-only
 
 export const CLIENT_NAV: NavItem[] = [
   // Overview
   { label: 'Home', to: '/home', icon: 'LayoutDashboard', section: 'Overview', orgContext: true },
-  { label: 'Cockpit', to: '/cockpit', icon: 'Gauge', section: 'Overview', roles: OVERSEERS, orgContext: true },
+  { label: 'Cockpit', to: '/cockpit', icon: 'Gauge', section: 'Overview', roles: OWNER, orgContext: true },
   { label: 'Console', to: '/console', icon: 'LayoutGrid', section: 'Overview', roles: OVERSEERS, orgContext: true },
   // Work
   { label: 'Leads', to: '/leads', icon: 'Users', section: 'Work', orgContext: true },
@@ -36,10 +37,10 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Targets', to: '/targets', icon: 'Crosshair', section: 'Sales', roles: OVERSEERS, orgContext: true },
   { label: 'Holidays', to: '/holidays', icon: 'CalendarDays', section: 'Sales', roles: OVERSEERS, orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
-  { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OVERSEERS, orgContext: true },
+  { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OWNER, orgContext: true },
   // Sourcing
-  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OVERSEERS, orgContext: true },
-  { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OVERSEERS, orgContext: true },
+  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
+  { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
   // Operations

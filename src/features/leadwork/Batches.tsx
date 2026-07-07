@@ -24,7 +24,7 @@ export function BatchesPage() {
   const canArchive = role === 'manager' || role === 'superadmin'
   const canDelete = role === 'superadmin'
   const canExport = isGenerator
-  const canAllocate = role === 'owner' || role === 'superadmin' || role === 'admin'
+  const canAllocate = role === 'owner' || role === 'superadmin' // §2: allocate batches → Owner only
   const { data: orgUsers } = useQuery({ queryKey: ['org-users-mini'], queryFn: () => usersApi.list(), enabled: canAllocate })
   const managers = (orgUsers ?? []).filter((u) => u.role === 'manager').map((u) => ({ id: u.id, name: u.name }))
   const allocate = useMutation({

@@ -9,6 +9,7 @@ import { ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { blendedStatus, expectedByNow, monthPeriod, paceExpected, paceStatus, type PaceStatus } from './pace'
 import { cn } from '../../lib/utils'
+import { useAuth } from '../../hooks'
 import type { Attainment, TargetRow } from '../../api/types'
 
 const STATUS_COLOR: Record<PaceStatus, string> = { on_pace: 'bg-green-500', slipping: 'bg-amber-500', behind: 'bg-red-500' }
@@ -38,6 +39,8 @@ function PaceBar({ label, attained, expected, target, money }: { label: string; 
 /** §8 blended targets — owner sets org revenue + closes; pace vs expected-by-now (holiday-aware). */
 export function TargetsPage() {
   const qc = useQueryClient()
+  const { role } = useAuth()
+  const isOwner = role === 'owner' || role === 'superadmin' // §2: only the Owner sets org / manager (team) targets
   const period = currentPeriod()
   const { data: targets, isLoading, isError, refetch } = useQuery({ queryKey: ['targets', period], queryFn: () => targetsApi.forPeriod(period) })
   const { data: att } = useQuery({ queryKey: ['attainment', period], queryFn: () => targetsApi.attainment(period) })
@@ -98,17 +101,19 @@ export function TargetsPage() {
         ) : <p className="text-sm text-[var(--color-text-secondary)]">Set a monthly revenue + closes target below to start tracking pace.</p>}
       </Card>
 
-      <Card className="mb-5 max-w-md p-5">
-        <div className="mb-1 flex items-center gap-2"><Target className="h-5 w-5 text-[var(--color-primary)]" /><h2 className="text-[16px] font-semibold">Set org target</h2></div>
-        <p className="mb-4 text-sm text-[var(--color-text-secondary)]">Changing mid-month prorates forward — it won't penalise what's already banked.</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div><Label htmlFor="t-rev">Revenue (USD)</Label><Input id="t-rev" type="number" min={0} value={rev} onChange={(e) => setRev(e.target.value)} /></div>
-          <div><Label htmlFor="t-cl">Closes</Label><Input id="t-cl" type="number" min={0} value={cl} onChange={(e) => setCl(e.target.value)} /></div>
-        </div>
-        <Button className="mt-3" loading={save.isPending} onClick={() => save.mutate()}>Save target</Button>
-      </Card>
+      {isOwner && (
+        <Card className="mb-5 max-w-md p-5">
+          <div className="mb-1 flex items-center gap-2"><Target className="h-5 w-5 text-[var(--color-primary)]" /><h2 className="text-[16px] font-semibold">Set org target</h2></div>
+          <p className="mb-4 text-sm text-[var(--color-text-secondary)]">Changing mid-month prorates forward — it won't penalise what's already banked.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label htmlFor="t-rev">Revenue (USD)</Label><Input id="t-rev" type="number" min={0} value={rev} onChange={(e) => setRev(e.target.value)} /></div>
+            <div><Label htmlFor="t-cl">Closes</Label><Input id="t-cl" type="number" min={0} value={cl} onChange={(e) => setCl(e.target.value)} /></div>
+          </div>
+          <Button className="mt-3" loading={save.isPending} onClick={() => save.mutate()}>Save target</Button>
+        </Card>
+      )}
 
-      {(teams?.length ?? 0) > 0 && (
+      {isOwner && (teams?.length ?? 0) > 0 && (
         <Card className="mb-5">
           <div className="border-b border-[var(--color-border)] px-5 py-3"><h2 className="text-[15px] font-semibold">Team targets</h2></div>
           <div className="overflow-x-auto">

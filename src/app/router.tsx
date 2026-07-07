@@ -140,9 +140,7 @@ export const router = createBrowserRouter([
                       { path: 'performance', element: L(<PerformancePage />) },
                       { path: 'targets', element: L(<TargetsPage />) },
                       { path: 'holidays', element: L(<HolidaysPage />) },
-                      { path: 'teams', element: L(<TeamsPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
-                      { path: 'cockpit', element: L(<CockpitPage />) },
                       { path: 'audit-log', element: L(<AuditLogPage />) },
                     ],
                   },
@@ -165,8 +163,11 @@ export const router = createBrowserRouter([
                     children: [{ path: 'users', element: L(<UsersPage />) }],
                   },
                   {
-                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                    // §2 matrix: scrape/global pool + "see all managers/teams" = Owner only.
+                    element: <RequireRole roles={['superadmin', 'owner']} />,
                     children: [
+                      { path: 'cockpit', element: L(<CockpitPage />) },
+                      { path: 'teams', element: L(<TeamsPage />) },
                       { path: 'pipeline', element: L(<PipelinePage />) },
                       { path: 'discovery', element: L(<DiscoveryPage />) },
                     ],
