@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CheckCircle2, Search, UserMinus, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
@@ -82,6 +82,28 @@ export function LeadQueuePage() {
   })
   const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
   const slaMs = (floor?.sla_hours ?? 4) * 3_600_000
+  const orgSetters = useOrgMembers('setter')
+  // §6 round-robin: distribute this batch's unassigned leads evenly across setters, respecting WIP caps.
+  const roundRobin = useMutation({
+    mutationFn: async () => {
+      if (!batchId || orgSetters.length === 0) throw new Error('No setters to round-robin to.')
+      const loads = await floorConfigApi.setterLoads()
+      const cap = floor?.wip_cap ?? 40
+      let remaining = batch?.unassigned_count ?? 0
+      if (remaining === 0) throw new Error('No unassigned leads in this batch.')
+      const share = Math.ceil(remaining / orgSetters.length)
+      let total = 0
+      for (const s of orgSetters) {
+        if (remaining <= 0) break
+        const room = Math.max(0, cap - (loads[s.id] ?? 0))
+        const n = Math.min(share, room, remaining)
+        if (n > 0) { const got = await assignmentApi.assignLeadsToSetter(batchId, s.id, n); total += got; remaining -= got }
+      }
+      return total
+    },
+    onSuccess: (n) => { toast.success(`Round-robin: assigned ${n} lead${n === 1 ? '' : 's'} across the team`); qc.invalidateQueries() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
   const isSetter = role === 'setter'
   const { data: goal = 0 } = useQuery({ queryKey: ['daily-goal'], queryFn: progressApi.getGoal, enabled: isSetter })
   const periods = useMemo(() => {
@@ -231,7 +253,12 @@ export function LeadQueuePage() {
       <PageHeader
         title={batch ? batch.file_name : 'Leads'}
         subtitle={batch ? `${batch.template_name} · ${batch.lead_count} lead${batch.lead_count === 1 ? '' : 's'}` : 'Leads assigned to you.'}
-        actions={isManager && batchId ? <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button> : undefined}
+        actions={isManager && batchId ? (
+          <div className="flex gap-2">
+            <Button variant="outline" loading={roundRobin.isPending} onClick={() => roundRobin.mutate()}><Shuffle className="h-4 w-4" /> Round-robin</Button>
+            <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button>
+          </div>
+        ) : undefined}
       />
 
       {isManager && batch && (

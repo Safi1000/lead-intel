@@ -28,10 +28,18 @@ export function PerformancePage() {
 
   const rows = data ?? []
   const totals = useMemo(() => rows.reduce((a, r) => ({
-    attempts: a.attempts + r.attempts, connects: a.connects + r.connects, booked: a.booked + r.booked,
-  }), { attempts: 0, connects: 0, booked: 0 }), [rows])
+    attempts: a.attempts + r.attempts, connects: a.connects + r.connects, conversations: a.conversations + r.conversations, booked: a.booked + r.booked,
+  }), { attempts: 0, connects: 0, conversations: 0, booked: 0 }), [rows])
   const connectRate = totals.attempts ? Math.round((totals.connects / totals.attempts) * 100) : 0
   const bookingRate = totals.connects ? Math.round((totals.booked / totals.connects) * 100) : 0
+  const wonTotal = (closers ?? []).reduce((s, c) => s + c.won, 0)
+  const funnel = [
+    { label: 'Attempts', value: totals.attempts },
+    { label: 'Connects', value: totals.connects },
+    { label: 'Conversations', value: totals.conversations },
+    { label: 'Booked', value: totals.booked },
+    { label: 'Won', value: wonTotal },
+  ]
 
   return (
     <div className="reveal">
@@ -54,6 +62,30 @@ export function PerformancePage() {
           <StatCard label="Connect rate" value={`${connectRate}%`} />
           <StatCard label="Booking rate" value={`${bookingRate}%`} />
         </div>
+      )}
+
+      {!isLoading && !isError && rows.length > 0 && (
+        <Card className="mb-5 p-5">
+          <h2 className="mb-4 text-[15px] font-semibold">Conversion funnel</h2>
+          <div className="space-y-3">
+            {funnel.map((s, i) => {
+              const max = funnel[0].value || 1
+              const prev = i > 0 ? funnel[i - 1].value : null
+              const conv = prev ? Math.round((s.value / (prev || 1)) * 100) : null
+              return (
+                <div key={s.label}>
+                  <div className="mb-1 flex items-center justify-between text-[13px]">
+                    <span className="font-medium">{s.label}</span>
+                    <span className="tabular-nums text-[var(--color-text-secondary)]">{s.value.toLocaleString()}{conv != null && <span className="ml-2 text-[12px] text-[var(--color-text-muted)]">{conv}% of prev</span>}</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-signal)] transition-all" style={{ width: `${Math.round((s.value / max) * 100)}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
       )}
 
       <Card>
