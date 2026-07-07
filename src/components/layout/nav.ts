@@ -48,6 +48,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Activity', to: '/activity', icon: 'Activity', section: 'Operations', roles: OVERSEERS, orgContext: true },
   { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', section: 'Operations', roles: OVERSEERS, orgContext: true },
   { label: 'Scripts', to: '/scripts', icon: 'FileText', section: 'Operations', roles: WORKERS_NAV, orgContext: true },
+  { label: 'Sequences', to: '/cadences', icon: 'GitBranch', section: 'Operations', roles: OVERSEERS, orgContext: true },
   // Admin
   { label: 'Users', to: '/users', icon: 'UserCog', section: 'Admin', perm: { resource: 'users', action: 'manage' }, orgContext: true },
   { label: 'Organizations', to: '/organizations', icon: 'Building2', section: 'Admin', roles: ['superadmin', 'admin'] },

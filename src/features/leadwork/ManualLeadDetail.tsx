@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
-import { activitiesApi, dealsApi, dispositionsApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, dealsApi, dispositionsApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -190,6 +190,7 @@ export function ManualLeadDetailPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           {canWork && <DispositionBar leadId={lead.id} onLogged={invalidate} />}
+          {canWork && <CadenceCard leadId={lead.id} />}
           {/* Lead data */}
           <Card className="p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -439,6 +440,43 @@ function DispositionBar({ leadId, onLogged }: { leadId: string; onLogged: () => 
 }
 
 /** §3/§8 Deal — closer records the money + pipeline stage; feeds revenue targets and closer KPIs. */
+/** §10 enroll this lead into a follow-up sequence + show/stop active enrollments. */
+function CadenceCard({ leadId }: { leadId: string }) {
+  const qc = useQueryClient()
+  const { data: cadences } = useQuery({ queryKey: ['cadences'], queryFn: () => cadencesApi.list() })
+  const { data: enrollments } = useQuery({ queryKey: ['cadence-enrollments', leadId], queryFn: () => cadencesApi.enrollmentsForLead(leadId) })
+  const [cid, setCid] = useState('')
+  const active = (enrollments ?? []).filter((e) => e.status === 'active')
+  const activeCadences = (cadences ?? []).filter((c) => c.active)
+  const enroll = useMutation({ mutationFn: () => cadencesApi.enroll(leadId, cid), onSuccess: () => { toast.success('Enrolled in sequence'); setCid(''); qc.invalidateQueries({ queryKey: ['cadence-enrollments', leadId] }) }, onError: (e) => toast.error(normalizeError(e).message) })
+  const stop = useMutation({ mutationFn: (id: string) => cadencesApi.stop(id), onSuccess: () => qc.invalidateQueries({ queryKey: ['cadence-enrollments', leadId] }), onError: (e) => toast.error(normalizeError(e).message) })
+
+  return (
+    <Card className="p-5">
+      <h2 className="mb-3 text-[15px] font-semibold">Sequence</h2>
+      {active.length > 0 && (
+        <div className="mb-3 space-y-1.5">
+          {active.map((e) => (
+            <div key={e.id} className="flex items-center justify-between rounded-[8px] bg-[var(--color-surface-2)] px-3 py-1.5 text-[13px]">
+              <span className="font-medium">{e.cadence_name} <span className="text-[var(--color-text-muted)]">· step {e.current_step + 1}</span></span>
+              <button onClick={() => stop.mutate(e.id)} className="text-[12px] text-red-600 hover:underline dark:text-red-400">Stop</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {activeCadences.length > 0 ? (
+        <div className="flex gap-2">
+          <select value={cid} onChange={(e) => setCid(e.target.value)} className="h-9 flex-1 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+            <option value="">Enroll in…</option>
+            {activeCadences.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <Button size="sm" disabled={!cid} loading={enroll.isPending} onClick={() => enroll.mutate()}>Enroll</Button>
+        </div>
+      ) : <p className="text-[13px] text-[var(--color-text-muted)]">No active sequences yet.</p>}
+    </Card>
+  )
+}
+
 function DealCard({ leadId }: { leadId: string }) {
   const qc = useQueryClient()
   const { data: deals } = useQuery({ queryKey: ['deals', leadId], queryFn: () => dealsApi.forLead(leadId) })

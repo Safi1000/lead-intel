@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
 import { TIER2_TO_STAGE } from './types'
-import type { ActivityType, Attainment, BatchAssignment, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark } from './types'
+import type { ActivityType, Attainment, BatchAssignment, Cadence, CadenceEnrollment, CadenceStep, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -1088,6 +1088,58 @@ export interface CloserKpi {
   rep_id: string; name: string
   deals: number; won: number; lost: number; proposals: number; closeRate: number
   revenue: number; avgDeal: number; pipeline: number; cycleDays: number
+}
+
+// ---- Cadences / sequences (§10). Org-scoped; owner/manager build, executor runs hourly. ----
+export const cadencesApi = {
+  list: async (): Promise<Cadence[]> => {
+    const org = effectiveOrgId()
+    let q = supabase.from('cadences').select('*').order('created_at', { ascending: false })
+    if (org) q = q.eq('org_id', org)
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Cadence[]
+  },
+  steps: async (cadenceId: string): Promise<CadenceStep[]> => {
+    const { data, error } = await supabase.from('cadence_steps').select('*').eq('cadence_id', cadenceId).order('step_order')
+    if (error) throw new Error(error.message)
+    return (data ?? []) as CadenceStep[]
+  },
+  create: async (name: string): Promise<Cadence> => {
+    const by = useAuthStore.getState().user?.id ?? null
+    const { data, error } = await supabase.from('cadences').insert({ org_id: effectiveOrgId(), name, created_by: by }).select().single()
+    if (error) throw new Error(error.message)
+    return data as Cadence
+  },
+  update: async (id: string, body: { name?: string; active?: boolean }): Promise<void> => {
+    const { error } = await supabase.from('cadences').update(body).eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+  remove: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('cadences').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+  setSteps: async (cadenceId: string, steps: CadenceStep[]): Promise<void> => {
+    await supabase.from('cadence_steps').delete().eq('cadence_id', cadenceId)
+    if (steps.length) {
+      const rows = steps.map((s, i) => ({ cadence_id: cadenceId, step_order: i + 1, day_offset: s.day_offset, action: s.action, script_id: s.script_id, note: s.note, target_state: s.target_state }))
+      const { error } = await supabase.from('cadence_steps').insert(rows)
+      if (error) throw new Error(error.message)
+    }
+  },
+  enroll: async (leadId: string, cadenceId: string): Promise<void> => {
+    const { error } = await supabase.rpc('enroll_in_cadence', { p_lead: leadId, p_cadence: cadenceId })
+    if (error) throw new Error(error.message)
+  },
+  enrollmentsForLead: async (leadId: string): Promise<Array<CadenceEnrollment & { cadence_name: string }>> => {
+    const { data, error } = await supabase.from('cadence_enrollments').select('*, cadences(name)').eq('lead_id', leadId).order('enrolled_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data ?? []).map((r) => ({ ...(r as CadenceEnrollment), cadence_name: (r as { cadences?: { name?: string } }).cadences?.name ?? 'Cadence' }))
+  },
+  stop: async (enrollmentId: string): Promise<void> => {
+    const { error } = await supabase.from('cadence_enrollments').update({ status: 'stopped', next_run_at: null }).eq('id', enrollmentId)
+    if (error) throw new Error(error.message)
+  },
 }
 
 // ---- Scripts / email templates (§10). Org-scoped read; managers write. ----

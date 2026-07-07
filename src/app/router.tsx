@@ -63,6 +63,7 @@ const AuditLogPage = lazyPage(() => import('../features/leadwork/AuditLog').then
 const HolidaysPage = lazyPage(() => import('../features/sales/Holidays').then((m) => ({ default: m.HolidaysPage })))
 const SearchPage = lazyPage(() => import('../features/leadwork/Search').then((m) => ({ default: m.SearchPage })))
 const CreditsPage = lazyPage(() => import('../features/sales/Credits').then((m) => ({ default: m.CreditsPage })))
+const CadencesPage = lazyPage(() => import('../features/leadwork/Cadences').then((m) => ({ default: m.CadencesPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -144,6 +145,7 @@ export const router = createBrowserRouter([
                       { path: 'holidays', element: L(<HolidaysPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
                       { path: 'audit-log', element: L(<AuditLogPage />) },
+                      { path: 'cadences', element: L(<CadencesPage />) },
                     ],
                   },
                   { path: 'deals', element: L(<DealsPage />) },

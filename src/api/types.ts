@@ -648,6 +648,29 @@ export interface TargetRow {
 }
 export interface Attainment { closes: number; revenue: number }
 
+/** §10 sequences / cadences — timed multi-step follow-up plans. */
+export interface Cadence { id: string; org_id: string | null; name: string; active: boolean; created_at: string }
+export type CadenceAction = 'task' | 'email' | 'move'
+export interface CadenceStep {
+  id?: string
+  cadence_id?: string
+  step_order: number
+  day_offset: number
+  action: CadenceAction
+  script_id: string | null
+  note: string | null
+  target_state: string | null
+}
+export interface CadenceEnrollment {
+  id: string
+  lead_id: string
+  cadence_id: string
+  current_step: number
+  next_run_at: string | null
+  status: 'active' | 'completed' | 'stopped'
+  enrolled_at: string
+}
+
 /** §10 reusable call script / email template. */
 export interface Script {
   id: string
