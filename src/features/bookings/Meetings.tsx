@@ -98,7 +98,7 @@ function SetterNotesBlock({ row }: { row: MeetingWithLeadDTO }) {
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] ring-1 ring-blue-100">
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[12px] ring-1 ring-inset ring-[var(--color-border)]">
       <span className="text-[var(--color-text-muted)]">{label}</span>
       <span className="font-medium text-[var(--color-text)]">{value}</span>
     </span>

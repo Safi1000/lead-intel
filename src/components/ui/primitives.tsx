@@ -8,12 +8,12 @@ type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-sm',
-  secondary: 'bg-[var(--color-surface-2)] text-slate-900 hover:bg-[var(--color-border)]',
+    'bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-hover)] hover:shadow-[0_6px_18px_-6px_var(--color-primary)]',
+  secondary: 'bg-[var(--color-surface-2)] text-[var(--color-text)] hover:bg-[var(--color-border)]',
   outline:
-    'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-2)]',
-  ghost: 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
-  danger: 'bg-[var(--c-unverified)] text-white hover:brightness-95 shadow-sm',
+    'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-surface-2)]',
+  ghost: 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]',
+  danger: 'bg-[var(--c-unverified)] text-white shadow-sm hover:brightness-110',
 }
 const buttonSizes: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-[13px] gap-1.5',
@@ -34,7 +34,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-[8px] font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-2',
+        'inline-flex items-center justify-center rounded-[9px] font-medium transition-all duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-bg)]',
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -57,7 +57,7 @@ export const Input = React.forwardRef<
     ref={ref}
     aria-invalid={invalid}
     className={cn(
-      'h-9 w-full rounded-[8px] border bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-colors focus:border-[var(--color-primary)] focus-visible:outline-none',
+      'h-9 w-full rounded-[9px] border bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-all focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15 focus-visible:outline-none',
       invalid ? 'border-[var(--c-unverified)]' : 'border-[var(--color-border)]',
       className,
     )}
@@ -73,7 +73,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus-visible:outline-none',
+      'w-full rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-all focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15 focus-visible:outline-none',
       className,
     )}
     {...props}
@@ -104,7 +104,7 @@ export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
   return (
     <div
       className={cn(
-        'rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm',
+        'rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_1px_2px_rgba(10,17,36,0.04)]',
         className,
       )}
       {...props}

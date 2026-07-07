@@ -21,7 +21,7 @@ export function StageSelect({ stage, role, disabled, onChange }: { stage: LeadSt
       onClick={(e) => e.stopPropagation()}
       className={cn('h-7 cursor-pointer rounded-full border-0 px-2.5 text-[12px] font-medium outline-none ring-1 ring-inset ring-black/5 focus:ring-2 focus:ring-[var(--color-primary)]', m.className)}
     >
-      {opts.map((s) => <option key={s} value={s} className="bg-white text-[var(--color-text)]">{STAGE_META[s].label}</option>)}
+      {opts.map((s) => <option key={s} value={s} className="bg-[var(--color-surface)] text-[var(--color-text)]">{STAGE_META[s].label}</option>)}
     </select>
   )
 }
