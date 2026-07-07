@@ -214,7 +214,7 @@ function CreateKeyDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(v) => !v && onClose()} title="Create API key" description="Scope the key to the minimum access it needs.">
       {secret ? (
         <div className="space-y-4">
-          <div className="flex items-start gap-2 rounded-[8px] border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-800">
+          <div className="flex items-start gap-2 rounded-[8px] border border-amber-200 bg-amber-500/10 p-3 text-[13px] text-amber-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>This secret is shown only once. Store it safely — you won’t be able to see it again.</span>
           </div>

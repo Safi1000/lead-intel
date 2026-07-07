@@ -32,7 +32,7 @@ export function FollowUpCell({ value, disabled, onChange }: { value: string | nu
   const due = isDueToday(value)
   if (disabled) {
     if (!value) return <span className="text-[var(--color-text-muted)]">—</span>
-    return <span className={cn('text-[13px]', overdue ? 'font-medium text-red-600' : due ? 'font-medium text-amber-600' : 'text-[var(--color-text-secondary)]')}>{format(new Date(value), 'd MMM')}</span>
+    return <span className={cn('text-[13px]', overdue ? 'font-medium text-red-600 dark:text-red-400' : due ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-[var(--color-text-secondary)]')}>{format(new Date(value), 'd MMM')}</span>
   }
   return (
     <input
@@ -41,7 +41,7 @@ export function FollowUpCell({ value, disabled, onChange }: { value: string | nu
       onChange={(e) => onChange(e.target.value || null)}
       onClick={(e) => e.stopPropagation()}
       className={cn('h-7 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[12px]',
-        overdue ? 'border-red-300 text-red-600' : due ? 'border-amber-300 text-amber-700' : '')}
+        overdue ? 'border-red-300 text-red-600 dark:text-red-400' : due ? 'border-amber-300 text-amber-700 dark:text-amber-400' : '')}
     />
   )
 }

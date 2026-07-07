@@ -159,7 +159,7 @@ export function RationaleDisclosure({ title = 'Why this result', children }: { t
 
 export function AINotConfigured() {
   return (
-    <div className="flex items-start gap-2 rounded-[8px] border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-800">
+    <div className="flex items-start gap-2 rounded-[8px] border border-amber-200 bg-amber-500/10 p-3 text-[13px] text-amber-800">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>
         No AI provider configured. Set one in{' '}

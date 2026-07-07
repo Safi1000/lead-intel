@@ -40,7 +40,7 @@ export function PortalPage() {
                     <td className="px-3 py-3 text-[var(--color-text-secondary)]">{l.city || '—'}</td>
                     <td className="px-3 py-3">
                       {l.booked
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[12px] font-medium text-green-700"><CheckCircle2 className="h-3.5 w-3.5" /> Booked</span>
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[12px] font-medium text-green-700 dark:text-green-400"><CheckCircle2 className="h-3.5 w-3.5" /> Booked</span>
                         : <span className="text-[12px] text-[var(--color-text-muted)]">Delivered</span>}
                     </td>
                   </tr>

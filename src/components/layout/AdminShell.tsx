@@ -41,7 +41,7 @@ function FlagTag({ flag }: { flag?: string }) {
   const on = useAuthStore((s) => (flag ? s.flags[flag as keyof typeof s.flags] : true))
   if (!flag || on) return null
   return (
-    <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-400">
+    <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
       Soon
     </span>
   )

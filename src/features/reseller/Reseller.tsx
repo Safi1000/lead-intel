@@ -12,15 +12,15 @@ import { formatMoney } from '../../lib/i18n'
 import { cn, formatNumber } from '../../lib/utils'
 
 const SUB_STATUS_TONE: Record<SubClient['status'], string> = {
-  active: 'bg-green-50 text-green-700',
-  suspended: 'bg-amber-50 text-amber-700',
+  active: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  suspended: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
 }
 
 const STATEMENT_TONE: Record<string, string> = {
-  paid: 'bg-green-50 text-green-700',
-  pending: 'bg-amber-50 text-amber-700',
-  due: 'bg-amber-50 text-amber-700',
-  overdue: 'bg-red-50 text-red-700',
+  paid: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  due: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  overdue: 'bg-red-500/10 text-red-700 dark:text-red-400',
 }
 
 export function ResellerPage() {
@@ -117,11 +117,11 @@ export function ResellerPage() {
                     </thead>
                     <tbody className="divide-y divide-[var(--color-border)]">
                       {revenue.statements.map((st) => (
-                        <tr key={st.period} className="hover:bg-slate-50">
+                        <tr key={st.period} className="hover:bg-[var(--color-surface-2)]">
                           <td className="px-4 py-3 font-medium">{st.period}</td>
                           <td className="px-4 py-3 text-right tabular-nums">{formatMoney(st.amount_cents, 'USD')}</td>
                           <td className="px-4 py-3">
-                            <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium capitalize', STATEMENT_TONE[st.status] ?? 'bg-slate-100 text-slate-700')}>
+                            <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium capitalize', STATEMENT_TONE[st.status] ?? 'bg-[var(--color-surface-2)] text-[var(--color-text)]')}>
                               {st.status}
                             </span>
                           </td>
@@ -160,7 +160,7 @@ export function ResellerPage() {
                     </thead>
                     <tbody className="divide-y divide-[var(--color-border)]">
                       {subClients.map((s) => (
-                        <tr key={s.id} className="hover:bg-slate-50">
+                        <tr key={s.id} className="hover:bg-[var(--color-surface-2)]">
                           <td className="px-4 py-3 font-medium">{s.name}</td>
                           <td className="px-4 py-3 capitalize text-[var(--color-text-secondary)]">{s.plan}</td>
                           <td className="px-4 py-3 text-right tabular-nums">{formatNumber(s.leads_delivered)}</td>

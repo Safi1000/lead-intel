@@ -24,7 +24,7 @@ export function Sheet({ open, onClose, title, children, width = 'max-w-lg' }: {
         role="dialog" aria-modal="true">
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-3">
           <div className="min-w-0 text-[15px] font-semibold">{title}</div>
-          <button onClick={onClose} className="rounded-full p-1 text-[var(--color-text-muted)] hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className="rounded-full p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
       </div>

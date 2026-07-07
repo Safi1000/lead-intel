@@ -170,7 +170,7 @@ export function UploadPage() {
                 ))}
               </ul>
               {missingRequired.length > 0 && (
-                <p className="mt-2 flex items-center gap-1.5 rounded-[8px] bg-red-50 p-2.5 text-[13px] text-[var(--c-unverified-text)]">
+                <p className="mt-2 flex items-center gap-1.5 rounded-[8px] bg-red-500/10 p-2.5 text-[13px] text-[var(--c-unverified-text)]">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   Required column(s) not found with an exact name match. Check capitalisation and spacing in your sheet's header row.
                 </p>

@@ -52,7 +52,7 @@ export function ProviderPage() {
               {rows.map((r) => {
                 const b = billedOf(r), c = costOf(r)
                 return (
-                  <tr key={r.org_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                  <tr key={r.org_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 font-medium">{r.org_name}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.leads_total}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.delivered_30d}</td>
@@ -60,7 +60,7 @@ export function ProviderPage() {
                     <td className="px-3 py-3 text-[var(--color-text-secondary)]">{r.plan}</td>
                     <td className="px-3 py-3 tabular-nums">${Math.round(b).toLocaleString()}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">${Math.round(c).toLocaleString()}</td>
-                    <td className={`px-3 py-3 tabular-nums font-semibold ${b - c >= 0 ? 'text-green-600' : 'text-red-600'}`}>${Math.round(b - c).toLocaleString()}</td>
+                    <td className={`px-3 py-3 tabular-nums font-semibold ${b - c >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>${Math.round(b - c).toLocaleString()}</td>
                     <td className="px-3 py-3"><Button size="sm" variant="ghost" onClick={() => setEdit(r)}>Billing</Button></td>
                   </tr>
                 )

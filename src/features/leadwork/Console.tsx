@@ -11,8 +11,8 @@ const monthStart = () => { const d = new Date(); return new Date(d.getFullYear()
 
 function AlertTile({ icon: Icon, label, value, tone }: { icon: LucideIcon; label: string; value: number; tone: 'red' | 'amber' }) {
   const active = value > 0
-  const box = !active ? 'border-[var(--color-border)]' : tone === 'red' ? 'border-red-300 bg-red-50/50' : 'border-amber-300 bg-amber-50/50'
-  const ic = !active ? 'text-[var(--color-text-muted)]' : tone === 'red' ? 'text-red-600' : 'text-amber-600'
+  const box = !active ? 'border-[var(--color-border)]' : tone === 'red' ? 'border-red-300 bg-red-500/10' : 'border-amber-300 bg-amber-500/10'
+  const ic = !active ? 'text-[var(--color-text-muted)]' : tone === 'red' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
   return (
     <Card className={cn('border p-4', box)}>
       <div className="mb-1 flex items-center gap-2"><Icon className={cn('h-4 w-4', ic)} /><span className="text-[13px] font-medium text-[var(--color-text-secondary)]">{label}</span></div>
@@ -66,12 +66,12 @@ export function ConsolePage() {
               </thead>
               <tbody>
                 {(funnel ?? []).slice(0, 8).map((r) => (
-                  <tr key={r.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                  <tr key={r.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 font-medium">{r.name}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{r.connectRate}%</td>
                     <td className="px-3 py-3 tabular-nums font-semibold text-[var(--color-primary)]">{r.booked}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.worked}/{r.assigned}</td>
-                    <td className={cn('px-3 py-3 tabular-nums', r.overdue ? 'font-semibold text-amber-600' : 'text-[var(--color-text-secondary)]')}>{r.overdue || '—'}</td>
+                    <td className={cn('px-3 py-3 tabular-nums', r.overdue ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-[var(--color-text-secondary)]')}>{r.overdue || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -82,7 +82,7 @@ export function ConsolePage() {
 
       <div className="flex flex-wrap gap-2">
         {links.map((l) => (
-          <Link key={l.to} to={l.to} className="inline-flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-3 py-2 text-sm font-medium hover:bg-slate-50">
+          <Link key={l.to} to={l.to} className="inline-flex items-center gap-1 rounded-[8px] border border-[var(--color-border)] px-3 py-2 text-sm font-medium hover:bg-[var(--color-surface-2)]">
             {l.label}<ArrowRight className="h-3.5 w-3.5" />
           </Link>
         ))}

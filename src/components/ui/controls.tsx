@@ -73,7 +73,7 @@ export function DropdownItem({
       disabled={disabled}
       onSelect={onSelect}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 data-[disabled]:opacity-40',
+        'flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-[var(--color-surface-2)] data-[disabled]:opacity-40',
         destructive ? 'text-[var(--c-unverified)]' : 'text-[var(--color-text)]',
       )}
     >
@@ -161,7 +161,7 @@ export function Checkbox({
       checked={checked}
       onCheckedChange={(v) => onCheckedChange(Boolean(v))}
       aria-label={ariaLabel}
-      className="flex h-4 w-4 items-center justify-center rounded border border-slate-300 bg-white data-[state=checked]:border-[var(--color-primary)] data-[state=checked]:bg-[var(--color-primary)] data-[state=indeterminate]:border-[var(--color-primary)] data-[state=indeterminate]:bg-[var(--color-primary)]"
+      className="flex h-4 w-4 items-center justify-center rounded border border-[var(--color-border)] bg-white data-[state=checked]:border-[var(--color-primary)] data-[state=checked]:bg-[var(--color-primary)] data-[state=indeterminate]:border-[var(--color-primary)] data-[state=indeterminate]:bg-[var(--color-primary)]"
     >
       <RCheckbox.Indicator>
         <Check className="h-3 w-3 text-white" />
@@ -221,7 +221,7 @@ export function Slider({
       onValueChange={(v) => onValueChange(v[0])}
       className="relative flex h-5 w-full touch-none items-center"
     >
-      <RSlider.Track className="relative h-1.5 w-full grow rounded-full bg-slate-200">
+      <RSlider.Track className="relative h-1.5 w-full grow rounded-full bg-[var(--color-border)]">
         <RSlider.Range className="absolute h-full rounded-full bg-[var(--color-primary)]" />
       </RSlider.Track>
       <RSlider.Thumb className="block h-4 w-4 rounded-full border-2 border-[var(--color-primary)] bg-white shadow" aria-label="value" />

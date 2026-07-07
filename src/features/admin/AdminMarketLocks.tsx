@@ -65,7 +65,7 @@ export function AdminMarketLocksPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {locks.map((l) => (
-                  <tr key={l.id} className="hover:bg-slate-50">
+                  <tr key={l.id} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3 font-medium">{l.client_name ?? '—'}</td>
                     <td className="px-4 py-3 capitalize text-[var(--color-text-secondary)]">{l.trade}</td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">{l.area}</td>
@@ -74,7 +74,7 @@ export function AdminMarketLocksPage() {
                     </td>
                     <td className="px-4 py-3">
                       {l.auto_renew ? (
-                        <span className="inline-flex items-center gap-1 text-[13px] font-medium text-green-700">
+                        <span className="inline-flex items-center gap-1 text-[13px] font-medium text-green-700 dark:text-green-400">
                           <Check className="h-3.5 w-3.5" /> On
                         </span>
                       ) : (

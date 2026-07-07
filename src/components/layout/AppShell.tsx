@@ -21,7 +21,7 @@ export function AppShell() {
           <RD.Overlay className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" />
           <RD.Content className="fixed inset-y-0 left-0 z-50 w-64 lg:hidden">
             <div className="relative h-full">
-              <RD.Close className="absolute right-2 top-3 z-10 rounded-md p-2 text-[var(--color-text-secondary)] hover:bg-slate-100">
+              <RD.Close className="absolute right-2 top-3 z-10 rounded-md p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]">
                 <X className="h-5 w-5" />
               </RD.Close>
               <Sidebar onNavigate={() => setMobileOpen(false)} />

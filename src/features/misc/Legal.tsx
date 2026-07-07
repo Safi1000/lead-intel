@@ -45,7 +45,7 @@ export function LegalPage({ doc }: { doc: 'terms' | 'privacy' | 'aup' }) {
         </div>
 
         {isGate ? (
-          <div className="mt-8 rounded-[12px] border border-[var(--color-border)] bg-slate-50 p-4">
+          <div className="mt-8 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
             <p className="text-sm font-medium">You must accept the Terms of Service to continue.</p>
             <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
               By continuing you also agree to the{' '}

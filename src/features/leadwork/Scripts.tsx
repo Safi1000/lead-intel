@@ -78,7 +78,7 @@ export function ScriptsPage() {
             {canEdit && (
               <div className="flex gap-1">
                 <Button size="sm" variant="ghost" onClick={() => setEditing({ id: s.id, kind: s.kind, name: s.name, body: s.body })}>Edit</Button>
-                <Button size="sm" variant="ghost" className="text-red-600" onClick={() => setDeleteFor(s)}><Trash2 className="h-4 w-4" /></Button>
+                <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" onClick={() => setDeleteFor(s)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             )}
           </div>

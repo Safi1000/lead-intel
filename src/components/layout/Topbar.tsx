@@ -47,7 +47,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenMobileNav}
-          className="rounded-md p-2 text-[var(--color-text-secondary)] hover:bg-slate-100 lg:hidden"
+          className="rounded-md p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] lg:hidden"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
@@ -59,7 +59,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
             <span className="font-medium">{client?.name}</span>
             <button
               onClick={onExitOrg}
-              className="rounded-full px-2 py-0.5 text-[12px] font-medium text-[var(--color-text-secondary)] hover:bg-slate-200"
+              className="rounded-full px-2 py-0.5 text-[12px] font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]"
             >
               Exit
             </button>
@@ -72,14 +72,14 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="rounded-full p-2 text-[var(--color-text-secondary)] hover:bg-slate-100"
+          className="rounded-full p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]"
         >
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </button>
         <NotificationBell />
         <DropdownMenu>
           <DropdownTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-slate-100">
+            <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-[var(--color-surface-2)]">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-[13px] font-semibold text-white">
                 {initials}
               </span>

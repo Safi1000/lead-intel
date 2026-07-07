@@ -86,7 +86,7 @@ function TeamCard({ team, managers, assignable, members, allUsers, onChanged, on
     <Card className="p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-[16px] font-semibold">{team.name}</h2>
-        <Button size="sm" variant="ghost" className="text-red-600" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+        <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
       </div>
       <div className="mb-4 flex items-center gap-2">
         <Label className="text-[13px]">Manager</Label>
@@ -104,7 +104,7 @@ function TeamCard({ team, managers, assignable, members, allUsers, onChanged, on
             <span key={m.user_id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] py-1 pl-2.5 pr-1 text-[12px]">
               <span className="font-medium">{nameFor(m.user_id)}</span>
               <span className="text-[var(--color-text-muted)]">{m.role_in_team}</span>
-              <button onClick={() => rmM.mutate(m.user_id)} className="rounded-full p-0.5 text-[var(--color-text-muted)] hover:bg-slate-200" aria-label="Remove"><X className="h-3 w-3" /></button>
+              <button onClick={() => rmM.mutate(m.user_id)} className="rounded-full p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)]" aria-label="Remove"><X className="h-3 w-3" /></button>
             </span>
           ))}
         </div>

@@ -81,7 +81,7 @@ function Section({ title, tone, count, leads, canEdit, role, onStage, onFollowUp
             </thead>
             <tbody>
               {leads.map((l) => (
-                <tr key={l.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                <tr key={l.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                   <td className="px-5 py-3"><Link to={`/leads/manual/${l.id}`} className="font-medium hover:text-[var(--color-primary)]">{l.display_name}</Link></td>
                   <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={(s) => onStage(l.id, s)} /></td>
                   <td className="px-3 py-3"><FollowUpCell value={l.next_follow_up} disabled={!canEdit} onChange={(d) => onFollowUp(l.id, d)} /></td>

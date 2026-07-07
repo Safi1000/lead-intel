@@ -14,10 +14,10 @@ export function ComingSoon({
 }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10">
         <Sparkles className="h-7 w-7 text-[var(--color-primary)]" />
       </div>
-      <span className="mb-2 rounded-full bg-slate-100 px-2.5 py-1 text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
+      <span className="mb-2 rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
         {phase}
       </span>
       <h1 className="text-[24px] font-bold text-[var(--color-text)]">{title}</h1>

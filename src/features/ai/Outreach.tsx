@@ -374,7 +374,7 @@ export function OutreachPage() {
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {lead.hot && (
-                  <Badge className="bg-red-50 text-red-700">Hot</Badge>
+                  <Badge className="bg-red-500/10 text-red-700 dark:text-red-400">Hot</Badge>
                 )}
                 <Badge className="bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]">
                   Score {lead.score ?? '—'}

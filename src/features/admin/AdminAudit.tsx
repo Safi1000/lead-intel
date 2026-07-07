@@ -85,7 +85,7 @@ export function AdminAuditPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {filtered.map((e) => (
-                  <tr key={e.id} className="hover:bg-slate-50">
+                  <tr key={e.id} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">
                       <Tooltip content={absoluteTime(e.at)}>
                         <span className="cursor-default">{relativeTime(e.at)}</span>

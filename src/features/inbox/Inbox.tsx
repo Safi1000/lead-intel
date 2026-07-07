@@ -92,13 +92,13 @@ export function InboxPage() {
                     <button
                       onClick={() => setSelectedId(c.id)}
                       className={cn(
-                        'flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-slate-50',
-                        selectedId === c.id && 'bg-slate-50',
+                        'flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)]',
+                        selectedId === c.id && 'bg-[var(--color-surface-2)]',
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-1.5 truncate font-medium text-[var(--color-text)]">
-                          {c.resolved && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />}
+                          {c.resolved && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />}
                           {c.business_name}
                         </span>
                         <span className="shrink-0 text-[11px] text-[var(--color-text-muted)]">

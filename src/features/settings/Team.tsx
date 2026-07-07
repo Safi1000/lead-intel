@@ -88,15 +88,15 @@ export function TeamSettingsPage() {
                     <p className="truncate text-[13px] text-[var(--color-text-muted)]">{m.email}</p>
                   </div>
                   {m.status === 'invited' && (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Pending</span>
+                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">Pending</span>
                   )}
-                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'manager' ? 'bg-blue-50 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'manager' ? 'bg-blue-500/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
                     {ROLE_LABELS[m.role]}
                   </span>
                   <Can action="manage" resource="users" fallback={<span className="w-8" />}>
                     <DropdownMenu>
                       <DropdownTrigger asChild>
-                        <button className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-slate-100" aria-label="Member actions">
+                        <button className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]" aria-label="Member actions">
                           <MoreVertical className="h-4 w-4" />
                         </button>
                       </DropdownTrigger>

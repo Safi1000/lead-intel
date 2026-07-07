@@ -112,7 +112,7 @@ function MeetingCard({ row, tz }: { row: MeetingWithLeadDTO; tz: string }) {
       <div className="flex flex-col gap-1 border-b border-[var(--color-border)] pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[15px] font-semibold text-[var(--color-text)]">{fmtRange(meeting.startTime, meeting.endTime, tz)}</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[12px] font-medium text-slate-600">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[12px] font-medium text-[var(--color-text-secondary)]">
             <Clock className="h-3 w-3" /> {relativeHint(meeting.startTime)}
           </span>
         </div>
@@ -128,10 +128,10 @@ function MeetingCard({ row, tz }: { row: MeetingWithLeadDTO; tz: string }) {
         {row.lead ? (
           <LeadBlock lead={row.lead} />
         ) : (
-          <div className="rounded-[10px] border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800">
+          <div className="rounded-[10px] border border-amber-200 bg-amber-500/10 p-3 text-sm text-amber-800">
             <p className="font-medium">No CRM lead matched.</p>
             <p className="mt-1">Invitee: <span className="font-mono">{meeting.invitee.name}</span> · <span className="font-mono">{meeting.invitee.email}</span></p>
-            <p className="mt-1 text-[12px] text-amber-700">Ask the setter to include the CRM Lead ID when booking.</p>
+            <p className="mt-1 text-[12px] text-amber-700 dark:text-amber-400">Ask the setter to include the CRM Lead ID when booking.</p>
           </div>
         )}
         <SetterNotesBlock row={row} />
@@ -236,8 +236,8 @@ export function MeetingsPage() {
               className={cn(
                 'rounded-[8px] border px-3 py-1.5 text-sm font-medium transition-colors',
                 a.aeId === pickedAe
-                  ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'
-                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50',
+                  ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]'
+                  : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
               )}
             >
               {a.aeName}

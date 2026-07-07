@@ -36,7 +36,7 @@ export function AuthLayout({
           </div>
           <div>
             <p className="text-lg font-bold leading-none tracking-tight">LeadIntel</p>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signal Intelligence Platform</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">Signal Intelligence Platform</p>
           </div>
         </div>
 
@@ -59,7 +59,7 @@ export function AuthLayout({
             <span style={{ color: '#1466ff' }}>for local-service trades.</span>
           </h2>
 
-          <p className="max-w-[380px] text-[14.5px] leading-relaxed text-slate-400">
+          <p className="max-w-[380px] text-[14.5px] leading-relaxed text-[var(--color-text-muted)]">
             Discover, enrich, and deliver leads with per-field confidence scoring and full source provenance. Launch a run, watch it enrich live, and export in minutes.
           </p>
 
@@ -73,14 +73,14 @@ export function AuthLayout({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
             <ShieldCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#00c2a8' }} />
             SOC2-aligned · multi-tenant · audit-logged
           </div>
         </div>
 
         {/* Footer */}
-        <p className="relative text-[12px] text-slate-600">Lead Intelligence Platform v1.0</p>
+        <p className="relative text-[12px] text-[var(--color-text-secondary)]">Lead Intelligence Platform v1.0</p>
       </div>
 
       {/* ── Form panel ── */}

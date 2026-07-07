@@ -14,9 +14,9 @@ import { cn, formatNumber } from '../../lib/utils'
 import { relativeTime, absoluteTime } from '../../lib/time'
 
 const STATUS_TONE: Record<AdminClient['status'], string> = {
-  active: 'bg-green-50 text-green-700',
-  suspended: 'bg-amber-50 text-amber-700',
-  deleting: 'bg-red-50 text-red-700',
+  active: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  suspended: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  deleting: 'bg-red-500/10 text-red-700 dark:text-red-400',
 }
 
 function StatusBadge({ status }: { status: AdminClient['status'] }) {
@@ -73,7 +73,7 @@ export function AdminClientsPage() {
                 {clients.map((c) => (
                   <tr
                     key={c.id}
-                    className="cursor-pointer hover:bg-slate-50"
+                    className="cursor-pointer hover:bg-[var(--color-surface-2)]"
                     onClick={() => navigate(`/admin/clients/${c.id}`)}
                   >
                     <td className="px-4 py-3 font-medium">
@@ -208,7 +208,7 @@ export function AdminClientDetailPage() {
       </div>
 
       {client.status === 'deleting' && client.retention_days != null && (
-        <div className="mb-6 rounded-[12px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-[12px] border border-red-200 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
           This account is scheduled for deletion. Data retained for {client.retention_days} more day{client.retention_days === 1 ? '' : 's'}.
         </div>
       )}

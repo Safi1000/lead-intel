@@ -123,12 +123,12 @@ export function UsersPage() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                  <tr key={u.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{u.name}</p>
                         {remarkCounts[u.id] > 0 && (
-                          <button onClick={() => setRemarksTarget(u)} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-slate-200" title="View remarks">
+                          <button onClick={() => setRemarksTarget(u)} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]" title="View remarks">
                             <MessageSquare className="h-3 w-3" /> {remarkCounts[u.id]}
                           </button>
                         )}
@@ -154,7 +154,7 @@ export function UsersPage() {
                     <td className="px-3 py-3 text-right">
                       <DropdownMenu>
                         <DropdownTrigger asChild>
-                          <button className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-slate-100" aria-label="User actions"><MoreVertical className="h-4 w-4" /></button>
+                          <button className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]" aria-label="User actions"><MoreVertical className="h-4 w-4" /></button>
                         </DropdownTrigger>
                         <DropdownContent>
                           <DropdownItem onSelect={() => { setEditing(u); setFormOpen(true) }}>Edit role &amp; permissions</DropdownItem>
@@ -263,7 +263,7 @@ function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; 
               return (
                 <label key={key} className="flex items-center justify-between gap-3 text-sm">
                   <span>{p.label}</span>
-                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={!!perms[key]} onChange={(e) => setPerms((s) => ({ ...s, [key]: e.target.checked }))} />
+                  <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={!!perms[key]} onChange={(e) => setPerms((s) => ({ ...s, [key]: e.target.checked }))} />
                 </label>
               )
             })}
@@ -335,7 +335,7 @@ function UserRemarksDialog({ user, onClose, onChanged }: { user: ManagedUser; on
                 <div className="mb-1 flex items-center gap-2 text-[12px]">
                   <span className="font-semibold text-[var(--color-text)]">{r.author ?? 'Unknown'}</span>
                   <span className="text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(r.at), { addSuffix: true })}</span>
-                  <button onClick={() => del.mutate(r.id)} className="ml-auto rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition group-hover:opacity-100 hover:bg-slate-200 hover:text-red-600" aria-label="Delete remark"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => del.mutate(r.id)} className="ml-auto rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition group-hover:opacity-100 hover:bg-[var(--color-border)] hover:text-red-600 dark:text-red-400" aria-label="Delete remark"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
                 <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{r.text}</p>
               </div>

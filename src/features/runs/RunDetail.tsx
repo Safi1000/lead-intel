@@ -189,9 +189,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Banner({ tone, icon: Icon, title, children }: { tone: 'error' | 'warn' | 'success'; icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   const map = {
-    error: 'border-red-200 bg-red-50 text-[var(--c-unverified-text)]',
-    warn: 'border-amber-200 bg-amber-50 text-amber-800',
-    success: 'border-green-200 bg-green-50 text-green-800',
+    error: 'border-red-200 bg-red-500/10 text-[var(--c-unverified-text)]',
+    warn: 'border-amber-200 bg-amber-500/10 text-amber-800',
+    success: 'border-green-200 bg-green-500/10 text-green-800',
   }
   return (
     <div className={cn('mt-4 flex items-start gap-3 rounded-[12px] border p-4 text-sm', map[tone])}>

@@ -24,10 +24,10 @@ import { PageHeader, SectionCard, ProgressBar } from '../shared/bits'
 
 // ---- shared status styling ----
 const CAMPAIGN_STATUS: Record<Campaign['status'], { label: string; className: string }> = {
-  draft: { label: 'Draft', className: 'bg-slate-100 text-slate-600' },
+  draft: { label: 'Draft', className: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]' },
   scheduled: { label: 'Scheduled', className: 'bg-indigo-50 text-indigo-700' },
-  sending: { label: 'Sending', className: 'bg-amber-50 text-amber-700' },
-  sent: { label: 'Sent', className: 'bg-green-50 text-green-700' },
+  sending: { label: 'Sending', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+  sent: { label: 'Sent', className: 'bg-green-500/10 text-green-700 dark:text-green-400' },
 }
 
 function CampaignStatusBadge({ status }: { status: Campaign['status'] }) {
@@ -93,7 +93,7 @@ export function CampaignsPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {data.map((c) => (
-                  <tr key={c.id} className="cursor-default hover:bg-slate-50">
+                  <tr key={c.id} className="cursor-default hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3">
                       <Link to={`/campaigns/${c.id}`} className="font-medium hover:text-[var(--color-primary)]">
                         {c.name}
@@ -311,9 +311,9 @@ export function NewCampaignPage() {
                 </label>
                 <div className="flex items-start gap-2.5">
                   {templateApproved ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                   ) : (
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                   )}
                   <span className={cn('text-[var(--color-text)]', !templateApproved && 'text-[var(--color-text-secondary)]')}>
                     {templateApproved ? 'Template approved by Meta.' : 'Select an approved template.'}
@@ -486,7 +486,7 @@ export function CampaignDetailPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {messageRows.map((r) => (
-                  <tr key={r.label} className="hover:bg-slate-50">
+                  <tr key={r.label} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 text-[var(--color-text)]">{r.label}</td>
                     <td className="px-5 py-3">
                       <Badge className="bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]">{r.status}</Badge>

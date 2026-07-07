@@ -9,10 +9,10 @@ type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
     'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-sm',
-  secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
+  secondary: 'bg-[var(--color-surface-2)] text-slate-900 hover:bg-[var(--color-border)]',
   outline:
-    'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-slate-50',
-  ghost: 'text-[var(--color-text-secondary)] hover:bg-slate-100',
+    'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-surface-2)]',
+  ghost: 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
   danger: 'bg-[var(--c-unverified)] text-white hover:brightness-95 shadow-sm',
 }
 const buttonSizes: Record<ButtonSize, string> = {

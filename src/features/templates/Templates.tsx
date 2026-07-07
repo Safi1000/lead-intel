@@ -86,7 +86,7 @@ export function TemplatesPage() {
                     key={c.id}
                     className={cn(
                       'rounded-full px-2 py-0.5 font-mono text-[11px]',
-                      c.required ? 'bg-blue-50 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]',
+                      c.required ? 'bg-blue-500/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]',
                     )}
                     title={c.required ? 'Required' : 'Optional'}
                   >
@@ -197,7 +197,7 @@ function TemplateBuilder({ template, onClose, onSaved }: { template: LeadTemplat
                   className="font-mono"
                 />
                 <label className="flex shrink-0 items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]">
-                  <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={c.required} onChange={(e) => setCol(i, { required: e.target.checked })} />
+                  <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={c.required} onChange={(e) => setCol(i, { required: e.target.checked })} />
                   Required
                 </label>
                 <Button

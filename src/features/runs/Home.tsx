@@ -58,7 +58,7 @@ export function HomePage() {
               ['2. Watch it enrich', 'Live progress with per-field confidence.'],
               ['3. Export & outreach', 'Download CSV or view the fill-rate report.'],
             ].map(([t, d]) => (
-              <div key={t} className="rounded-[12px] bg-slate-50 p-4">
+              <div key={t} className="rounded-[12px] bg-[var(--color-surface-2)] p-4">
                 <p className="text-sm font-semibold">{t}</p>
                 <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{d}</p>
               </div>
@@ -110,7 +110,7 @@ export function HomePage() {
             <ul className="divide-y divide-[var(--color-border)]">
               {active.map((r) => (
                 <li key={r.id}>
-                  <Link to={`/runs/${r.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50">
+                  <Link to={`/runs/${r.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-[var(--color-surface-2)]">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-medium">Roofing · {r.location_label}</span>

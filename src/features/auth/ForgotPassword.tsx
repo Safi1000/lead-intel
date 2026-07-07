@@ -18,7 +18,7 @@ export function ForgotPasswordPage() {
   if (request.isSuccess) {
     return (
       <AuthLayout title="Check your email">
-        <div className="rounded-[12px] border border-[var(--color-border)] bg-slate-50 p-5 text-center">
+        <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-5 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-[var(--c-verified)]" />
           <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
             If an account exists for that email, we’ve sent a password reset link. It expires in 30 minutes.

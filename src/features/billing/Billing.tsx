@@ -40,7 +40,7 @@ export function BillingSettingsPage() {
   return (
     <div className="reveal space-y-6">
       {lowBalance && (
-        <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-500/10 p-4 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-semibold">Low credit balance</p>
@@ -242,7 +242,7 @@ function BuyCreditsModal({
               onClick={() => setAmount(pack)}
               className={cn(
                 'rounded-[12px] border p-4 text-center transition-colors',
-                amount === pack ? 'border-[var(--color-primary)] bg-blue-50' : 'border-[var(--color-border)] hover:border-slate-300',
+                amount === pack ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
               )}
             >
               <p className="text-[18px] font-bold tabular-nums text-[var(--color-text)]">{formatNumber(pack)}</p>
@@ -253,7 +253,7 @@ function BuyCreditsModal({
 
         <DemoCardForm />
 
-        <div className="flex items-center justify-between rounded-[8px] bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between rounded-[8px] bg-[var(--color-surface-2)] px-4 py-3">
           <span className="text-sm font-medium text-[var(--color-text)]">Total</span>
           <span className="text-[18px] font-bold tabular-nums">{formatMoney(priceCents, currency)}</span>
         </div>
@@ -282,7 +282,7 @@ function DemoCardForm() {
     <div className="rounded-[12px] border border-dashed border-[var(--color-border)] p-4">
       <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
         <CreditCard className="h-4 w-4" /> Card details
-        <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">Demo</span>
+        <span className="rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-text-muted)]">Demo</span>
       </div>
       <div className="space-y-3">
         <div>
@@ -332,7 +332,7 @@ function PaymentMethodsSection({ methods }: { methods: PaymentMethod[] }) {
           {methods.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-4 px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-12 items-center justify-center rounded-[6px] border border-[var(--color-border)] bg-slate-50">
+                <div className="flex h-9 w-12 items-center justify-center rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface-2)]">
                   <CreditCard className="h-4 w-4 text-[var(--color-text-secondary)]" />
                 </div>
                 <div>
@@ -343,7 +343,7 @@ function PaymentMethodsSection({ methods }: { methods: PaymentMethod[] }) {
                 </div>
               </div>
               {m.default && (
-                <Badge className="bg-slate-100 text-[var(--color-text-secondary)]">Default</Badge>
+                <Badge className="bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]">Default</Badge>
               )}
             </li>
           ))}
@@ -380,9 +380,9 @@ function AddPaymentMethodModal({ open, onOpenChange }: { open: boolean; onOpenCh
 }
 
 const INVOICE_STATUS: Record<Invoice['status'], string> = {
-  paid: 'bg-green-50 text-green-700',
-  open: 'bg-amber-50 text-amber-700',
-  void: 'bg-slate-100 text-slate-500',
+  paid: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  open: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  void: 'bg-[var(--color-surface-2)] text-[var(--color-text-muted)]',
 }
 
 function InvoicesSection({ invoices, currency }: { invoices: Invoice[]; currency: Currency }) {

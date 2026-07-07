@@ -45,7 +45,7 @@ function GoalCard({ label, count, target }: { label: string; count: number; targ
       </div>
       {target > 0 ? (
         <>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--color-border)]">
             <div className={cn('h-full rounded-full transition-all', met ? 'bg-[var(--c-verified)]' : 'bg-[var(--color-primary)]')} style={{ width: `${pct * 100}%` }} />
           </div>
           <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">{met ? 'Goal met 🎉' : `${Math.round(pct * 100)}% of goal`}</p>
@@ -83,7 +83,7 @@ function StatCell({ count, target }: { count: number; target: number }) {
       <div className="flex items-center gap-2">
         <span className="w-14 tabular-nums text-[var(--color-text)]">{count}{target > 0 && <span className="text-[var(--color-text-muted)]"> / {target}</span>}</span>
         {target > 0 && (
-          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--color-border)]">
             <span className={cn('block h-full rounded-full', met ? 'bg-[var(--c-verified)]' : 'bg-[var(--color-primary)]')} style={{ width: `${pct * 100}%` }} />
           </span>
         )}
@@ -123,7 +123,7 @@ function OverseerProgress({ periods, goal }: { periods: PeriodInfo; goal: number
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.user_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                <tr key={r.user_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                   <td className="px-5 py-3 font-medium text-[var(--color-text)]">{r.name}</td>
                   <StatCell count={r.today} target={t.today} />
                   <StatCell count={r.week} target={t.week} />

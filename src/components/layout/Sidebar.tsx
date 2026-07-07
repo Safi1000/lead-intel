@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { PanelLeftClose, PanelLeft } from 'lucide-react'
-import { CLIENT_NAV, CLIENT_NAV_BOTTOM, type NavItem } from './nav'
+import { CLIENT_NAV, CLIENT_NAV_BOTTOM, NAV_SECTIONS, type NavItem } from './nav'
 import { Icon } from './icon'
 import { useUIStore } from '../../stores/uiStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -14,27 +14,36 @@ function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boo
     <NavLink
       to={item.to}
       onClick={onNavigate}
+      title={collapsed ? item.label : undefined}
       className={({ isActive }) =>
         cn(
-          'group flex items-center gap-3 rounded-[8px] px-3 py-2 text-sm font-medium transition-colors',
+          'group relative flex items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] font-medium transition-all duration-150',
+          collapsed && 'justify-center px-0',
           item.primary
-            ? 'mb-1 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]'
+            ? 'bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-hover)]'
             : isActive
-              ? 'bg-blue-50 text-[var(--color-primary)]'
-              : 'text-[var(--color-text-secondary)] hover:bg-slate-100 hover:text-[var(--color-text)]',
+              ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]',
         )
       }
     >
-      <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-      {!collapsed && (
-        <span className="flex flex-1 items-center justify-between">
-          {item.label}
-          {soon && (
-            <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">
-              Soon
+      {({ isActive }) => (
+        <>
+          {isActive && !item.primary && !collapsed && (
+            <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
+          )}
+          <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && (
+            <span className="flex flex-1 items-center justify-between">
+              {item.label}
+              {soon && (
+                <span className="rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
+                  Soon
+                </span>
+              )}
             </span>
           )}
-        </span>
+        </>
       )}
     </NavLink>
   )
@@ -48,7 +57,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const inOrg = useAuthStore((s) => s.actingOrgId) != null
 
   const visible = CLIENT_NAV.filter((item) => {
-    // Clients are external: they only ever see items explicitly tagged for them (the portal).
     if (role === 'client') return item.roles?.includes('client') ?? false
     if (item.orgContext && !inOrg) return false
     if (item.perm) return can(role, item.perm.action, item.perm.resource, permissions)
@@ -56,35 +64,47 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     return true
   })
 
+  const ungrouped = visible.filter((i) => !i.section)
+  const groups = NAV_SECTIONS.map((s) => ({ section: s, items: visible.filter((i) => i.section === s) })).filter((g) => g.items.length)
+
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] transition-all',
+        'flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] transition-all duration-200',
         collapsed ? 'w-16' : 'w-64',
       )}
     >
-      <div className={cn('flex h-14 items-center gap-2 border-b border-[var(--color-border)] px-4', collapsed && 'justify-center px-0')}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-bold text-white">
-          Li
-        </div>
-        {!collapsed && <span className="text-[15px] font-bold tracking-tight">LeadIntel</span>}
+      <div className={cn('flex h-14 items-center gap-2.5 border-b border-[var(--color-border)] px-4', collapsed && 'justify-center px-0')}>
+        <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--color-primary)] text-sm font-bold text-white shadow-sm">Li</div>
+        {!collapsed && <span className="font-display text-[15px] font-bold tracking-tight">LeadIntel</span>}
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {visible.map((item) => (
-          <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+      <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-3">
+        {ungrouped.length > 0 && (
+          <div className="space-y-0.5">
+            {ungrouped.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+          </div>
+        )}
+        {groups.map((g) => (
+          <div key={g.section} className="mt-4 first:mt-0">
+            {!collapsed && (
+              <p className="px-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{g.section}</p>
+            )}
+            {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-[var(--color-border)]" />}
+            <div className="space-y-0.5">
+              {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+            </div>
+          </div>
         ))}
       </nav>
 
       <div className="space-y-0.5 border-t border-[var(--color-border)] p-3">
-        {CLIENT_NAV_BOTTOM.map((item) => (
-          <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
-        ))}
+        {CLIENT_NAV_BOTTOM.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
         <button
           onClick={toggle}
           className={cn(
-            'hidden w-full items-center gap-3 rounded-[8px] px-3 py-2 text-sm text-[var(--color-text-muted)] hover:bg-slate-100 lg:flex',
-            collapsed && 'justify-center',
+            'hidden w-full items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-2)] lg:flex',
+            collapsed && 'justify-center px-0',
           )}
         >
           {collapsed ? <PanelLeft className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}

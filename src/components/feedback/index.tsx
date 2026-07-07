@@ -29,7 +29,7 @@ export function EmptyState({
 }) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 px-6 py-16 text-center', className)}>
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
         <Icon className="h-6 w-6 text-[var(--color-text-muted)]" />
       </div>
       <div>
@@ -54,7 +54,7 @@ export function ErrorState({
 }) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 px-6 py-16 text-center', className)}>
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
         <AlertTriangle className="h-6 w-6 text-[var(--c-unverified)]" />
       </div>
       <div>

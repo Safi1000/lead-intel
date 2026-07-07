@@ -113,7 +113,7 @@ const GROUPS: Group[] = [
 const METHOD_TONE: Record<Method, string> = {
   GET: 'bg-[var(--c-verified-bg)] text-[var(--c-verified-text)]',
   POST: 'bg-[var(--color-surface-2)] text-[var(--color-primary)]',
-  PUT: 'bg-amber-50 text-amber-700',
+  PUT: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   DELETE: 'bg-[var(--c-unverified-bg)] text-[var(--c-unverified-text)]',
 }
 

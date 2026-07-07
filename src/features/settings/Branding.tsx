@@ -139,7 +139,7 @@ export function BrandingSettingsPage() {
               </div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <Badge className="bg-amber-50 text-amber-700">Verification: Pending</Badge>
+              <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400">Verification: Pending</Badge>
               <Button variant="outline" size="sm" onClick={() => toast('Verification still pending — DNS can take up to 24h to propagate.')}>
                 <Globe className="h-3.5 w-3.5" /> Check status
               </Button>

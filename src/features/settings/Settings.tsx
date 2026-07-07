@@ -41,7 +41,7 @@ export function SettingsLayout() {
               }
             >
               {t.label}
-              {soon && <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Soon</span>}
+              {soon && <span className="rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">Soon</span>}
             </NavLink>
           )
         })}

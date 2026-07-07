@@ -42,7 +42,7 @@ export function AdminCostsPage() {
       />
 
       {data.near_cap.length > 0 && (
-        <div className="mb-4 flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="mb-4 flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-500/10 p-4 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div><p className="font-semibold">API nearing monthly cap</p><p>{data.near_cap.map((c) => `${c.api} at ${Math.round(c.pct * 100)}%`).join(', ')}. Consider throttling new runs.</p></div>
         </div>
@@ -89,9 +89,9 @@ export function AdminCostsPage() {
 }
 
 const SEVERITY = {
-  critical: 'bg-red-50 text-red-700',
-  warning: 'bg-amber-50 text-amber-700',
-  info: 'bg-slate-100 text-slate-600',
+  critical: 'bg-red-500/10 text-red-700 dark:text-red-400',
+  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  info: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]',
 }
 
 export function AdminErrorsPage() {

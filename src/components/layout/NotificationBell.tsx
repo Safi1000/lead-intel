@@ -24,7 +24,7 @@ export function NotificationBell() {
     <Popover>
       <PopoverTrigger asChild>
         <button
-          className="relative rounded-full p-2 text-[var(--color-text-secondary)] hover:bg-slate-100"
+          className="relative rounded-full p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]"
           aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`}
         >
           <Bell className="h-5 w-5" />
@@ -52,7 +52,7 @@ export function NotificationBell() {
                 to={n.link ?? '#'}
                 onClick={() => !n.read && markRead.mutate(n.id)}
                 className={cn(
-                  'flex gap-3 border-b border-[var(--color-border)] px-4 py-3 last:border-0 hover:bg-slate-50',
+                  'flex gap-3 border-b border-[var(--color-border)] px-4 py-3 last:border-0 hover:bg-[var(--color-surface-2)]',
                   !n.read && 'bg-blue-50/40',
                 )}
               >
@@ -74,7 +74,7 @@ export function NotificationBell() {
         {items.length > 0 && (
           <button
             onClick={() => items.filter((n) => !n.read).forEach((n) => markRead.mutate(n.id))}
-            className="flex w-full items-center justify-center gap-1.5 border-t border-[var(--color-border)] py-2.5 text-[13px] font-medium text-[var(--color-primary)] hover:bg-slate-50"
+            className="flex w-full items-center justify-center gap-1.5 border-t border-[var(--color-border)] py-2.5 text-[13px] font-medium text-[var(--color-primary)] hover:bg-[var(--color-surface-2)]"
           >
             <CheckCheck className="h-4 w-4" /> Mark all read
           </button>

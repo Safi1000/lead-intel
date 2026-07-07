@@ -37,7 +37,7 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
   return (
     <button type="button" title="Copy" aria-label="Copy"
       onClick={async (e) => { e.stopPropagation(); e.preventDefault(); try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1200) } catch { toast.error('Could not copy') } }}
-      className={cn('shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-slate-100 hover:text-[var(--color-text)]', className)}>
+      className={cn('shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]', className)}>
       {done ? <Check className="h-3.5 w-3.5 text-[var(--c-verified)]" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
   )
@@ -158,7 +158,7 @@ export function ManualLeadDetailPage() {
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {lead.lifecycle_state && <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)]">{lead.lifecycle_state}</span>}
             {lead.attempt_count > 0 && <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)] tabular-nums">{lead.attempt_count} attempt{lead.attempt_count === 1 ? '' : 's'}</span>}
-            {lead.dnc && <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-600"><Ban className="h-3 w-3" /> Do not call</span>}
+            {lead.dnc && <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400"><Ban className="h-3 w-3" /> Do not call</span>}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -212,8 +212,8 @@ export function ManualLeadDetailPage() {
                     <span className="text-left"><LeadValue value={value} /></span>
                     {value && looksPhone(value) && (
                       <>
-                        <a href={`tel:${digits(value)}`} title="Call" className="shrink-0 rounded p-1 text-[var(--color-primary)] hover:bg-slate-100"><Phone className="h-4 w-4" /></a>
-                        <a href={`https://wa.me/${digits(value)}`} target="_blank" rel="noreferrer" title="WhatsApp" className="shrink-0 rounded p-1 text-green-600 hover:bg-slate-100"><MessageCircle className="h-4 w-4" /></a>
+                        <a href={`tel:${digits(value)}`} title="Call" className="shrink-0 rounded p-1 text-[var(--color-primary)] hover:bg-[var(--color-surface-2)]"><Phone className="h-4 w-4" /></a>
+                        <a href={`https://wa.me/${digits(value)}`} target="_blank" rel="noreferrer" title="WhatsApp" className="shrink-0 rounded p-1 text-green-600 dark:text-green-400 hover:bg-[var(--color-surface-2)]"><MessageCircle className="h-4 w-4" /></a>
                       </>
                     )}
                     {value && <CopyButton text={value} />}
@@ -264,7 +264,7 @@ export function ManualLeadDetailPage() {
                   <li key={r.id} className="group rounded-[10px] bg-[var(--color-surface-2)] p-3">
                     <div className="mb-1 flex items-center gap-2 text-[12px]">
                       <span className="font-semibold text-[var(--color-text)]">{r.author}</span>
-                      <span className="rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium uppercase text-slate-600">{ROLE_LABELS[r.author_role]}</span>
+                      <span className="rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--color-text-secondary)]">{ROLE_LABELS[r.author_role]}</span>
                       <span className="text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(r.at), { addSuffix: true })}</span>
                       <CopyButton text={r.text} className="ml-auto" />
                     </div>
@@ -294,7 +294,7 @@ export function ManualLeadDetailPage() {
               <div>
                 <Label className="mb-1.5 flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5" /> Next follow-up</Label>
                 <FollowUpCell value={lead.next_follow_up} disabled={!canWork} onChange={(d) => update.mutate({ next_follow_up: d })} />
-                {isOverdue(lead.next_follow_up) && <p className="mt-1 text-[12px] font-medium text-red-600">Overdue</p>}
+                {isOverdue(lead.next_follow_up) && <p className="mt-1 text-[12px] font-medium text-red-600 dark:text-red-400">Overdue</p>}
               </div>
               {(lead.stage === 'Booked' || lead.call_at) && (
                 <div>
@@ -340,10 +340,10 @@ export function ManualLeadDetailPage() {
             <h2 className="mb-3 text-[15px] font-semibold">Assignment</h2>
             <dl className="space-y-2 text-sm">
               <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Setter</dt><dd className="flex items-center gap-1">{lead.setter ?? '—'}{lead.setter && <CopyButton text={lead.setter} />}{lead.setter && !lead.done_at && (role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (
-                <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'setter'} onClick={() => unassign.mutate('setter')}>Unassign</Button>
+                <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" loading={unassign.isPending && unassign.variables === 'setter'} onClick={() => unassign.mutate('setter')}>Unassign</Button>
               )}{lead.setter && lead.done_at && <span className="text-[11px] text-[var(--color-text-muted)]" title="Done leads stay with their setter forever">🔒</span>}</dd></div>
               <div className="group flex items-center justify-between gap-2"><dt className="text-[var(--color-text-muted)]">Closer</dt><dd className="flex items-center gap-1">{lead.closer ?? '—'}{lead.closer && <CopyButton text={lead.closer} />}{lead.closer && (role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (
-                <Button size="sm" variant="ghost" className="text-red-600" loading={unassign.isPending && unassign.variables === 'closer'} onClick={() => unassign.mutate('closer')}>Unassign</Button>
+                <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" loading={unassign.isPending && unassign.variables === 'closer'} onClick={() => unassign.mutate('closer')}>Unassign</Button>
               )}</dd></div>
               <div className="flex justify-between"><dt className="text-[var(--color-text-muted)]">Updated</dt><dd>{formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}</dd></div>
             </dl>
@@ -479,11 +479,11 @@ function CallCard({ lead }: { lead: ManualLead }) {
   const issue = findField(lead.data, /issue|problem|pain|reason|note/i)
   const phone = findField(lead.data, /phone|mobile|cell|tel/i)
   return (
-    <Card className="mb-5 border-amber-200 bg-amber-50/40 p-5">
+    <Card className="mb-5 border-amber-200 bg-amber-500/10 p-5">
       <div className="mb-3 flex items-center gap-2">
-        <PhoneCall className="h-4 w-4 text-amber-600" />
+        <PhoneCall className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         <h2 className="text-[15px] font-semibold">Call card</h2>
-        {lead.call_at && <span className="ml-auto text-[13px] font-medium text-amber-700">{format(new Date(lead.call_at), 'PPp')}</span>}
+        {lead.call_at && <span className="ml-auto text-[13px] font-medium text-amber-700 dark:text-amber-400">{format(new Date(lead.call_at), 'PPp')}</span>}
       </div>
       <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
         <Field label="Business">{lead.display_name}</Field>

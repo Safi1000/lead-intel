@@ -52,7 +52,7 @@ export function ResetPasswordPage() {
   return (
     <AuthLayout title="Set a new password" subtitle="Choose a strong password (12+ characters).">
       {expired ? (
-        <div className="rounded-[12px] border border-red-200 bg-red-50 p-5">
+        <div className="rounded-[12px] border border-red-200 bg-red-500/10 p-5">
           <p className="text-sm text-[var(--c-unverified-text)]">This reset link has expired.</p>
           <Link to="/forgot-password" className="mt-3 inline-block">
             <Button variant="outline">Request a new link</Button>
@@ -75,7 +75,7 @@ export function ResetPasswordPage() {
                           ? strength.score >= 3
                             ? 'bg-[var(--c-verified)]'
                             : 'bg-[var(--c-probable)]'
-                          : 'bg-slate-200',
+                          : 'bg-[var(--color-border)]',
                       )}
                     />
                   ))}

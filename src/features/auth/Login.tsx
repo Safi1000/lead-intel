@@ -63,7 +63,7 @@ export function LoginPage() {
     <AuthLayout title="Sign in" subtitle="Welcome back. Enter your credentials to continue.">
       <form onSubmit={form.handleSubmit((d) => login.mutate(d))} className="space-y-4" noValidate>
         {login.isError && (
-          <div className="flex items-start gap-2 rounded-[8px] border border-red-200 bg-red-50 p-3 text-[13px] text-[var(--c-unverified-text)]">
+          <div className="flex items-start gap-2 rounded-[8px] border border-red-200 bg-red-500/10 p-3 text-[13px] text-[var(--c-unverified-text)]">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{normalizeError(login.error).message}</span>
           </div>
@@ -84,13 +84,13 @@ export function LoginPage() {
           <FieldError>{form.formState.errors.password?.message}</FieldError>
         </div>
         <label className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" {...form.register('remember')} />
+          <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" {...form.register('remember')} />
           Remember me
         </label>
         <Button type="submit" className="w-full" size="lg" loading={login.isPending}>
           Sign in
         </Button>
-        <p className="rounded-[8px] bg-slate-50 p-3 text-center text-[12px] text-[var(--color-text-muted)]">
+        <p className="rounded-[8px] bg-[var(--color-surface-2)] p-3 text-center text-[12px] text-[var(--color-text-muted)]">
           Sign in with the account your administrator created for you.
         </p>
       </form>

@@ -71,7 +71,7 @@ function UsageContent({ data }: { data: UsageSummary }) {
   return (
     <div className="space-y-6">
       {overage && (
-        <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-[12px] border border-amber-200 bg-amber-500/10 p-4 text-sm text-amber-800">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-semibold">High credit consumption</p>

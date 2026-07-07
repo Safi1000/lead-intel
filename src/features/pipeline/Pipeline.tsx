@@ -18,7 +18,7 @@ import { cn } from '../../lib/utils'
 
 function NicheBanner() {
   return (
-    <Card className="flex items-start gap-3 px-5 py-4 border-blue-200 bg-blue-50">
+    <Card className="flex items-start gap-3 px-5 py-4 border-blue-200 bg-blue-500/10">
       <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
       <div className="text-sm text-blue-800">
         <span className="font-semibold">Target niche: US Med Spas & Aesthetic Clinics</span>
@@ -139,10 +139,10 @@ function ElapsedTimer({ startedAt, completedAt, running }: { startedAt: string; 
 
 function StatusBadge({ status }: { status: PipelineRun['status'] }) {
   const styles: Record<PipelineRun['status'], string> = {
-    running:   'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    failed:    'bg-red-100 text-red-700',
-    stopped:   'bg-amber-100 text-amber-700',
+    running:   'bg-blue-100 text-blue-700 dark:text-blue-400',
+    completed: 'bg-green-100 text-green-700 dark:text-green-400',
+    failed:    'bg-red-100 text-red-700 dark:text-red-400',
+    stopped:   'bg-amber-100 text-amber-700 dark:text-amber-400',
   }
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status])}>
@@ -184,7 +184,7 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold">Daily auto-run <span className="ml-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">Superadmin</span></h2>
+          <h2 className="text-[15px] font-semibold">Daily auto-run <span className="ml-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:text-violet-400">Superadmin</span></h2>
           <p className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">
             Every day at 8:00 AM, automatically create the day's batch (named by date) and run until the qualified target is met. Untick to skip — it stays off until you re-enable it.
           </p>
@@ -202,12 +202,12 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
           </div>
           <label className="flex cursor-pointer items-center gap-2 pt-5">
             <input
-              type="checkbox" className="h-5 w-5 rounded border-slate-300 accent-[var(--color-primary)]"
+              type="checkbox" className="h-5 w-5 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
               checked={enabled}
               onChange={(e) => save.mutate({ daily_run_enabled: e.target.checked })}
               disabled={save.isPending}
             />
-            <span className={cn('text-sm font-medium', enabled ? 'text-green-700' : 'text-[var(--color-text-muted)]')}>
+            <span className={cn('text-sm font-medium', enabled ? 'text-green-700 dark:text-green-400' : 'text-[var(--color-text-muted)]')}>
               {enabled ? 'Enabled' : 'Disabled'}
             </span>
           </label>
@@ -329,7 +329,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
               onClick={() => stop.mutate()}
               loading={stop.isPending}
               disabled={stop.isPending}
-              className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+              className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 hover:bg-red-100"
             >
               <Square className="h-3.5 w-3.5 mr-1.5 fill-current" />
               Stop
@@ -341,7 +341,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
       {liveRun && (
         <div className={cn(
           'mt-4 rounded-lg border px-4 py-3 text-sm',
-          liveRun.status === 'failed' ? 'border-red-200 bg-red-50' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)]',
+          liveRun.status === 'failed' ? 'border-red-200 bg-red-500/10' : 'border-[var(--color-border)] bg-[var(--color-surface-alt)]',
         )}>
           <div className="flex items-center justify-between gap-2 mb-2">
             <span className="font-medium">Current run</span>
@@ -372,7 +372,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
             <span>Imported: <strong className="text-[var(--color-text)]">{liveRun.total_imported}</strong></span>
             <span>No site: <strong className="text-[var(--color-text-secondary)]">{liveRun.total_no_website ?? 0}</strong></span>
           </div>
-          {liveRun.error && <p className="mt-2 text-red-600 text-[12px]">{liveRun.error}</p>}
+          {liveRun.error && <p className="mt-2 text-red-600 dark:text-red-400 text-[12px]">{liveRun.error}</p>}
           {liveRun.xlsx_url && (
             <a href={liveRun.xlsx_url} target="_blank" rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1 text-[var(--color-primary)] text-[12px] hover:underline">
@@ -472,7 +472,7 @@ function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
   })
 
   return (
-    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+    <tr className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
       <td className="px-5 py-3">{format(new Date(run.started_at), 'MMM d, HH:mm')}</td>
       <td className="px-3 py-3"><StatusBadge status={run.status} /></td>
       <td className="px-3 py-3 text-[var(--color-text-secondary)]">{run.dry_run ? 'Dry run' : 'Live'}</td>
@@ -485,7 +485,7 @@ function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
       <td className="px-3 py-3">
         <div className="flex items-center gap-2">
           <button onClick={() => stop.mutate()} disabled={stop.isPending}
-            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-[12px] disabled:opacity-40"
+            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 dark:text-red-400 text-[12px] disabled:opacity-40"
             title="Force stop">
             <Square className="h-3 w-3 fill-current" />
             {stop.isPending ? '…' : 'Stop'}

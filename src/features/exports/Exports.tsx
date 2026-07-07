@@ -49,7 +49,7 @@ export function ExportsPage() {
             <div>
               <p className="mb-1.5 text-sm font-medium">Source batch</p>
               {batches.isLoading ? (
-                <div className="h-9 animate-pulse rounded-[8px] bg-slate-100" />
+                <div className="h-9 animate-pulse rounded-[8px] bg-[var(--color-surface-2)]" />
               ) : (
                 <select value={batchId} onChange={(e) => setBatchId(e.target.value)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] px-2 text-sm">
                   <option value="">Most recent batch</option>
@@ -64,7 +64,7 @@ export function ExportsPage() {
               <p className="mb-1.5 text-sm font-medium">Format</p>
               <div className="flex gap-2">
                 {(['csv', 'xlsx'] as const).map((f) => (
-                  <button key={f} onClick={() => setFormat(f)} className={cn('flex flex-1 items-center justify-center gap-2 rounded-[8px] border py-2 text-sm font-medium', format === f ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]' : 'border-[var(--color-border)]')}>
+                  <button key={f} onClick={() => setFormat(f)} className={cn('flex flex-1 items-center justify-center gap-2 rounded-[8px] border py-2 text-sm font-medium', format === f ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]' : 'border-[var(--color-border)]')}>
                     {f === 'csv' ? <FileText className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}{f.toUpperCase()}
                   </button>
                 ))}
@@ -107,7 +107,7 @@ export function ExportsPage() {
               <ul className="divide-y divide-[var(--color-border)]">
                 {jobs.data!.data.map((j) => (
                   <li key={j.id} className="flex items-center gap-3 px-5 py-3.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-surface-2)]">
                       {j.format === 'csv' ? <FileText className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}
                     </div>
                     <div className="min-w-0 flex-1">

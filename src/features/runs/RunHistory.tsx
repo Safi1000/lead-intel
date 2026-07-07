@@ -66,7 +66,7 @@ export function RunHistoryPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {runs.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3">
                       <Link to={`/runs/${r.id}`} className="font-medium hover:text-[var(--color-primary)]">Roofing · {r.location_label}</Link>
                     </td>

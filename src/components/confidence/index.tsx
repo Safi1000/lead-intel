@@ -80,7 +80,7 @@ function CopyButton({ value }: { value: string }) {
         setTimeout(() => setCopied(false), 1200)
       }}
       aria-label="Copy"
-      className="rounded p-1 text-[var(--color-text-muted)] hover:bg-slate-100 hover:text-[var(--color-text)]"
+      className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
     >
       {copied ? <Check className="h-3.5 w-3.5 text-[var(--c-verified)]" /> : <Copy className="h-3.5 w-3.5" />}
     </button>

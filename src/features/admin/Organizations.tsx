@@ -55,12 +55,12 @@ export function OrganizationsPage() {
           {orgs.map((o) => (
             <Card key={o.id} className="flex flex-col p-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-blue-50 text-[var(--color-primary)]"><Building2 className="h-5 w-5" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-blue-500/10 text-[var(--color-primary)]"><Building2 className="h-5 w-5" /></span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-[15px] font-semibold">{o.name}</h3>
                   <p className="text-[12px] text-[var(--color-text-muted)]">{o.user_count ?? 0} user{o.user_count === 1 ? '' : 's'} · {o.manager_count ?? 0} manager{o.manager_count === 1 ? '' : 's'}</p>
                 </div>
-                <button onClick={() => setDeleteTarget(o)} aria-label="Delete organization" className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-slate-100"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => setDeleteTarget(o)} aria-label="Delete organization" className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]"><Trash2 className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 flex items-center gap-2 border-t border-[var(--color-border)] pt-3">
                 <Button size="sm" className="flex-1" onClick={() => onView(o)}>

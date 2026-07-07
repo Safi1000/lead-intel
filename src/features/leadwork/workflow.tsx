@@ -6,13 +6,13 @@ export const STAGE_ORDER: LeadStage[] = LEAD_STAGES
 
 /** Colour-coded chip styling per pipeline stage (Feature 1). */
 export const STAGE_META: Record<LeadStage, { label: string; className: string; dot: string }> = {
-  New: { label: 'New', className: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' },
-  Contacted: { label: 'Contacted', className: 'bg-blue-50 text-blue-700', dot: 'bg-blue-500' },
-  Interested: { label: 'Interested', className: 'bg-violet-50 text-violet-700', dot: 'bg-violet-500' },
-  Booked: { label: 'Booked', className: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+  New: { label: 'New', className: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]', dot: 'bg-slate-400' },
+  Contacted: { label: 'Contacted', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', dot: 'bg-blue-500' },
+  Interested: { label: 'Interested', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
+  Booked: { label: 'Booked', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
   'Not Now': { label: 'Not Now', className: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500' },
-  Won: { label: 'Won', className: 'bg-green-50 text-green-700', dot: 'bg-green-500' },
-  Lost: { label: 'Lost', className: 'bg-red-50 text-red-600', dot: 'bg-red-500' },
+  Won: { label: 'Won', className: 'bg-green-500/10 text-green-700 dark:text-green-400', dot: 'bg-green-500' },
+  Lost: { label: 'Lost', className: 'bg-red-500/10 text-red-600 dark:text-red-400', dot: 'bg-red-500' },
 }
 
 export const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin' || role === 'owner'

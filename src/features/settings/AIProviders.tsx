@@ -173,7 +173,7 @@ function ByoKeyRow({
       <Can action="manage" resource="aiProviders" disable>
         <Button size="sm" variant="outline" loading={validating} onClick={validate}>Validate</Button>
       </Can>
-      <span className={cn('inline-flex items-center gap-1 text-[12px]', valid ? 'text-[var(--c-verified-text)]' : present ? 'text-[var(--color-text-muted)]' : 'text-amber-600')}>
+      <span className={cn('inline-flex items-center gap-1 text-[12px]', valid ? 'text-[var(--c-verified-text)]' : present ? 'text-[var(--color-text-muted)]' : 'text-amber-600 dark:text-amber-400')}>
         {valid ? (
           <><CheckCircle2 className="h-3.5 w-3.5" /> Valid</>
         ) : present ? (

@@ -103,7 +103,7 @@ export function BatchesPage() {
           <button
             onClick={() => setShowArchived((v) => !v)}
             className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-              showArchived ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100')}
+              showArchived ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}
           >
             <Archive className="h-3.5 w-3.5" /> Archived <span className="tabular-nums opacity-70">{archivedCount}</span>
           </button>
@@ -181,12 +181,12 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
   allocateManagers?: { id: string; name: string }[]; onAllocate: (mgr: string | null) => void
 }) {
   return (
-    <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50" onClick={onOpen}>
+    <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]" onClick={onOpen}>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-blue-50 text-[var(--color-primary)]"><FileSpreadsheet className="h-4 w-4" /></span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-blue-500/10 text-[var(--color-primary)]"><FileSpreadsheet className="h-4 w-4" /></span>
           <div className="min-w-0">
-            <p className="truncate font-medium text-[var(--color-text)]">{b.file_name}{b.archived_at && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Archived</span>}</p>
+            <p className="truncate font-medium text-[var(--color-text)]">{b.file_name}{b.archived_at && <span className="ml-2 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)]">Archived</span>}</p>
             <p className="truncate text-[12px] text-[var(--color-text-muted)]">{b.template_name}{b.created_by ? ` · by ${b.created_by}` : ''}</p>
           </div>
         </div>
@@ -196,7 +196,7 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
         {b.rejected_count > 0 && <span className="ml-1 text-[12px] text-[var(--color-text-muted)]">({b.rejected_count} rejected)</span>}
         {b.lead_count > 0 && (
           <div className="mt-1 w-24">
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-border)]">
               <div className="h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${Math.round(((b.lead_count - b.new_count) / b.lead_count) * 100)}%` }} />
             </div>
             <span className="text-[11px] text-[var(--color-text-muted)]">{b.lead_count - b.new_count}/{b.lead_count} worked</span>
@@ -205,12 +205,12 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
       </td>
       <td className="px-3 py-3">
         <div className="flex flex-wrap gap-1">
-          <Pill label="new" value={b.new_count} className="bg-slate-100 text-slate-600" />
-          <Pill label="contacted" value={b.contacted_count} className="bg-blue-50 text-blue-700" />
-          <Pill label="interested" value={b.interested_count} className="bg-violet-50 text-violet-700" />
-          <Pill label="booked" value={b.booked_count} className="bg-amber-50 text-amber-700" />
-          <Pill label="won" value={b.won_count} className="bg-green-50 text-green-700" />
-          <Pill label="lost" value={b.lost_count} className="bg-red-50 text-red-600" />
+          <Pill label="new" value={b.new_count} className="bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]" />
+          <Pill label="contacted" value={b.contacted_count} className="bg-blue-500/10 text-blue-700 dark:text-blue-400" />
+          <Pill label="interested" value={b.interested_count} className="bg-violet-500/10 text-violet-700 dark:text-violet-400" />
+          <Pill label="booked" value={b.booked_count} className="bg-amber-500/10 text-amber-700 dark:text-amber-400" />
+          <Pill label="won" value={b.won_count} className="bg-green-500/10 text-green-700 dark:text-green-400" />
+          <Pill label="lost" value={b.lost_count} className="bg-red-500/10 text-red-600 dark:text-red-400" />
           {b.lead_count === 0 && <span className="text-[12px] text-[var(--color-text-muted)]">—</span>}
         </div>
       </td>
@@ -242,7 +242,7 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
               </Button>
             )}
             {canDelete && (
-              <Button size="sm" variant="ghost" className="text-red-600" title="Delete forever (superadmin)" onClick={onDelete}>
+              <Button size="sm" variant="ghost" className="text-red-600 dark:text-red-400" title="Delete forever (superadmin)" onClick={onDelete}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}

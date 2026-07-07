@@ -55,7 +55,7 @@ function CalBookingLauncher({ url, prefill, onScheduled }: { url: string; prefil
 
   if (!bookingUrl) {
     return (
-      <div className="rounded-[10px] border border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800">
+      <div className="rounded-[10px] border border-amber-200 bg-amber-500/10 p-4 text-sm text-amber-800">
         <p className="font-medium">Scheduling unavailable</p>
         <p className="mt-1">This AE has no scheduling URL configured. Set CAL_AE_&lt;ID&gt;_URL in Vercel (e.g. https://cal.com/hamna/30min) and redeploy.</p>
       </div>
@@ -201,7 +201,7 @@ function SetterGuide() {
               <ol className="space-y-1.5">
                 {sec.steps.map((step, i) => (
                   <li key={i} className="flex gap-2 text-sm text-[var(--color-text-secondary)]">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">{i + 1}</span>
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-[11px] font-semibold text-[var(--color-text-secondary)]">{i + 1}</span>
                     <span>{step}</span>
                   </li>
                 ))}
@@ -209,7 +209,7 @@ function SetterGuide() {
             </div>
           ))}
 
-          <div className="rounded-[10px] bg-slate-50 p-3">
+          <div className="rounded-[10px] bg-[var(--color-surface-2)] p-3">
             <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Quick do / don’t</p>
             <ul className="space-y-1 text-[13px]">
               {['Verify the pre-filled client email', 'Keep the CRM Lead ID as-is', 'Add one line of context'].map((t) => (
@@ -312,8 +312,8 @@ export function NewBookingPage() {
                     className={cn(
                       'rounded-[8px] border px-3 py-2 text-sm font-medium transition-colors',
                       a.aeId === aeId
-                        ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'
-                        : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50',
+                        ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]'
+                        : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
                     )}
                   >
                     {a.aeName}
@@ -336,7 +336,7 @@ export function NewBookingPage() {
             <Card className="p-4 sm:p-5">
               {booked ? (
                 <div className="flex flex-col items-center gap-3 py-10 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10">
                     <CircleCheck className="h-7 w-7 text-[var(--c-verified)]" />
                   </div>
                   <div>

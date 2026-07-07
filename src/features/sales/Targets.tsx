@@ -128,7 +128,7 @@ export function TargetsPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] px-5 py-3">
           <h2 className="text-[15px] font-semibold">Closer targets</h2>
           {orgTarget && (
-            <span className={cn('text-[12px] font-medium', repSum.cl === orgTarget.closes_value && repSum.rev === orgTarget.revenue_value ? 'text-[var(--color-text-muted)]' : 'text-amber-600')}>
+            <span className={cn('text-[12px] font-medium', repSum.cl === orgTarget.closes_value && repSum.rev === orgTarget.revenue_value ? 'text-[var(--color-text-muted)]' : 'text-amber-600 dark:text-amber-400')}>
               Split so far: ${Math.round(repSum.rev).toLocaleString()} / {repSum.cl} vs org ${Math.round(orgTarget.revenue_value).toLocaleString()} / {orgTarget.closes_value}
             </span>
           )}

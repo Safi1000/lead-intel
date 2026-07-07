@@ -20,9 +20,9 @@ export function LeadDrawer({ leadId, onClose }: { leadId: string | null; onClose
       {isLoading || !lead ? <LoadingState /> : (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 text-[12px]">
-            {lead.lifecycle_state && <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium">{lead.lifecycle_state}</span>}
-            <span className="rounded-full bg-slate-100 px-2 py-0.5">{lead.attempt_count} attempts</span>
-            {lead.dnc && <span className="rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-600">DNC</span>}
+            {lead.lifecycle_state && <span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 font-medium">{lead.lifecycle_state}</span>}
+            <span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5">{lead.attempt_count} attempts</span>
+            {lead.dnc && <span className="rounded-full bg-red-500/10 px-2 py-0.5 font-medium text-red-600 dark:text-red-400">DNC</span>}
           </div>
 
           <div className="space-y-2 text-sm">

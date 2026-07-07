@@ -51,7 +51,7 @@ export function AdminRunsPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {runs.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50">
+                  <tr key={r.id} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3 font-medium">{r.client_name}</td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">Roofing · {r.location_label}</td>
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>

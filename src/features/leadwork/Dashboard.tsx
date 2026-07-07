@@ -102,7 +102,7 @@ export function WorkHomePage() {
 function RecentRow({ lead }: { lead: ManualLead }) {
   return (
     <li>
-      <Link to={`/leads/manual/${lead.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
+      <Link to={`/leads/manual/${lead.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-surface-2)]">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{lead.display_name}</p>
           <p className="truncate text-[12px] text-[var(--color-text-muted)]">{lead.template_name}</p>

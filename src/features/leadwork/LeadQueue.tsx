@@ -237,23 +237,23 @@ export function LeadQueuePage() {
         <div className="mb-4 flex flex-wrap gap-2 text-[12px] text-[var(--color-text-muted)]">
           <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.unassigned_count} unassigned</span>
           <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.assigned_count} assigned</span>
-          <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">{batch.booked_count} booked</span>
-          <span className="rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-700">{batch.won_count} won</span>
-          <span className="rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-600">{batch.lost_count} lost</span>
+          <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-medium text-amber-700 dark:text-amber-400">{batch.booked_count} booked</span>
+          <span className="rounded-full bg-green-500/10 px-2.5 py-1 font-medium text-green-700 dark:text-green-400">{batch.won_count} won</span>
+          <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-medium text-red-600 dark:text-red-400">{batch.lost_count} lost</span>
         </div>
       )}
 
       {isManager && batchId && <BatchAccess batchId={batchId} />}
 
       {isManager && overdue > 0 && (
-        <div className="mb-3 rounded-[10px] border border-red-200 bg-red-50/60 px-4 py-2.5 text-[13px] font-medium text-red-700">
+        <div className="mb-3 rounded-[10px] border border-red-200 bg-red-500/10 px-4 py-2.5 text-[13px] font-medium text-red-700 dark:text-red-400">
           {overdue} lead{overdue === 1 ? '' : 's'} past the first-touch SLA — being auto-recycled to the pool.
         </div>
       )}
 
       {isSetter && goal > 0 && (
         <div className={cn('mb-3 rounded-[10px] border px-4 py-2.5 text-[13px] font-medium',
-          todayDone >= goal ? 'border-green-200 bg-green-50/60 text-green-700' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]')}>
+          todayDone >= goal ? 'border-green-200 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]')}>
           Today: {todayDone}/{goal} leads worked {todayDone >= goal ? '· goal met 🎉' : `· ${Math.round((todayDone / goal) * 100)}% of today's target`}
         </div>
       )}
@@ -264,7 +264,7 @@ export function LeadQueuePage() {
           return (
             <button key={t.key} onClick={() => { setTab(t.key); setSelected(new Set()) }}
               className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-                tab === t.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100')}>
+                tab === t.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}>
               {t.label} <span className="tabular-nums opacity-70">{count}</span>
             </button>
           )
@@ -292,7 +292,7 @@ export function LeadQueuePage() {
         <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} aria-label="Filter by follow-up" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option>
         </select>
-        <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-slate-300" /> Hide DNC</label>
+        <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
         <Input type="number" min={0} value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} placeholder="Min score" aria-label="Minimum quality score" className="h-9 w-28" />
         <select value={ratingMin} onChange={(e) => setRatingMin(e.target.value)} aria-label="Minimum rating" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any rating</option><option value="4">4.0+</option><option value="4.5">4.5+</option>
@@ -332,7 +332,7 @@ export function LeadQueuePage() {
           <span className="font-medium">{selected.size} selected</span>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
-            <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-slate-100"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]"><X className="h-4 w-4" /></button>
           </div>
         </div>
       )}
@@ -345,7 +345,7 @@ export function LeadQueuePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                  {selectable && <th className="px-4 py-2.5"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>}
+                  {selectable && <th className="px-4 py-2.5"><input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>}
                   <th className="px-5 py-2.5 font-medium">Lead</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5 font-medium">Follow-up</th>
@@ -384,11 +384,11 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
   onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
   return (
-    <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-slate-50')}>
-      {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
+    <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-500/10 hover:bg-green-100' : 'hover:bg-[var(--color-surface-2)]')}>
+      {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <button type="button" onClick={() => onOpen(l.id)} className="text-left font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</button>
-        {isSlaBreach(l, slaMs) && <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">SLA</span>}
+        {isSlaBreach(l, slaMs) && <span className="ml-2 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">SLA</span>}
       </td>
       <td className="px-3 py-3"><StageSelect stage={l.stage} role={role} disabled={!canEdit} onChange={onStage} /></td>
       <td className="px-3 py-3"><FollowUpCell value={l.next_follow_up} disabled={!canEdit} onChange={onFollowUp} /></td>
@@ -401,8 +401,8 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
           className={cn(
             'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors disabled:opacity-40',
             l.done_at
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-slate-50',
+              ? 'border-green-200 bg-green-500/10 text-green-700 dark:text-green-400'
+              : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
           )}
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> {l.done_at ? 'Done' : 'Mark'}
@@ -434,7 +434,7 @@ function BatchAccess({ batchId }: { batchId: string }) {
         <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] py-1 pl-2.5 pr-1 text-[12px]">
           <span className="font-medium">{nameFor(a.user_id)}</span>
           <span className="text-[var(--color-text-muted)]">{a.role}</span>
-          <button onClick={() => revoke.mutate(a.user_id)} className="rounded-full p-0.5 text-[var(--color-text-muted)] hover:bg-slate-200" aria-label="Revoke"><X className="h-3 w-3" /></button>
+          <button onClick={() => revoke.mutate(a.user_id)} className="rounded-full p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)]" aria-label="Revoke"><X className="h-3 w-3" /></button>
         </span>
       ))}
     </div>
@@ -477,7 +477,7 @@ function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchI
           {setters.length === 0 && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">No setters in this organization yet — add one in Users.</p>}
         </div>
         {setterId && (
-          <p className={cn('text-[12px]', room === 0 ? 'font-medium text-red-600' : 'text-[var(--color-text-muted)]')}>
+          <p className={cn('text-[12px]', room === 0 ? 'font-medium text-red-600 dark:text-red-400' : 'text-[var(--color-text-muted)]')}>
             {room === 0 ? `At WIP cap (${currentLoad}/${cap}) — dispose active leads before assigning more.` : `Holding ${currentLoad}/${cap} active — room for ${room} more.`}
           </p>
         )}

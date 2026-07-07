@@ -38,7 +38,7 @@ export function StatusBadge({ status }: { status: RunStatus }) {
 
 export function ProgressBar({ value, className }: { value: number; className?: string }) {
   return (
-    <div className={cn('h-2 w-full overflow-hidden rounded-full bg-slate-200', className)} role="progressbar" aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
+    <div className={cn('h-2 w-full overflow-hidden rounded-full bg-[var(--color-border)]', className)} role="progressbar" aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
       <div className="h-full rounded-full bg-[var(--color-primary)] transition-all" style={{ width: `${Math.min(100, value * 100)}%` }} />
     </div>
   )
@@ -46,7 +46,7 @@ export function ProgressBar({ value, className }: { value: number; className?: s
 
 export function FillChip({ value }: { value: number | null | undefined }) {
   if (value == null) return <span className="text-[var(--color-text-muted)]">—</span>
-  const tone = value >= 0.7 ? 'bg-green-50 text-green-700' : value >= 0.4 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+  const tone = value >= 0.7 ? 'bg-green-500/10 text-green-700 dark:text-green-400' : value >= 0.4 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'
   return <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium tabular-nums', tone)}>{formatPercent(value)}</span>
 }
 
@@ -64,7 +64,7 @@ export function StatCard({
   hint?: string
 }) {
   const inner = (
-    <div className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-shadow hover:shadow-md">
+    <div className={cn('rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150', to && 'hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-md')}>
       <p className="text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
       <div className="mt-2 flex items-end justify-between">
         <span className="text-[28px] font-bold tabular-nums leading-none text-[var(--color-text)]">{value}</span>

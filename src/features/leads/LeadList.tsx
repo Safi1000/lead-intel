@@ -177,7 +177,7 @@ export function LeadListPage() {
 
       {/* Bulk bar */}
       {selected.size > 0 && (
-        <div className="mb-2 flex items-center gap-3 rounded-[8px] border border-[var(--color-primary)] bg-blue-50 px-4 py-2 text-sm">
+        <div className="mb-2 flex items-center gap-3 rounded-[8px] border border-[var(--color-primary)] bg-blue-500/10 px-4 py-2 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <Button size="sm" variant="outline" onClick={() => exportLeads.mutate('csv')}>Export selected</Button>
           <Button size="sm" variant="outline" onClick={() => toast.success(`Pushed ${selected.size} leads to CRM`)}>Push to CRM</Button>
@@ -204,7 +204,7 @@ export function LeadListPage() {
               <span className="sm:hidden"><ConfidenceLegend /></span>
             </div>
             {/* Header */}
-            <div className="flex items-center gap-3 border-b border-[var(--color-border)] bg-slate-50 px-4 py-2 text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+            <div className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
               <span className="w-5"><Checkbox checked={allSelected ? true : selected.size ? 'indeterminate' : false} onCheckedChange={toggleAll} aria-label="Select all" /></span>
               {visibleCols.map((c) => (
                 <span key={c.key} className={cn('truncate', c.key === 'business_name' ? 'flex-[2]' : 'flex-1', (c.key === 'ads' || c.key === 'website') && 'hidden md:block')}>{c.label}</span>
@@ -255,7 +255,7 @@ function LeadRowView({
   return (
     <div
       style={{ ...style, borderLeft: `3px solid ${rowBorderColor(lead.row_confidence)}` }}
-      className={cn('flex items-center gap-3 border-b border-[var(--color-border)] px-4 text-sm hover:bg-slate-50', compact ? 'py-1.5' : 'py-2.5', selected && 'bg-blue-50/60')}
+      className={cn('flex items-center gap-3 border-b border-[var(--color-border)] px-4 text-sm hover:bg-[var(--color-surface-2)]', compact ? 'py-1.5' : 'py-2.5', selected && 'bg-blue-50/60')}
     >
       <span className="w-5"><Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Select ${lead.business_name}`} /></span>
       {cols.map((c) => (

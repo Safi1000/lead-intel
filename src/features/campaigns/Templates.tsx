@@ -11,9 +11,9 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 
 const STATUS_META: Record<WaTemplate['status'], { label: string; className: string }> = {
-  approved: { label: 'Approved', className: 'bg-green-50 text-green-700' },
-  pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700' },
-  rejected: { label: 'Rejected', className: 'bg-red-50 text-red-700' },
+  approved: { label: 'Approved', className: 'bg-green-500/10 text-green-700 dark:text-green-400' },
+  pending: { label: 'Pending', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+  rejected: { label: 'Rejected', className: 'bg-red-500/10 text-red-700 dark:text-red-400' },
 }
 
 function StatusBadge({ template }: { template: WaTemplate }) {
@@ -107,7 +107,7 @@ export function TemplatesPage() {
               </div>
 
               {t.status === 'rejected' && t.reject_reason && (
-                <p className="mt-2 text-[12px] text-red-600">Rejected: {t.reject_reason}</p>
+                <p className="mt-2 text-[12px] text-red-600 dark:text-red-400">Rejected: {t.reject_reason}</p>
               )}
 
               {(t.status === 'pending' || t.status === 'rejected') && (

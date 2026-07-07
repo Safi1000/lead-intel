@@ -98,12 +98,12 @@ export function NewRunPage() {
                   className={cn(
                     'relative flex flex-col items-start gap-2 rounded-[12px] border p-4 text-left transition-colors',
                     !t.enabled && 'cursor-not-allowed opacity-60',
-                    trade === t.id ? 'border-[var(--color-primary)] bg-blue-50' : 'border-[var(--color-border)] hover:border-slate-300',
+                    trade === t.id ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
                   )}
                 >
                   <Icon name={t.icon} className={cn('h-6 w-6', trade === t.id ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]')} />
                   <span className="text-sm font-semibold">{t.label}</span>
-                  {!t.enabled && <span className="absolute right-2 top-2 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Phase 2</span>}
+                  {!t.enabled && <span className="absolute right-2 top-2 rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">Phase 2</span>}
                 </button>
               ))}
             </div>
@@ -130,7 +130,7 @@ export function NewRunPage() {
                 {zips.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {zips.map((z) => (
-                      <span key={z} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[13px] tabular-nums">
+                      <span key={z} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 text-[13px] tabular-nums">
                         {z}
                         <button onClick={() => setZips(zips.filter((x) => x !== z))} aria-label={`Remove ${z}`}><X className="h-3 w-3" /></button>
                       </span>
@@ -173,7 +173,7 @@ export function NewRunPage() {
                 <Switch checked={refreshStale} onCheckedChange={setRefreshStale} />
               </div>
               <div className="flex items-center justify-between gap-4 rounded-[12px] border border-dashed border-[var(--color-border)] p-4 opacity-70">
-                <p className="text-sm font-medium">AI lead scoring <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">Phase 2</span></p>
+                <p className="text-sm font-medium">AI lead scoring <span className="ml-1 rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">Phase 2</span></p>
                 <Switch checked={false} onCheckedChange={() => {}} disabled />
               </div>
             </div>
@@ -234,7 +234,7 @@ function EstimatePanel({ data, ownerPhone }: { data: EstimateResponse; ownerPhon
             <span className="font-medium tabular-nums">{formatMoney(b.cost_cents)}</span>
           </div>
         ))}
-        <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
+        <div className="flex items-center justify-between bg-[var(--color-surface-2)] px-4 py-3">
           <span className="text-sm font-semibold">Estimated total</span>
           <span className="text-[18px] font-bold tabular-nums">{formatMoney(data.total_cents)}</span>
         </div>
@@ -245,14 +245,14 @@ function EstimatePanel({ data, ownerPhone }: { data: EstimateResponse; ownerPhon
           ['Per lead', formatMoney(data.per_lead_cents)],
           ['Est. time', etaLabel(data.est_eta_seconds)],
         ].map(([k, v]) => (
-          <div key={k} className="rounded-[12px] bg-slate-50 p-3 text-center">
+          <div key={k} className="rounded-[12px] bg-[var(--color-surface-2)] p-3 text-center">
             <p className="text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">{k}</p>
             <p className="mt-1 text-[16px] font-bold tabular-nums">{v}</p>
           </div>
         ))}
       </div>
       {!ownerPhone && <p className="text-[13px] text-[var(--color-text-muted)]">Tip: enabling owner phone increases reachability but raises cost.</p>}
-      <p className="rounded-[8px] bg-amber-50 p-3 text-[13px] text-amber-800">
+      <p className="rounded-[8px] bg-amber-500/10 p-3 text-[13px] text-amber-800">
         This is an estimate based on market density and option selection — final cost depends on actual data availability.
       </p>
     </div>

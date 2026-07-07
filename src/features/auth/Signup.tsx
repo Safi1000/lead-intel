@@ -143,7 +143,7 @@ export function SignupPage() {
                           ? strength.score >= 3
                             ? 'bg-[var(--c-verified)]'
                             : 'bg-[var(--c-probable)]'
-                          : 'bg-slate-200',
+                          : 'bg-[var(--color-border)]',
                       )}
                     />
                   ))}
@@ -164,13 +164,13 @@ export function SignupPage() {
               onClick={() => setIntent(opt.id)}
               className={cn(
                 'flex w-full items-start gap-3 rounded-[12px] border p-4 text-left transition-colors',
-                intent === opt.id ? 'border-[var(--color-primary)] bg-blue-50' : 'border-[var(--color-border)] hover:border-slate-300',
+                intent === opt.id ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
               )}
             >
               <span
                 className={cn(
                   'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2',
-                  intent === opt.id ? 'border-[var(--color-primary)]' : 'border-slate-300',
+                  intent === opt.id ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)]',
                 )}
               >
                 {intent === opt.id && <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />}
@@ -187,7 +187,7 @@ export function SignupPage() {
       {/* Step 3 — Verify */}
       {step === 2 && (
         <div className="space-y-4">
-          <div className="flex items-start gap-2 rounded-[8px] bg-slate-50 p-3 text-[13px] text-[var(--color-text-secondary)]">
+          <div className="flex items-start gap-2 rounded-[8px] bg-[var(--color-surface-2)] p-3 text-[13px] text-[var(--color-text-secondary)]">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
               We sent a 6-digit code to <b>{email || 'your email'}</b>. Enter it below. (Demo: any 6 digits work.)
@@ -237,7 +237,7 @@ export function SignupPage() {
       {/* Step 5 — Done */}
       {step === 4 && (
         <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10">
             <Check className="h-7 w-7 text-[var(--c-verified)]" />
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
@@ -341,7 +341,7 @@ export function AcceptInvitePage() {
                         ? strength.score >= 3
                           ? 'bg-[var(--c-verified)]'
                           : 'bg-[var(--c-probable)]'
-                        : 'bg-slate-200',
+                        : 'bg-[var(--color-border)]',
                     )}
                   />
                 ))}

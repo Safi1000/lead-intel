@@ -46,7 +46,7 @@ export function BatchesPage() {
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {batches.map((b) => (
-                  <tr key={b.id} className="hover:bg-slate-50">
+                  <tr key={b.id} className="hover:bg-[var(--color-surface-2)]">
                     <td className="px-4 py-3 font-medium">Roofing · {b.location_label}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatNumber(b.lead_count)}</td>
                     <td className="px-4 py-3"><FillChip value={b.fill_rate} /></td>

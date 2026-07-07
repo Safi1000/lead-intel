@@ -41,7 +41,7 @@ export function PerformancePage() {
         {RANGES.map((r) => (
           <button key={r.key} onClick={() => setRange(r.key)}
             className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-              range === r.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-slate-100')}>
+              range === r.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}>
             {r.label}
           </button>
         ))}
@@ -78,7 +78,7 @@ export function PerformancePage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                  <tr key={r.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 font-medium">{r.name}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.assigned}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.worked}</td>
@@ -88,7 +88,7 @@ export function PerformancePage() {
                     <td className="px-3 py-3 tabular-nums font-semibold text-[var(--color-primary)]">{r.booked}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{r.bookingRate}%</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.speedHrs || '—'}</td>
-                    <td className={cn('px-3 py-3 tabular-nums', r.overdue ? 'font-semibold text-amber-600' : 'text-[var(--color-text-secondary)]')}>{r.overdue || '—'}</td>
+                    <td className={cn('px-3 py-3 tabular-nums', r.overdue ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-[var(--color-text-secondary)]')}>{r.overdue || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -115,7 +115,7 @@ export function PerformancePage() {
               </thead>
               <tbody>
                 {(closers ?? []).map((c) => (
-                  <tr key={c.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-slate-50">
+                  <tr key={c.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 font-medium">{c.name}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{c.won}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{c.closeRate}%</td>

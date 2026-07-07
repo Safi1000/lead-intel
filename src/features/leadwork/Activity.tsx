@@ -19,10 +19,10 @@ const TYPE_STYLES: Record<string, string> = {
   'Stage Change': 'bg-blue-500/10 text-blue-600',
   'Temperature': 'bg-orange-500/10 text-orange-600',
   'Verdict': 'bg-purple-500/10 text-purple-600',
-  'Unassigned': 'bg-red-500/10 text-red-600',
-  'Remark': 'bg-amber-500/10 text-amber-600',
-  'Note': 'bg-amber-500/10 text-amber-600',
-  'Booked': 'bg-green-500/10 text-green-600',
+  'Unassigned': 'bg-red-500/10 text-red-600 dark:text-red-400',
+  'Remark': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  'Note': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  'Booked': 'bg-green-500/10 text-green-600 dark:text-green-400',
 }
 const typeBadge = (type: string) => TYPE_STYLES[type] ?? 'bg-slate-500/10 text-[var(--color-text-secondary)]'
 
@@ -172,7 +172,7 @@ export function ActivityPage() {
             {(verdictQ.data ?? []).map((v) => (
               <div key={v.setter} className="flex items-center gap-2 text-sm">
                 <span className="font-medium">{v.setter}</span>
-                <span className="inline-flex items-center gap-1 text-green-600"><Flame className="h-3.5 w-3.5" />{v.warm} warm</span>
+                <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400"><Flame className="h-3.5 w-3.5" />{v.warm} warm</span>
                 <span className="inline-flex items-center gap-1 text-red-500"><Snowflake className="h-3.5 w-3.5" />{v.not_warm} not warm</span>
                 <span className="text-xs text-[var(--color-text-muted)]">({Math.round((v.warm / Math.max(1, v.warm + v.not_warm)) * 100)}% genuine)</span>
               </div>

@@ -17,7 +17,7 @@ function Shell({
 }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-bg)] px-6 text-center">
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-surface-2)]">
         <Icon className="h-8 w-8 text-[var(--color-text-secondary)]" />
       </div>
       <p className="text-[13px] font-semibold uppercase tracking-widest text-[var(--color-text-muted)]">{code}</p>
