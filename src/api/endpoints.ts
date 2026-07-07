@@ -1231,8 +1231,16 @@ export const settingsApi = {
 
 // ---- Notifications (bell) ---- no backend yet; empty so the bell never errors.
 export const notificationsApi = {
-  list: async (): Promise<Paginated<NotificationItem>> => ({ data: [], page: 1, page_size: 0, total: 0 }),
-  markRead: async (_id: string): Promise<void> => { void _id },
+  list: async (): Promise<Paginated<NotificationItem>> => {
+    const { data, error } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(30)
+    if (error) throw new Error(error.message)
+    const items = (data ?? []) as NotificationItem[]
+    return { data: items, page: 1, page_size: items.length, total: items.length }
+  },
+  markRead: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id)
+    if (error) throw new Error(error.message)
+  },
 }
 
 // ---- Admin ----

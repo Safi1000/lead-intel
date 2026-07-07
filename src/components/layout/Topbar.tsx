@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Building2, ChevronDown, Coins, LogOut, Menu, Moon, Search, Settings, Sun, User as UserIcon } from 'lucide-react'
 import { authApi, orgCreditsApi } from '../../api/endpoints'
+import { cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
 import { useUIStore } from '../../stores/uiStore'
 import { queryClient } from '../../app/providers'
@@ -89,9 +90,14 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
 
       <div className="flex items-center gap-1.5">
         {credits != null && (
-          <span className="hidden items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-[12px] font-medium sm:inline-flex" title="Credit balance">
-            <Coins className="h-3.5 w-3.5 text-[var(--color-signal)]" />
+          <span
+            className={cn('hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium sm:inline-flex',
+              credits < 100 ? 'border-red-300 bg-red-500/10 text-red-600 dark:text-red-400' : 'border-[var(--color-border)] bg-[var(--color-surface-2)]')}
+            title={credits < 100 ? 'Low credit balance' : 'Credit balance'}
+          >
+            <Coins className={cn('h-3.5 w-3.5', credits < 100 ? 'text-red-500' : 'text-[var(--color-signal)]')} />
             <span className="tabular-nums">{Math.round(credits).toLocaleString()}</span>
+            {credits < 100 && <span className="text-[10px] font-bold uppercase">low</span>}
           </span>
         )}
         <ConnectionChip />
