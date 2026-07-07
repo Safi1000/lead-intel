@@ -80,8 +80,9 @@ function BillingDialog({ row, onClose, onSaved }: { row: ProviderRow; onClose: (
   const [ppl, setPpl] = useState(String(row.price_per_lead))
   const [fee, setFee] = useState(String(row.monthly_fee))
   const [credits, setCredits] = useState(String(row.credits_remaining))
+  const [metered, setMetered] = useState(row.metered)
   const save = useMutation({
-    mutationFn: () => providerApi.setBilling(row.org_id, { plan, price_per_lead: Number(ppl) || 0, monthly_fee: Number(fee) || 0, credits_remaining: Number(credits) || 0 }),
+    mutationFn: () => providerApi.setBilling(row.org_id, { plan, price_per_lead: Number(ppl) || 0, monthly_fee: Number(fee) || 0, credits_remaining: Number(credits) || 0, metered }),
     onSuccess: () => { toast.success('Billing saved'); onSaved() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
@@ -98,7 +99,11 @@ function BillingDialog({ row, onClose, onSaved }: { row: ProviderRow; onClose: (
           <div><Label htmlFor="b-ppl">Price / lead</Label><Input id="b-ppl" type="number" min={0} value={ppl} onChange={(e) => setPpl(e.target.value)} /></div>
           <div><Label htmlFor="b-fee">Monthly fee</Label><Input id="b-fee" type="number" min={0} value={fee} onChange={(e) => setFee(e.target.value)} /></div>
         </div>
-        <div><Label htmlFor="b-cr">Credits remaining</Label><Input id="b-cr" type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} /></div>
+        <div><Label htmlFor="b-cr">Credits remaining ($)</Label><Input id="b-cr" type="number" min={0} value={credits} onChange={(e) => setCredits(e.target.value)} /></div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={metered} onChange={(e) => setMetered(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" />
+          <span>Meter this tenant — scrapes consume the balance and <span className="font-medium">hard-stop at $0</span> (leaves a partial batch). Off = unlimited.</span>
+        </label>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button loading={save.isPending} onClick={() => save.mutate()}>Save</Button>

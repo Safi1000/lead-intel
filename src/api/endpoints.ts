@@ -1169,7 +1169,7 @@ export const scriptsApi = {
 // ---- Provider console (Surface 3, superadmin) + client portal (Surface 2) + billing (§13). ----
 export interface ProviderRow {
   org_id: string; org_name: string; leads_total: number; delivered_30d: number; booked: number
-  plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number
+  plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number; metered: boolean
 }
 export const providerApi = {
   overview: async (): Promise<ProviderRow[]> => {
@@ -1177,7 +1177,7 @@ export const providerApi = {
     if (error) throw new Error(error.message)
     return (data ?? []) as ProviderRow[]
   },
-  setBilling: async (orgId: string, body: { plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number }): Promise<void> => {
+  setBilling: async (orgId: string, body: { plan: string; price_per_lead: number; monthly_fee: number; credits_remaining: number; metered: boolean }): Promise<void> => {
     const { error } = await supabase.from('org_billing').upsert({ org_id: orgId, ...body, updated_at: new Date().toISOString() }, { onConflict: 'org_id' })
     if (error) throw new Error(error.message)
   },

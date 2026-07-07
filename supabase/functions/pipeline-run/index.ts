@@ -661,6 +661,17 @@ Deno.serve(async (req: Request) => {
     const qualityThreshold = Number(cfg.quality_threshold ?? 6)
     const model: string = (cfg.openai_model as string) ?? 'gpt-4o-mini'
 
+    // §13 credit hard-stop (opt-in per tenant via org_billing.metered). A metered org that has run
+    // dry halts immediately, leaving whatever was already pulled as a partial batch. Un-metered orgs
+    // (metered=false — the default, i.e. every org today) are unlimited: behaviour identical to before.
+    const billingRows = await dbSelect<{ metered: boolean; credits_remaining: number }>('org_billing', `org_id=eq.${orgId}&select=metered,credits_remaining`)
+    if (billingRows[0]?.metered && Number(billingRows[0]?.credits_remaining ?? 0) <= 0) {
+      console.log(`[pipeline-run] org ${orgId} metered + out of credits — halting scrape (partial).`)
+      if (incomingBatchId) await dbUpdate('batches', { credit_exhausted: true }, `id=eq.${incomingBatchId}`)
+      await dbUpdate('pipeline_runs', { status: 'completed', completed_at: new Date().toISOString() }, `id=eq.${runId}`)
+      return new Response(JSON.stringify({ ok: true, halted: 'credits_exhausted' }), { status: 200 })
+    }
+
     // Cumulative progress read at chunk start (chaining jobs span many invocations).
     let processedSoFar = 0, importedSoFar = 0, emptyStreak = 0
     if (chaining) {
