@@ -28,9 +28,10 @@ export function EmptyState({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-3 px-6 py-16 text-center', className)}>
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
-        <Icon className="h-6 w-6 text-[var(--color-text-muted)]" />
+    <div className={cn('reveal flex flex-col items-center justify-center gap-3.5 px-6 py-16 text-center', className)}>
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-signal)]/10 ring-1 ring-inset ring-[var(--color-border)]">
+        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[var(--color-primary)]/5 blur-xl" />
+        <Icon className="relative h-7 w-7 text-[var(--color-primary)]" />
       </div>
       <div>
         <h3 className="text-[16px] font-semibold text-[var(--color-text)]">{title}</h3>

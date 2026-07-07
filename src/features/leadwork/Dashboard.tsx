@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarClock, FileSpreadsheet, FileUp, Users } from 'lucide-react'
+import { CalendarCheck, CalendarClock, FileSpreadsheet, FileUp, Sparkles, Trophy, Users, XCircle } from 'lucide-react'
 import { manualLeadsApi } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -42,12 +42,12 @@ export function WorkHomePage() {
       ) : (
         <>
           <div className="stagger-in grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Total leads" value={leads.length} to="/leads" />
-            <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" />
-            <StatCard label="New" value={byStage('New')} to="/leads" />
-            <StatCard label="Booked" value={byStage('Booked')} to="/leads" />
-            <StatCard label="Won" value={byStage('Won')} to="/leads" />
-            <StatCard label="Lost" value={byStage('Lost')} to="/leads" />
+            <StatCard label="Total leads" value={leads.length} to="/leads" icon={Users} />
+            <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" icon={CalendarClock} />
+            <StatCard label="New" value={byStage('New')} to="/leads" icon={Sparkles} />
+            <StatCard label="Booked" value={byStage('Booked')} to="/leads" icon={CalendarCheck} />
+            <StatCard label="Won" value={byStage('Won')} to="/leads" icon={Trophy} />
+            <StatCard label="Lost" value={byStage('Lost')} to="/leads" icon={XCircle} />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
