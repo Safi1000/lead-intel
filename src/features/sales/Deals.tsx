@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { dealsApi, usersApi } from '../../api/endpoints'
@@ -6,6 +7,7 @@ import { Card } from '../../components/ui/primitives'
 import { ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { DEAL_STAGES, type DealStage } from '../../api/types'
+import { cn } from '../../lib/utils'
 
 const STAGE_LABEL: Record<DealStage, string> = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', proposal: 'Proposal', won: 'Won', lost: 'Lost' }
 
@@ -19,6 +21,7 @@ export function DealsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals-board'] }),
     onError: (e) => toast.error(normalizeError(e).message),
   })
+  const [dragStage, setDragStage] = useState<DealStage | null>(null)
   if (isLoading) return <LoadingState />
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
@@ -32,14 +35,20 @@ export function DealsPage() {
       <PageHeader title="Deals" subtitle={`$${Math.round(open).toLocaleString()} in open pipeline · $${Math.round(won).toLocaleString()} won`} />
       <div className="flex gap-3 overflow-x-auto pb-4">
         {DEAL_STAGES.map((s) => (
-          <div key={s} className="w-64 shrink-0">
+          <div key={s} className="w-64 shrink-0"
+            onDragOver={(e) => { e.preventDefault(); if (dragStage !== s) setDragStage(s) }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragStage(null) }}
+            onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); setDragStage(null); const d = (deals ?? []).find((x) => x.id === id); if (id && d && d.stage !== s) move.mutate({ id, stage: s }) }}
+          >
             <div className="mb-2 flex items-center justify-between px-1 text-[13px] font-semibold">
               <span>{STAGE_LABEL[s]}</span>
               <span className="tabular-nums text-[var(--color-text-muted)]">{byStage(s).length}</span>
             </div>
-            <div className="space-y-2">
+            <div className={cn('min-h-16 space-y-2 rounded-[10px] p-1 transition-colors', dragStage === s ? 'bg-[var(--color-primary)]/10 ring-1 ring-inset ring-[var(--color-primary)]/30' : '')}>
               {byStage(s).map((d) => (
-                <Card key={d.id} className="p-3">
+                <Card key={d.id} draggable
+                  onDragStart={(e) => e.dataTransfer.setData('text/plain', d.id)}
+                  className="cursor-grab p-3 active:cursor-grabbing">
                   <p className="mb-1 truncate text-[13px] font-medium">{d.lead_name}</p>
                   <p className="mb-1 text-[15px] font-semibold tabular-nums text-[var(--color-primary)]">{d.value != null ? `$${Math.round(d.value).toLocaleString()}` : '—'}</p>
                   <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">{nameFor(d.closer_id)}</p>

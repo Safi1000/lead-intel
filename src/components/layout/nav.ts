@@ -41,6 +41,7 @@ export const CLIENT_NAV: NavItem[] = [
   // Sourcing
   { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OWNER, orgContext: true },
+  { label: 'Usage & credits', to: '/credits', icon: 'Wallet', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
   // Operations
