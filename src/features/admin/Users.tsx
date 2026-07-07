@@ -212,6 +212,9 @@ function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; 
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<Role>(user?.role ?? 'setter')
   const [perms, setPerms] = useState<Record<string, boolean>>(() => buildPermState(user?.role ?? 'setter', user?.permissions))
+  // Only the provider (SA/admin) can mint an Owner — prevents a manager escalating someone above them.
+  const { role: actorRole } = useAuth()
+  const assignableRoles: Role[] = actorRole === 'superadmin' || actorRole === 'admin' ? ['owner', ...ASSIGNABLE_ROLES] : ASSIGNABLE_ROLES
 
   // Reset toggles to the role's defaults when the role changes.
   useEffect(() => { setPerms(buildPermState(role, editMode && role === user?.role ? user?.permissions : undefined)) }, [role]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -251,7 +254,7 @@ function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; 
         <div>
           <Label htmlFor="u-role">Role</Label>
           <select id="u-role" value={role} onChange={(e) => setRole(e.target.value as Role)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+            {assignableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
           </select>
         </div>
         <div>

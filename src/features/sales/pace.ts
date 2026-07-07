@@ -7,30 +7,35 @@
  * about the market's working days, per §8). Callers pass plain date strings.
  */
 
-/** Combined US-federal + Canada-national statutory holidays. Extend per year as needed. */
-const HOLIDAYS: Record<number, string[]> = {
-  2026: [
-    // Shared
-    '2026-01-01', // New Year's Day
-    '2026-09-07', // Labor / Labour Day
-    '2026-10-12', // Columbus Day (US) / Thanksgiving (CA)
-    '2026-11-11', // Veterans Day (US) / Remembrance Day (CA)
-    '2026-12-25', // Christmas
-    // US federal
-    '2026-01-19', // MLK Day
-    '2026-02-16', // Presidents' Day
-    '2026-05-25', // Memorial Day
-    '2026-06-19', // Juneteenth
-    '2026-07-03', // Independence Day (observed; Jul 4 is a Saturday)
-    '2026-11-26', // Thanksgiving (US)
-    // Canada national
-    '2026-04-03', // Good Friday
-    '2026-05-18', // Victoria Day
-    '2026-07-01', // Canada Day
-    '2026-09-30', // Truth & Reconciliation
-    '2026-12-26', // Boxing Day
-  ],
-}
+/** A single statutory holiday excluded from the pace working-days denominator. */
+export interface Holiday { date: string; name: string; region: 'US' | 'CA' | 'US+CA' }
+
+/** Combined US-federal + Canada-national statutory holidays (single source of truth — drives both the
+ *  pace math and the Holidays screen). Extend per year as needed. */
+export const HOLIDAY_CALENDAR: Holiday[] = [
+  { date: '2026-01-01', name: "New Year's Day", region: 'US+CA' },
+  { date: '2026-01-19', name: 'Martin Luther King Jr. Day', region: 'US' },
+  { date: '2026-02-16', name: "Presidents' Day", region: 'US' },
+  { date: '2026-04-03', name: 'Good Friday', region: 'CA' },
+  { date: '2026-05-18', name: 'Victoria Day', region: 'CA' },
+  { date: '2026-05-25', name: 'Memorial Day', region: 'US' },
+  { date: '2026-06-19', name: 'Juneteenth', region: 'US' },
+  { date: '2026-07-01', name: 'Canada Day', region: 'CA' },
+  { date: '2026-07-03', name: 'Independence Day (observed)', region: 'US' },
+  { date: '2026-09-07', name: 'Labor / Labour Day', region: 'US+CA' },
+  { date: '2026-09-30', name: 'Truth & Reconciliation', region: 'CA' },
+  { date: '2026-10-12', name: 'Columbus Day (US) / Thanksgiving (CA)', region: 'US+CA' },
+  { date: '2026-11-11', name: 'Veterans Day (US) / Remembrance Day (CA)', region: 'US+CA' },
+  { date: '2026-11-26', name: 'Thanksgiving (US)', region: 'US' },
+  { date: '2026-12-25', name: 'Christmas', region: 'US+CA' },
+  { date: '2026-12-26', name: 'Boxing Day', region: 'CA' },
+]
+
+const HOLIDAYS: Record<number, string[]> = HOLIDAY_CALENDAR.reduce((acc, h) => {
+  const y = Number(h.date.slice(0, 4))
+  ;(acc[y] ??= []).push(h.date)
+  return acc
+}, {} as Record<number, string[]>)
 
 function holidaySet(year: number): Set<string> {
   return new Set(HOLIDAYS[year] ?? [])

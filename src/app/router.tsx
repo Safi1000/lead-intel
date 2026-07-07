@@ -60,6 +60,7 @@ const ProviderPage = lazyPage(() => import('../features/provider/Provider').then
 const PortalPage = lazyPage(() => import('../features/portal/Portal').then((m) => ({ default: m.PortalPage })))
 const CockpitPage = lazyPage(() => import('../features/sales/Cockpit').then((m) => ({ default: m.CockpitPage })))
 const AuditLogPage = lazyPage(() => import('../features/leadwork/AuditLog').then((m) => ({ default: m.AuditLogPage })))
+const HolidaysPage = lazyPage(() => import('../features/sales/Holidays').then((m) => ({ default: m.HolidaysPage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -138,6 +139,7 @@ export const router = createBrowserRouter([
                       { path: 'activity', element: L(<ActivityPage />) },
                       { path: 'performance', element: L(<PerformancePage />) },
                       { path: 'targets', element: L(<TargetsPage />) },
+                      { path: 'holidays', element: L(<HolidaysPage />) },
                       { path: 'teams', element: L(<TeamsPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
                       { path: 'cockpit', element: L(<CockpitPage />) },

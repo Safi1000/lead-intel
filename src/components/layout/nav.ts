@@ -34,6 +34,7 @@ export const CLIENT_NAV: NavItem[] = [
   // Sales
   { label: 'Performance', to: '/performance', icon: 'BarChart3', section: 'Sales', roles: OVERSEERS, orgContext: true },
   { label: 'Targets', to: '/targets', icon: 'Crosshair', section: 'Sales', roles: OVERSEERS, orgContext: true },
+  { label: 'Holidays', to: '/holidays', icon: 'CalendarDays', section: 'Sales', roles: OVERSEERS, orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
   { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OVERSEERS, orgContext: true },
   // Sourcing
