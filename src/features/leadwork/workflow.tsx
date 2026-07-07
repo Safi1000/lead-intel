@@ -10,7 +10,7 @@ export const STAGE_META: Record<LeadStage, { label: string; className: string; d
   Contacted: { label: 'Contacted', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', dot: 'bg-blue-500' },
   Interested: { label: 'Interested', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
   Booked: { label: 'Booked', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
-  'Not Now': { label: 'Not Now', className: 'bg-orange-50 text-orange-700', dot: 'bg-orange-500' },
+  'Not Now': { label: 'Not Now', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },
   Won: { label: 'Won', className: 'bg-green-500/10 text-green-700 dark:text-green-400', dot: 'bg-green-500' },
   Lost: { label: 'Lost', className: 'bg-red-500/10 text-red-600 dark:text-red-400', dot: 'bg-red-500' },
 }

@@ -41,7 +41,7 @@ export function WorkHomePage() {
         <LoadingState />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="stagger-in grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <StatCard label="Total leads" value={leads.length} to="/leads" />
             <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" />
             <StatCard label="New" value={byStage('New')} to="/leads" />

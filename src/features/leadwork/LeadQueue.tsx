@@ -384,7 +384,7 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
   onStage: (s: LeadStage) => void; onFollowUp: (d: string | null) => void; onDone: (done: boolean) => void
 }) {
   return (
-    <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-500/10 hover:bg-green-100' : 'hover:bg-[var(--color-surface-2)]')}>
+    <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-500/10 hover:bg-green-500/15' : 'hover:bg-[var(--color-surface-2)]')}>
       {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <button type="button" onClick={() => onOpen(l.id)} className="text-left font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</button>

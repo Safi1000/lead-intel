@@ -41,7 +41,7 @@ export function CockpitPage() {
   return (
     <div className="reveal">
       <PageHeader title="Owner Cockpit" subtitle="Org funnel, spend and team pace — this month." />
-      <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="stagger-in mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Attempts" value={totals.attempts} />
         <StatCard label="Connects" value={totals.connects} />
         <StatCard label="Booked" value={totals.booked} />

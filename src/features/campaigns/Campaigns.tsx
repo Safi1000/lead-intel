@@ -25,7 +25,7 @@ import { PageHeader, SectionCard, ProgressBar } from '../shared/bits'
 // ---- shared status styling ----
 const CAMPAIGN_STATUS: Record<Campaign['status'], { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]' },
-  scheduled: { label: 'Scheduled', className: 'bg-indigo-50 text-indigo-700' },
+  scheduled: { label: 'Scheduled', className: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400' },
   sending: { label: 'Sending', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
   sent: { label: 'Sent', className: 'bg-green-500/10 text-green-700 dark:text-green-400' },
 }

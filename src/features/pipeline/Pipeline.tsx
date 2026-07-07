@@ -139,10 +139,10 @@ function ElapsedTimer({ startedAt, completedAt, running }: { startedAt: string; 
 
 function StatusBadge({ status }: { status: PipelineRun['status'] }) {
   const styles: Record<PipelineRun['status'], string> = {
-    running:   'bg-blue-100 text-blue-700 dark:text-blue-400',
-    completed: 'bg-green-100 text-green-700 dark:text-green-400',
-    failed:    'bg-red-100 text-red-700 dark:text-red-400',
-    stopped:   'bg-amber-100 text-amber-700 dark:text-amber-400',
+    running:   'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+    completed: 'bg-green-500/15 text-green-700 dark:text-green-400',
+    failed:    'bg-red-500/15 text-red-700 dark:text-red-400',
+    stopped:   'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   }
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium', styles[status])}>
@@ -329,7 +329,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
               onClick={() => stop.mutate()}
               loading={stop.isPending}
               disabled={stop.isPending}
-              className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 hover:bg-red-100"
+              className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 hover:bg-red-500/15"
             >
               <Square className="h-3.5 w-3.5 mr-1.5 fill-current" />
               Stop

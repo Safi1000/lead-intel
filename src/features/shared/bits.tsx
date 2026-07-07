@@ -64,7 +64,7 @@ export function StatCard({
   hint?: string
 }) {
   const inner = (
-    <div className={cn('rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150', to && 'hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-md')}>
+    <div className={cn('lift rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5', to && 'cursor-pointer')}>
       <p className="text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
       <div className="mt-2 flex items-end justify-between">
         <span className="text-[28px] font-bold tabular-nums leading-none text-[var(--color-text)]">{value}</span>

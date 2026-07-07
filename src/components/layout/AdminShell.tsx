@@ -20,7 +20,7 @@ function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
               cn(
                 'flex items-center gap-3 rounded-[8px] px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-purple-50 text-[var(--color-admin)]'
+                  ? 'bg-purple-500/10 text-[var(--color-admin)]'
                   : 'text-slate-300 hover:bg-white/10 hover:text-white',
               )
             }

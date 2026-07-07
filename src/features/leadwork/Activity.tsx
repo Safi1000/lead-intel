@@ -17,8 +17,8 @@ const PERIODS: Array<{ key: Period; label: string; days: number }> = [
 
 const TYPE_STYLES: Record<string, string> = {
   'Stage Change': 'bg-blue-500/10 text-blue-600',
-  'Temperature': 'bg-orange-500/10 text-orange-600',
-  'Verdict': 'bg-purple-500/10 text-purple-600',
+  'Temperature': 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  'Verdict': 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   'Unassigned': 'bg-red-500/10 text-red-600 dark:text-red-400',
   'Remark': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
   'Note': 'bg-amber-500/10 text-amber-600 dark:text-amber-400',

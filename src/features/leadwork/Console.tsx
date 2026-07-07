@@ -38,7 +38,7 @@ export function ConsolePage() {
   return (
     <div className="reveal">
       <PageHeader title="Manager Console" subtitle="Floor health at a glance." />
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="stagger-in mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <AlertTile icon={AlertTriangle} label="SLA breaches" value={alerts.slaBreaches} tone="red" />
         <AlertTile icon={PhoneMissed} label="Overdue callbacks" value={alerts.overdueCallbacks} tone="amber" />
         <AlertTile icon={UserX} label="Idle reps (30m+)" value={alerts.idleReps} tone="amber" />

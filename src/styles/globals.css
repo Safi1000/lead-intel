@@ -135,6 +135,30 @@
   opacity: 0;
   animation: fadeInUp 0.55s var(--ease-out) forwards;
 }
+
+/* Staggered entrance for direct children of a .stagger-in container (dashboards, grids) */
+.stagger-in > * { opacity: 0; animation: fadeInUp 0.5s var(--ease-out) forwards; }
+.stagger-in > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger-in > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-in > *:nth-child(3) { animation-delay: 0.10s; }
+.stagger-in > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger-in > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger-in > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger-in > *:nth-child(n+7) { animation-delay: 0.26s; }
+
+/* Premium interactive-surface lift + cobalt glow (works in both themes) */
+.lift {
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+}
+.lift:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--color-primary) 32%, var(--color-border));
+  box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stagger-in > * { opacity: 1; animation: none; }
+  .lift:hover { transform: none; }
+}
 .stagger-1 { animation-delay: 0.04s; }
 .stagger-2 { animation-delay: 0.10s; }
 .stagger-3 { animation-delay: 0.16s; }

@@ -75,12 +75,11 @@ function load(): DB {
   } catch {
     /* fall through to seed */
   }
-  const fresh = seed()
-  persist(fresh)
-  return fresh
+  return seed()
 }
 
 let db: DB = load()
+persist() // seed localStorage on first run — deferred until `db` is initialized (avoids a TDZ crash)
 
 function persist(next: DB = db) {
   db = next
