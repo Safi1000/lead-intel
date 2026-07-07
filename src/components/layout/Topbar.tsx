@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
-import { Building2, ChevronDown, LogOut, Menu, Moon, Settings, Sun, User as UserIcon } from 'lucide-react'
-import { authApi } from '../../api/endpoints'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Building2, ChevronDown, Coins, LogOut, Menu, Moon, Search, Settings, Sun, User as UserIcon } from 'lucide-react'
+import { authApi, orgCreditsApi } from '../../api/endpoints'
 import { useAuthStore } from '../../stores/authStore'
 import { useUIStore } from '../../stores/uiStore'
 import { queryClient } from '../../app/providers'
@@ -23,6 +24,8 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const clear = useAuthStore((s) => s.clear)
   const navigate = useNavigate()
   const isSA = role === 'superadmin' || role === 'admin'
+  const [q, setQ] = useState('')
+  const { data: credits } = useQuery({ queryKey: ['org-credits'], queryFn: () => orgCreditsApi.mine(), enabled: !!actingOrgId || (!isSA && !!role) })
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSettled: () => {
@@ -67,7 +70,30 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         )}
       </div>
 
+      {/* Global lead search (§10) */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 2) navigate(`/search?q=${encodeURIComponent(q.trim())}`) }}
+        className="mx-3 hidden max-w-md flex-1 items-center md:flex"
+      >
+        <div className="relative w-full">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search leads…"
+            aria-label="Search leads"
+            className="h-9 w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] pl-9 pr-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] transition-all focus:border-[var(--color-primary)] focus:bg-[var(--color-surface)] focus:ring-2 focus:ring-[var(--color-primary)]/15 focus-visible:outline-none"
+          />
+        </div>
+      </form>
+
       <div className="flex items-center gap-1.5">
+        {credits != null && (
+          <span className="hidden items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-[12px] font-medium sm:inline-flex" title="Credit balance">
+            <Coins className="h-3.5 w-3.5 text-[var(--color-signal)]" />
+            <span className="tabular-nums">{Math.round(credits).toLocaleString()}</span>
+          </span>
+        )}
         <ConnectionChip />
         <button
           onClick={toggleTheme}

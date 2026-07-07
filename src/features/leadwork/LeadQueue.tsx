@@ -193,6 +193,7 @@ export function LeadQueuePage() {
       if (!l.next_follow_up) return false
       if (dueFilter === 'overdue' && !(l.next_follow_up < today)) return false
       if (dueFilter === 'today' && l.next_follow_up !== today) return false
+      if (dueFilter === 'week') { const wk = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10); if (!(l.next_follow_up >= today && l.next_follow_up <= wk)) return false }
     }
     if (scoreMin) { if (Number(l.data['Quality Score'] ?? 0) < Number(scoreMin)) return false }
     if (ratingMin !== 'all') { if (Number(l.data['Rating'] ?? l.data['rating'] ?? 0) < Number(ratingMin)) return false }
@@ -290,7 +291,7 @@ export function LeadQueuePage() {
           <option value="all">Any site</option><option value="has">Has website</option><option value="none">No website</option>
         </select>
         <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} aria-label="Filter by follow-up" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option>
+          <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">This week</option>
         </select>
         <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
         <Input type="number" min={0} value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} placeholder="Min score" aria-label="Minimum quality score" className="h-9 w-28" />

@@ -980,7 +980,7 @@ export interface SetterKpi {
   rep_id: string; name: string
   assigned: number; worked: number
   attempts: number; connects: number; connectRate: number
-  booked: number; bookingRate: number
+  conversations: number; booked: number; bookingRate: number
   speedHrs: number; overdue: number
 }
 export const kpisApi = {
@@ -999,10 +999,10 @@ export const kpisApi = {
     const speed = new Map<string, { sum: number; n: number }>()
     const get = (id: string) => {
       let k = map.get(id)
-      if (!k) { k = { rep_id: id, name: nameFor(id), assigned: 0, worked: 0, attempts: 0, connects: 0, connectRate: 0, booked: 0, bookingRate: 0, speedHrs: 0, overdue: 0 }; map.set(id, k) }
+      if (!k) { k = { rep_id: id, name: nameFor(id), assigned: 0, worked: 0, attempts: 0, connects: 0, connectRate: 0, conversations: 0, booked: 0, bookingRate: 0, speedHrs: 0, overdue: 0 }; map.set(id, k) }
       return k
     }
-    for (const d of disp ?? []) { const k = get(d.rep_id as string); k.attempts++; if (d.tier1 === 'Connected') k.connects++; if (d.tier2 === 'Booked') k.booked++ }
+    for (const d of disp ?? []) { const k = get(d.rep_id as string); k.attempts++; if (d.tier1 === 'Connected') k.connects++; if (d.tier2) k.conversations++; if (d.tier2 === 'Booked') k.booked++ }
     const today = new Date().toISOString().slice(0, 10)
     for (const l of leadRows) {
       if (!l.setter_id) continue
@@ -1027,18 +1027,19 @@ export const kpisApi = {
     if (error) throw new Error(error.message)
     const users = await usersApi.list()
     const nameFor = (id: string) => users.find((u) => u.id === id)?.name ?? 'Closer'
-    type Acc = { deals: number; won: number; lost: number; revenue: number; cycleSum: number; cycleN: number; pipeline: number }
+    type Acc = { deals: number; won: number; lost: number; proposals: number; revenue: number; cycleSum: number; cycleN: number; pipeline: number }
     const map = new Map<string, Acc>()
-    const get = (id: string) => { let k = map.get(id); if (!k) { k = { deals: 0, won: 0, lost: 0, revenue: 0, cycleSum: 0, cycleN: 0, pipeline: 0 }; map.set(id, k) } return k }
+    const get = (id: string) => { let k = map.get(id); if (!k) { k = { deals: 0, won: 0, lost: 0, proposals: 0, revenue: 0, cycleSum: 0, cycleN: 0, pipeline: 0 }; map.set(id, k) } return k }
     for (const d of data ?? []) {
       const id = d.closer_id as string | null; if (!id) continue
       const k = get(id); k.deals++
+      if (d.stage === 'proposal') k.proposals++
       if (d.stage === 'won') { k.won++; k.revenue += Number(d.value ?? 0); if (d.closed_at) { k.cycleSum += (new Date(d.closed_at as string).getTime() - new Date(d.created_at as string).getTime()) / 86_400_000; k.cycleN++ } }
       else if (d.stage === 'lost') k.lost++
       else k.pipeline += Number(d.value ?? 0)
     }
     return [...map.entries()].map(([id, k]) => ({
-      rep_id: id, name: nameFor(id), deals: k.deals, won: k.won, lost: k.lost,
+      rep_id: id, name: nameFor(id), deals: k.deals, won: k.won, lost: k.lost, proposals: k.proposals,
       closeRate: k.won + k.lost ? Math.round((k.won / (k.won + k.lost)) * 100) : 0,
       revenue: k.revenue, avgDeal: k.won ? Math.round(k.revenue / k.won) : 0, pipeline: k.pipeline,
       cycleDays: k.cycleN ? Math.round(k.cycleSum / k.cycleN) : 0,
@@ -1085,7 +1086,7 @@ export const kpisApi = {
 }
 export interface CloserKpi {
   rep_id: string; name: string
-  deals: number; won: number; lost: number; closeRate: number
+  deals: number; won: number; lost: number; proposals: number; closeRate: number
   revenue: number; avgDeal: number; pipeline: number; cycleDays: number
 }
 
@@ -1129,6 +1130,16 @@ export const providerApi = {
     if (error) throw new Error(error.message)
   },
 }
+// Org credit balance for the current tenant (top-bar chip). Reads org_billing (RLS: org members).
+export const orgCreditsApi = {
+  mine: async (): Promise<number | null> => {
+    const org = effectiveOrgId()
+    if (!org) return null
+    const { data } = await supabase.from('org_billing').select('credits_remaining').eq('org_id', org).maybeSingle()
+    return data ? Number(data.credits_remaining) : null
+  },
+}
+
 export const portalApi = {
   summary: async (): Promise<{ delivered: number; booked: number; won: number; revenue: number; recent: Array<{ id: string; name: string; city: string; booked: boolean }> }> => {
     const { data: leads } = await supabase.from('leads').select('id,display_name,data,lifecycle_state,created_at').order('created_at', { ascending: false }).limit(2000)

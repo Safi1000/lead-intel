@@ -70,6 +70,7 @@ export function PerformancePage() {
                   <th className="px-3 py-2.5 font-medium tabular-nums">Attempts</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Connects</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Connect %</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Convos</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Booked</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Booking %</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Speed (h)</th>
@@ -85,6 +86,7 @@ export function PerformancePage() {
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.attempts}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.connects}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{r.connectRate}%</td>
+                    <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.conversations}</td>
                     <td className="px-3 py-3 tabular-nums font-semibold text-[var(--color-primary)]">{r.booked}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{r.bookingRate}%</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{r.speedHrs || '—'}</td>
@@ -106,6 +108,7 @@ export function PerformancePage() {
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
                   <th className="px-5 py-2.5 font-medium">Closer</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Won</th>
+                  <th className="px-3 py-2.5 font-medium tabular-nums">Proposals</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Close %</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Revenue</th>
                   <th className="px-3 py-2.5 font-medium tabular-nums">Avg deal</th>
@@ -118,6 +121,7 @@ export function PerformancePage() {
                   <tr key={c.rep_id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]">
                     <td className="px-5 py-3 font-medium">{c.name}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{c.won}</td>
+                    <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">{c.proposals}</td>
                     <td className="px-3 py-3 tabular-nums font-medium">{c.closeRate}%</td>
                     <td className="px-3 py-3 tabular-nums font-semibold text-[var(--color-primary)]">${Math.round(c.revenue).toLocaleString()}</td>
                     <td className="px-3 py-3 tabular-nums text-[var(--color-text-secondary)]">${c.avgDeal.toLocaleString()}</td>
