@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Building2, ChevronDown, Coins, LogOut, Menu, Moon, Search, Settings, Sun, User as UserIcon } from 'lucide-react'
+import { Building2, ChevronDown, Coins, LogOut, Menu, Moon, PanelLeft, PanelLeftClose, Search, Settings, Sun, User as UserIcon } from 'lucide-react'
 import { authApi, orgCreditsApi } from '../../api/endpoints'
 import { cn } from '../../lib/utils'
 import { useAuthStore } from '../../stores/authStore'
@@ -22,6 +22,8 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const exitOrgAction = useAuthStore((s) => s.exitOrg)
   const theme = useUIStore((s) => s.theme)
   const toggleTheme = useUIStore((s) => s.toggleTheme)
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const clear = useAuthStore((s) => s.clear)
   const navigate = useNavigate()
   const isSA = role === 'superadmin' || role === 'admin'
@@ -55,6 +57,14 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
+        </button>
+        <button
+          onClick={toggleSidebar}
+          className="hidden rounded-md p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] lg:inline-flex"
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
         </button>
         <span className="text-[15px] font-semibold lg:hidden">LeadIntel</span>
         {isSA && actingOrgId && (
