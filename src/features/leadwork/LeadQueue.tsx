@@ -7,8 +7,7 @@ import { toast } from 'sonner'
 import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
-import { Button, Card, Input, Label } from '../../components/ui/primitives'
-import { Dialog } from '../../components/ui/Dialog'
+import { Button, Card, Input } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
@@ -155,7 +154,6 @@ export function LeadQueuePage() {
   const [tab, setTab] = useState(tabs[0]?.key ?? 'all')
   const [searchRaw, setSearchRaw] = useState('')
   const search = useDebounce(searchRaw, 200).toLowerCase()
-  const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [assignSetterId, setAssignSetterId] = useState('')
@@ -177,7 +175,6 @@ export function LeadQueuePage() {
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const [setterFilter, setSetterFilter] = useState('all')
-  const [closerFilter, setCloserFilter] = useState('all')
   const [attemptsFilter, setAttemptsFilter] = useState('all')
   const [dueFilter, setDueFilter] = useState('all')
   const [doneFilter, setDoneFilter] = useState('all')
@@ -192,7 +189,6 @@ export function LeadQueuePage() {
 
   // Distinct setters/closers present in this batch, for the filter dropdowns.
   const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
-  const closerNames = useMemo(() => [...new Set(leads.map((l) => l.closer).filter((n): n is string => !!n))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
     // Hard guarantee: a setter/closer only ever sees leads that belong to them, whatever the source
@@ -201,7 +197,6 @@ export function LeadQueuePage() {
     if (role === 'closer' && l.closer_id !== user?.id) return false
     if (activeTab && !activeTab.filter(l)) return false
     if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
-    if (closerFilter !== 'all' && l.closer !== (closerFilter === 'none' ? null : closerFilter)) return false
     if (hideDnc && l.dnc) return false
     if (attemptsFilter !== 'all') {
       const a = l.attempt_count
@@ -229,7 +224,7 @@ export function LeadQueuePage() {
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, attemptsFilter, dueFilter, hideDnc, scoreMin, tier1Filter, tier2Filter, doneFilter])
+  }), [leads, role, user?.id, activeTab, search, setterFilter, attemptsFilter, dueFilter, hideDnc, scoreMin, tier1Filter, tier2Filter, doneFilter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
@@ -253,10 +248,7 @@ export function LeadQueuePage() {
         title={batch ? batch.file_name : 'Leads'}
         subtitle={batch ? `${batch.template_name} · ${batch.lead_count} lead${batch.lead_count === 1 ? '' : 's'}` : 'Leads assigned to you.'}
         actions={isManager && batchId ? (
-          <div className="flex gap-2">
-            <Button variant="outline" loading={roundRobin.isPending} onClick={() => roundRobin.mutate()}><Shuffle className="h-4 w-4" /> Round-robin</Button>
-            <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button>
-          </div>
+          <Button variant="outline" loading={roundRobin.isPending} onClick={() => roundRobin.mutate()}><Shuffle className="h-4 w-4" /> Round-robin</Button>
         ) : undefined}
       />
 
@@ -328,14 +320,8 @@ export function LeadQueuePage() {
               <option value="none">Unassigned</option>
               {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
-            <select value={closerFilter} onChange={(e) => setCloserFilter(e.target.value)} aria-label="Filter by closer"
-              className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-              <option value="all">All closers</option>
-              <option value="none">No closer</option>
-              {closerNames.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-            {(setterFilter !== 'all' || closerFilter !== 'all') && (
-              <button onClick={() => { setSetterFilter('all'); setCloserFilter('all') }} className="text-[13px] text-[var(--color-primary)] hover:underline">Clear</button>
+            {setterFilter !== 'all' && (
+              <button onClick={() => setSetterFilter('all')} className="text-[13px] text-[var(--color-primary)] hover:underline">Clear</button>
             )}
           </>
         )}
@@ -393,9 +379,6 @@ export function LeadQueuePage() {
         )}
       </Card>
 
-      {assignSetterOpen && batchId && batch && (
-        <AssignToSetterDialog batchId={batchId} unassigned={batch.unassigned_count} onClose={() => setAssignSetterOpen(false)} onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }} />
-      )}
 
       <LeadDrawer leadId={drawerLeadId} onClose={() => setDrawerLeadId(null)} />
     </div>
@@ -470,51 +453,4 @@ function useOrgMembers(role: 'setter' | 'closer'): ManagedUser[] {
   return (data ?? []).filter((u) => u.role === role && u.status === 'active')
 }
 
-function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchId: string; unassigned: number; onClose: () => void; onDone: () => void }) {
-  const setters = useOrgMembers('setter')
-  const [setterId, setSetterId] = useState('')
-  const [count, setCount] = useState(Math.min(50, unassigned))
-  const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
-  const { data: loads } = useQuery({ queryKey: ['setter-loads'], queryFn: floorConfigApi.setterLoads })
-
-  // WIP cap: a setter can only receive up to (cap − their current active load) more leads.
-  const cap = floor?.wip_cap ?? 40
-  const currentLoad = setterId ? (loads?.[setterId] ?? 0) : 0
-  const room = Math.max(0, cap - currentLoad)
-  const maxAssign = Math.min(unassigned, room)
-  const clamped = Math.max(0, Math.min(count, maxAssign))
-
-  const assign = useMutation({
-    mutationFn: () => assignmentApi.assignLeadsToSetter(batchId, setterId, clamped),
-    onSuccess: (n) => { toast.success(`Assigned ${n} lead${n === 1 ? '' : 's'} at random`); onDone() },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="Assign leads to a setter" description="A random selection of currently-unassigned leads will be given to the setter.">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="as-setter">Setter</Label>
-          <select id="as-setter" value={setterId} onChange={(e) => { setSetterId(e.target.value); setCount(Math.min(50, unassigned)) }} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">Select a setter…</option>
-            {setters.map((u) => <option key={u.id} value={u.id}>{u.name}{loads ? ` — ${loads[u.id] ?? 0}/${cap} active` : ''}</option>)}
-          </select>
-          {setters.length === 0 && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">No setters in this organization yet — add one in Users.</p>}
-        </div>
-        {setterId && (
-          <p className={cn('text-[12px]', room === 0 ? 'font-medium text-red-600 dark:text-red-400' : 'text-[var(--color-text-muted)]')}>
-            {room === 0 ? `At WIP cap (${currentLoad}/${cap}) — dispose active leads before assigning more.` : `Holding ${currentLoad}/${cap} active — room for ${room} more.`}
-          </p>
-        )}
-        <div>
-          <Label htmlFor="as-count">Number of leads (max {maxAssign})</Label>
-          <Input id="as-count" type="number" min={1} max={maxAssign} value={clamped} onChange={(e) => setCount(Math.max(1, Math.min(maxAssign, Number(e.target.value) || 0)))} disabled={maxAssign === 0} />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button loading={assign.isPending} disabled={!setterId || clamped < 1 || maxAssign === 0} onClick={() => assign.mutate()}>Assign {clamped} randomly</Button>
-        </div>
-      </div>
-    </Dialog>
-  )
-}
 
