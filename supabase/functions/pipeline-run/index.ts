@@ -115,11 +115,24 @@ async function dbUpdate(table: string, body: unknown, qs: string): Promise<void>
   if (!res.ok) console.error(`dbUpdate ${table}: ${res.status} ${await res.text()}`)
 }
 
+async function dbUpsert(table: string, body: unknown, onConflict: string): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: svcHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) console.error(`dbUpsert ${table}: ${res.status} ${await res.text()}`)
+}
+
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
   return out
 }
+
+// Global enrichment cache TTL — a place's heavy analysis (website scan + AI score) is reused across
+// tenants of the same niche for this long; volatile signals (ads) still refresh on each delivery.
+const CACHE_TTL_DAYS = 30
 
 // ---------------------------------------------------------------------------
 // Search combinations — yield-aware.
@@ -143,14 +156,16 @@ function shuffle<T>(arr: T[]): T[] {
 // combo #1 off a single lucky hit). Below this, it uses the global-average prior.
 const QUALIFY_MIN_SAMPLE = 12
 
-async function buildYieldAwareSearches(): Promise<Array<{ search_term: string; location: string }>> {
-  let locations: string[] = TARGET_METROS
+async function buildYieldAwareSearches(searchTerms: string[], profileMetros: string[] | null): Promise<Array<{ search_term: string; location: string }>> {
+  let locations: string[] = profileMetros ?? TARGET_METROS
   const yieldMap = new Map<string, { last_new: number; last_searched_at: string | null }>()
   const qualMap = new Map<string, { scanned: number; qualified: number }>()
   let globalRate = 0.15 // prior for never/under-sampled combos
   try {
-    const locs = await dbSelect<{ location: string }>('search_locations', 'active=is.true&select=location')
-    if (locs.length > 0) locations = locs.map((l) => l.location)
+    if (!profileMetros) {  // per-tenant metros bypass the global pool
+      const locs = await dbSelect<{ location: string }>('search_locations', 'active=is.true&select=location')
+      if (locs.length > 0) locations = locs.map((l) => l.location)
+    }
     const yields = await dbSelect<{ search_term: string; location: string; last_new: number; last_searched_at: string | null }>(
       'search_yield', 'select=search_term,location,last_new,last_searched_at')
     for (const y of yields) yieldMap.set(`${y.search_term}|${y.location}`, y)
@@ -178,7 +193,7 @@ async function buildYieldAwareSearches(): Promise<Array<{ search_term: string; l
   const fresh: Array<{ search_term: string; location: string }> = []      // never searched
   const productive: Array<{ search_term: string; location: string; rate: number; ln: number }> = []
   let skipped = 0
-  for (const term of SEARCH_TERMS) {
+  for (const term of searchTerms) {
     for (const location of locations) {
       const key = `${term}|${location}`
       const y = yieldMap.get(key)
@@ -215,11 +230,13 @@ async function buildYieldAwareSearches(): Promise<Array<{ search_term: string; l
 // Wall-clock budget per invocation — below the 150s hard limit, leaving margin for the final
 // DB writes + firing the next chunk.
 const CHUNK_TIME_BUDGET_MS = 110_000
-// Max NEW (deduped) leads to enrich per invocation. Deliberately SMALL: Supabase edge functions
-// have a cumulative CPU-time limit (not just wall-clock), and each lead does heavy HTML regex.
-// ~56 leads/chunk (with concurrency) blew the limit → 546 WORKER_LIMIT kills. ~12-15 is safe.
-// Concurrency still makes each small chunk fast, so we just run more short chunks.
-const CHUNK_CANDIDATE_CAP = 15
+// Max NEW (deduped) leads to enrich per invocation. This is the CPU-bound knob: Supabase edge
+// functions have a cumulative CPU-time limit (not just wall-clock), and each FRESH lead runs heavy
+// HTML regex. ~56 leads/chunk blew the limit → 546 WORKER_LIMIT kills; 15 was the proven-safe floor.
+// 20 (≈36% of the breaking load) cuts the number of cold-start/chain cycles for a modest overall
+// speedup. Concurrency doesn't add CPU (single-threaded), so this cap is the ONLY CPU-kill lever —
+// if a run ever logs 546/WORKER_LIMIT, drop back to 15. Do NOT push past ~25 on fresh-heavy runs.
+const CHUNK_CANDIDATE_CAP = 20
 
 // Fire the next chunk (the edge function invokes itself). Same race-then-return pattern the Vercel
 // trigger uses, so the next isolate is in-flight before this one exits.
@@ -451,6 +468,59 @@ const INFERRED_BOOKING_LABELS = new Set([
 const MIN_RATING = 3.5        // below this a spa reads as struggling; rubric rejects as "unproven"
 const MIN_REVIEW_COUNT = 3    // 0-2 reviews = brand-new/dead listing, can't assess as a real business
 
+// ---------------------------------------------------------------------------
+// Per-tenant sourcing profile. An org with a row in sourcing_profiles gets its own niche
+// (search terms + exclude list + AI niche label from its vertical), geo (metros) and field
+// toggles. An org WITHOUT one falls back to the historic global config below — so TechxServe
+// (which has no profile) keeps running byte-for-byte as before this change.
+// ---------------------------------------------------------------------------
+interface EffectiveProfile {
+  verticalKey: string                // niche scope for the enrichment cache (AI score is niche-specific)
+  searchTerms: string[]
+  metros: string[] | null            // null = use the global search_locations table (today's behavior)
+  excludeTypes: Set<string>
+  nicheLabel: string
+  nichePrompt: string | null
+  fetchAds: boolean
+  fetchEmail: boolean
+  fetchHours: boolean
+  dailyLimit: number
+}
+async function loadProfile(orgId: string): Promise<EffectiveProfile> {
+  const fb: EffectiveProfile = {
+    verticalKey: 'med_spa', searchTerms: SEARCH_TERMS, metros: null, excludeTypes: EXCLUDED_PLACE_TYPES,
+    nicheLabel: 'Med Spa', nichePrompt: null,
+    fetchAds: true, fetchEmail: true, fetchHours: true, dailyLimit: 1_000_000,
+  }
+  try {
+    const profs = await dbSelect<{ vertical_key: string | null; search_terms: string[] | null; metros: string[] | null; fetch_ads: boolean; fetch_email: boolean; fetch_hours: boolean; daily_limit: number; active: boolean }>(
+      'sourcing_profiles', `org_id=eq.${orgId}&limit=1`)
+    const p = profs[0]
+    if (!p || !p.active) return fb   // no/inactive profile → historic global behavior
+    let terms = p.search_terms ?? null
+    let excludes = EXCLUDED_PLACE_TYPES
+    let label = fb.nicheLabel, prompt: string | null = null
+    if (p.vertical_key) {
+      const vs = await dbSelect<{ label: string; search_terms: string[]; exclude_types: string[]; niche_prompt: string | null }>(
+        'verticals', `key=eq.${p.vertical_key}&limit=1`)
+      const v = vs[0]
+      if (v) { terms = terms ?? v.search_terms; excludes = new Set(v.exclude_types); label = v.label; prompt = v.niche_prompt }
+    }
+    return {
+      verticalKey: p.vertical_key ?? 'med_spa',
+      searchTerms: terms && terms.length ? terms : SEARCH_TERMS,
+      metros: p.metros && p.metros.length ? p.metros : null,
+      excludeTypes: excludes,
+      nicheLabel: label, nichePrompt: prompt,
+      fetchAds: p.fetch_ads, fetchEmail: p.fetch_email, fetchHours: p.fetch_hours,
+      dailyLimit: p.daily_limit ?? 1000,
+    }
+  } catch (e) {
+    console.error('[profile] load failed, using global defaults:', (e as Error).message)
+    return fb
+  }
+}
+
 async function placesTextSearch(
   searchTerm: string,
   location: string,
@@ -661,15 +731,30 @@ Deno.serve(async (req: Request) => {
     const qualityThreshold = Number(cfg.quality_threshold ?? 6)
     const model: string = (cfg.openai_model as string) ?? 'gpt-4o-mini'
 
-    // §13 credit hard-stop (opt-in per tenant via org_billing.metered). A metered org that has run
-    // dry halts immediately, leaving whatever was already pulled as a partial batch. Un-metered orgs
-    // (metered=false — the default, i.e. every org today) are unlimited: behaviour identical to before.
-    const billingRows = await dbSelect<{ metered: boolean; credits_remaining: number }>('org_billing', `org_id=eq.${orgId}&select=metered,credits_remaining`)
-    if (billingRows[0]?.metered && Number(billingRows[0]?.credits_remaining ?? 0) <= 0) {
-      console.log(`[pipeline-run] org ${orgId} metered + out of credits — halting scrape (partial).`)
+    // Per-tenant sourcing profile (niche / geo / field toggles). No profile → historic global config.
+    const profile = await loadProfile(orgId)
+
+    // Wallet gate (opt-in per tenant via org_billing.metered). A metered org must afford at least ONE
+    // lead to run; if not, halt and leave a partial batch. Un-metered orgs (metered=false — every org
+    // today) are unlimited: behaviour identical to before.
+    const billingRows = await dbSelect<{ metered: boolean; credits_remaining: number; price_per_lead: number }>('org_billing', `org_id=eq.${orgId}&select=metered,credits_remaining,price_per_lead`)
+    const bill = billingRows[0]
+    if (bill?.metered && Number(bill.credits_remaining ?? 0) < Number(bill.price_per_lead ?? 0.25)) {
+      console.log(`[pipeline-run] org ${orgId} can't afford a lead — halting (partial).`)
       if (incomingBatchId) await dbUpdate('batches', { credit_exhausted: true }, `id=eq.${incomingBatchId}`)
       await dbUpdate('pipeline_runs', { status: 'completed', completed_at: new Date().toISOString() }, `id=eq.${runId}`)
-      return new Response(JSON.stringify({ ok: true, halted: 'credits_exhausted' }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, halted: 'insufficient_balance' }), { status: 200 })
+    }
+
+    // Daily lead cap (per-tenant). Count engine leads delivered to this org since midnight UTC.
+    if (profile.dailyLimit < 1_000_000) {
+      const since = new Date(); since.setUTCHours(0, 0, 0, 0)
+      const todays = await dbSelect<{ id: string }>('leads', `org_id=eq.${orgId}&created_by=eq.pipeline&created_at=gte.${since.toISOString()}&select=id&limit=${profile.dailyLimit + 1}`)
+      if (todays.length >= profile.dailyLimit) {
+        console.log(`[pipeline-run] org ${orgId} hit daily cap ${profile.dailyLimit} — halting.`)
+        await dbUpdate('pipeline_runs', { status: 'completed', completed_at: new Date().toISOString() }, `id=eq.${runId}`)
+        return new Response(JSON.stringify({ ok: true, halted: 'daily_limit' }), { status: 200 })
+      }
     }
 
     // Cumulative progress read at chunk start (chaining jobs span many invocations).
@@ -690,7 +775,7 @@ Deno.serve(async (req: Request) => {
     // -------------------------------------------------------------------------
     type RawResult = RawPlace & { _search_term: string; _location: string; _address: string; _name: string }
     const allResults: RawResult[] = []
-    const searches = await buildYieldAwareSearches()
+    const searches = await buildYieldAwareSearches(profile.searchTerms, profile.metros)
     const searchedCombos: Array<{ search_term: string; location: string; raw: number }> = []
 
     for (const search of searches) {
@@ -731,7 +816,7 @@ Deno.serve(async (req: Request) => {
     if (allPlaceIds.length > 0) {
       const existing = await dbSelect<{ place_id: string }>(
         'sourced_places',
-        `place_id=in.(${allPlaceIds.map((id) => `"${id}"`).join(',')})&select=place_id`,
+        `place_id=in.(${allPlaceIds.map((id) => `"${id}"`).join(',')})&org_id=eq.${orgId}&select=place_id`,
       )
       const existingSet = new Set(existing.map((r) => r.place_id))
       newResults = allResults.filter((r) => !existingSet.has(r.id))
@@ -791,10 +876,12 @@ Deno.serve(async (req: Request) => {
     let processedThisChunk = 0
 
     // Process leads in bounded-concurrency batches. Per-lead work is mostly waiting on the website
-    // fetch + OpenAI, so running LEAD_CONCURRENCY at once overlaps those waits (~6x faster) while
-    // staying well within Google Places / OpenAI rate limits. Shared counters/arrays are safe to
-    // mutate from the callbacks (JS is single-threaded; mutations happen between awaits).
-    const LEAD_CONCURRENCY = 3
+    // fetch + OpenAI, so running LEAD_CONCURRENCY at once overlaps those waits. This is the SAFE
+    // throughput lever: it only overlaps I/O waits, so it does NOT add to the cumulative edge CPU-time
+    // (that's driven by CHUNK_CANDIDATE_CAP) — it just finishes each chunk in less wall-clock, so we
+    // chain the next chunk sooner. Watch for OpenAI 429s (borderline leads fire a 2nd escalation
+    // call, so 8 here can mean ~16 in-flight); dial back to 6 if they appear.
+    const LEAD_CONCURRENCY = 8
     for (let batchStart = 0; batchStart < newResults.length; batchStart += LEAD_CONCURRENCY) {
       // Stop check (once per batch)
       const runRows = await dbSelect<{ stop_requested: boolean }>('pipeline_runs', `id=eq.${runId}&select=stop_requested`)
@@ -822,7 +909,7 @@ Deno.serve(async (req: Request) => {
       // definitely out of niche (gym, dentist, nail salon...), record it for dedup and skip the
       // expensive Place Details + website scan + OpenAI calls entirely.
       const placeType = result.primaryType ?? result.types?.[0] ?? ''
-      if (placeType && EXCLUDED_PLACE_TYPES.has(placeType)) {
+      if (placeType && profile.excludeTypes.has(placeType)) {
         try {
           await dbInsert('sourced_places', {
             place_id: placeId, org_id: orgId, pipeline_run_id: runId,
@@ -902,10 +989,29 @@ Deno.serve(async (req: Request) => {
         return
       }
 
-      // Phase 4: Website analysis — only when there's a website.
+      // Phase 4-5: heavy enrichment (website scan + AI score). Served from the GLOBAL place cache when
+      // a fresh (< TTL) entry exists for this (place, niche) — which makes overlapping metros between
+      // same-niche tenants near-free — otherwise computed below and cached at the end. Volatile
+      // signals (ads) still refresh per delivery in the import block.
       let emailResult = { email: null as string | null, emailSource: 'none' as string, emailConfidence: 'none' as string }
-      let websiteResult = null
-      if (hasWebsite) {
+      let websiteResult: Awaited<ReturnType<typeof analyzeWebsite>> | null = null
+      let fromCache = false
+      try {
+        const cutoff = new Date(Date.now() - CACHE_TTL_DAYS * 864e5).toISOString()
+        const cachedRows = await dbSelect<{ website_result: Awaited<ReturnType<typeof analyzeWebsite>> | null; ai_score: AiScore }>(
+          'place_cache', `place_id=eq.${placeId}&vertical_key=eq.${profile.verticalKey}&enriched_at=gte.${cutoff}&select=website_result,ai_score&limit=1`)
+        if (cachedRows[0]) {
+          websiteResult = cachedRows[0].website_result
+          aiScore = cachedRows[0].ai_score
+          aiRaw = { cache_hit: true }
+          if (websiteResult?.email && profile.fetchEmail) {
+            emailResult = { email: websiteResult.email, emailSource: websiteResult.emailSource, emailConfidence: websiteResult.emailConfidence }
+            totalEmailed++
+          }
+          fromCache = true
+        }
+      } catch (e) { console.error(`[${placeId}] place_cache read failed:`, (e as Error).message) }
+      if (!fromCache && hasWebsite) {
         try {
           websiteResult = await analyzeWebsite(details!.website!)
           if (websiteResult.email) {
@@ -933,7 +1039,7 @@ Deno.serve(async (req: Request) => {
         && websiteResult.detectedIssues.every(softIssue)
         && websiteResult.chainSignals.length === 0
       )
-      if (certainGood && details) {
+      if (!fromCache && certainGood && details) {
         aiScore = {
           is_correct_niche: true, // irrelevant to the gate for 'good' sites; kept truthy for consistency
           website_status: 'good',
@@ -949,7 +1055,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Phase 5: AI scoring — also scores no-website leads (determines niche + reachability).
-      if (details && !certainGood) {
+      if (!fromCache && details && !certainGood) {
         try {
           const placeForAi: PlaceForScoring = {
             name: details.name,
@@ -962,7 +1068,7 @@ Deno.serve(async (req: Request) => {
             email: emailResult.email,
             websiteSignals: websiteResult,
           }
-          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY)
+          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY, { label: profile.nicheLabel, prompt: profile.nichePrompt })
           aiScore = score
           aiRaw = raw
           // Pin website_status to reality regardless of the model's guess: no real website → 'none';
@@ -985,6 +1091,16 @@ Deno.serve(async (req: Request) => {
           console.error(`[${placeId}] AI scoring failed:`, (e as Error).message)
           rowError = (rowError ? rowError + '; ' : '') + `AI failed: ${(e as Error).message}`
         }
+      }
+
+      // Cache the freshly-computed heavy enrichment for this (place, niche) so other same-niche
+      // tenants reuse it within the TTL instead of re-scanning + re-scoring. Keyed (place_id,
+      // vertical_key); the AI score is niche-specific, the website scan is folded in with it.
+      if (!fromCache && aiScore) {
+        await dbUpsert('place_cache', {
+          place_id: placeId, vertical_key: profile.verticalKey,
+          website_result: websiteResult, ai_score: aiScore, enriched_at: new Date().toISOString(),
+        }, 'place_id,vertical_key').catch((e) => console.error(`[${placeId}] place_cache write failed:`, (e as Error).message))
       }
 
       // Update sourced_places with all enriched data
@@ -1036,7 +1152,7 @@ Deno.serve(async (req: Request) => {
           if (dom) {
             const dupes = await dbSelect<{ place_id: string }>(
               'sourced_places',
-              `website=ilike.*${dom}*&crm_lead_id=not.is.null&place_id=neq.${placeId}&select=place_id&limit=1`,
+              `website=ilike.*${dom}*&crm_lead_id=not.is.null&org_id=eq.${orgId}&place_id=neq.${placeId}&select=place_id&limit=1`,
             )
             if (dupes.length > 0) { importBatchId = null; console.log(`[${placeId}] duplicate website (${dom}) already imported — skipping`) }
           }
@@ -1051,7 +1167,7 @@ Deno.serve(async (req: Request) => {
         let adsTaskId: string | null = null
         let adsDomain = ''
         let adsIsPlatform = false
-        if (importBatchId === batchId && details.website) {
+        if (profile.fetchAds && importBatchId === batchId && details.website) {
           try { adsDomain = new URL(details.website).hostname.replace(/^www\./, '').toLowerCase() } catch { /* skip */ }
           if (adsDomain && isBookingPlatformDomain(adsDomain)) adsIsPlatform = true // their "site" is a platform link — skip
           else if (adsDomain) adsTaskId = await postAdsTask(adsDomain, isCanada)
@@ -1067,19 +1183,19 @@ Deno.serve(async (req: Request) => {
             display_name: details.name,
             status: 'new',
             source_type: 'google_maps',
-            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status },
+            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status, place_id: placeId },
             data: {
               'Business Name': details.name,
               'Address': result._address,
               'Phone': details.phone ?? '',
               'Website': details.website ?? '',
-              'Email': emailResult.email ?? '',
-              'Email Verified': websiteResult?.emailMxOk === true ? 'Yes (MX)' : websiteResult?.emailMxOk === false ? 'No — domain cannot receive mail' : '',
+              'Email': profile.fetchEmail ? (emailResult.email ?? '') : '',
+              'Email Verified': profile.fetchEmail && websiteResult?.emailMxOk === true ? 'Yes (MX)' : profile.fetchEmail && websiteResult?.emailMxOk === false ? 'No — domain cannot receive mail' : '',
               'SEO Score': websiteResult?.seoScore != null ? `${websiteResult.seoScore}/100 — ${seoTag(websiteResult.seoScore)}` : '',
               'Tech Stack': websiteResult?.techStack ?? '',
               'Rating': details.rating != null ? String(details.rating) : '',
-              'Business Hours': details.hoursPeriods?.length ? formatLocalHours(details.hoursPeriods) : 'Not listed on Google',
-              'Best Time to Call (PKT)': details.hoursPeriods?.length ? formatPktCallWindow(details.hoursPeriods, details.utcOffsetMinutes) : '',
+              'Business Hours': profile.fetchHours ? (details.hoursPeriods?.length ? formatLocalHours(details.hoursPeriods) : 'Not listed on Google') : '',
+              'Best Time to Call (PKT)': profile.fetchHours && details.hoursPeriods?.length ? formatPktCallWindow(details.hoursPeriods, details.utcOffsetMinutes) : '',
               'Website Status': aiScore?.website_status ?? '',
               'Why This Status': aiScore?.status_reason ?? '',
               'Site Issue Note': aiScore?.site_issue_note ?? '',
@@ -1101,7 +1217,8 @@ Deno.serve(async (req: Request) => {
             }, `place_id=eq.${placeId}`)
             totalImported++
             // Two-pass review enrichment: only for leads worth selling to (i.e., the ones we import).
-            await enqueueReviewTasks(placeId, orgId, isCanada)
+            // Skip on a cache hit — the cached AI score already folded in the first tenant's reviews.
+            if (!fromCache) await enqueueReviewTasks(placeId, orgId, isCanada)
           }
         } catch (e) {
           console.error(`[${placeId}] import failed:`, (e as Error).message)

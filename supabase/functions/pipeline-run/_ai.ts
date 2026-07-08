@@ -243,14 +243,21 @@ async function callScoringModel(
   useModel: string,
   userPrompt: string,
   apiKey: string,
+  niche?: { label: string; prompt: string | null },
 ): Promise<{ score: AiScore; data: unknown }> {
+  // Niche-agnostic rubric: for any vertical other than the default med spa, prepend an override that
+  // re-points "correct niche" + the running examples to the tenant's niche, keeping the same
+  // website-quality/lead-scoring logic. No niche (or med spa) → the exact original prompt.
+  const systemContent = niche && niche.label !== 'Med Spa'
+    ? `NICHE OVERRIDE — READ FIRST: You are qualifying leads for "${niche.label}" businesses, NOT med spas. ${niche.prompt ?? ''} Everywhere the rules below reference "med spa / aesthetic clinic", apply the SAME website-quality and lead-scoring logic to "${niche.label}" businesses instead. is_correct_niche = true means the business genuinely IS a ${niche.label}; any other business type is the wrong niche. The worked examples below illustrate the SCORING pattern, not the niche.\n\n${SYSTEM_PROMPT}`
+    : SYSTEM_PROMPT
   const res = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: useModel,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemContent },
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_schema', json_schema: OUTPUT_SCHEMA },
@@ -269,10 +276,11 @@ export async function scorePlace(
   qualityThreshold: number,
   model: string,
   apiKey: string,
+  niche?: { label: string; prompt: string | null },
 ): Promise<{ score: AiScore; raw: unknown }> {
   const userPrompt = buildUserPrompt(place, qualityThreshold)
 
-  let { score, data } = await callScoringModel(model, userPrompt, apiKey)
+  let { score, data } = await callScoringModel(model, userPrompt, apiKey, niche)
 
   // Escalation: borderline scores (5-7) and low-confidence calls get one pass with the full model.
   // These are the genuinely hard calls; the mini model handles the clear-cut majority.
@@ -280,7 +288,7 @@ export async function scorePlace(
   if ((borderline || score.confidence === 'low') && model !== ESCALATION_MODEL) {
     const firstPass = { model, quality_score: score.quality_score, website_status: score.website_status, confidence: score.confidence }
     try {
-      const second = await callScoringModel(ESCALATION_MODEL, userPrompt, apiKey)
+      const second = await callScoringModel(ESCALATION_MODEL, userPrompt, apiKey, niche)
       score = second.score
       data = { escalated: true, first_pass: firstPass, response: second.data }
       console.log(`[scorePlace] escalated to ${ESCALATION_MODEL} (${place.name}): q${firstPass.quality_score}/${firstPass.confidence} -> q${score.quality_score}/${score.confidence}`)

@@ -648,6 +648,21 @@ export interface TargetRow {
 }
 export interface Attainment { closes: number; revenue: number }
 
+/** Multi-tenant sourcing — curated vertical + per-tenant sourcing profile. */
+export interface Vertical { key: string; label: string; search_terms: string[]; exclude_types: string[]; niche_prompt: string | null; active: boolean }
+export interface SourcingProfile {
+  org_id: string
+  vertical_key: string | null
+  search_terms: string[] | null // null = use vertical defaults
+  metros: string[]
+  fetch_ads: boolean
+  fetch_email: boolean
+  fetch_hours: boolean
+  daily_limit: number
+  active: boolean
+}
+export interface SourcingLocation { location: string; country: string }
+
 /** §10 sequences / cadences — timed multi-step follow-up plans. */
 export interface Cadence { id: string; org_id: string | null; name: string; active: boolean; created_at: string }
 export type CadenceAction = 'task' | 'email' | 'move'

@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
 import { TIER2_TO_STAGE } from './types'
-import type { ActivityType, Attainment, BatchAssignment, Cadence, CadenceEnrollment, CadenceStep, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark } from './types'
+import type { ActivityType, Attainment, BatchAssignment, Cadence, CadenceEnrollment, CadenceStep, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, SourcingLocation, SourcingProfile, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark, Vertical } from './types'
 import type {
   AdminClient,
   AIProviderConfig,
@@ -1088,6 +1088,36 @@ export interface CloserKpi {
   rep_id: string; name: string
   deals: number; won: number; lost: number; proposals: number; closeRate: number
   revenue: number; avgDeal: number; pipeline: number; cycleDays: number
+}
+
+// ---- Multi-tenant sourcing: curated verticals + per-tenant profile + curated metros. ----
+export const verticalsApi = {
+  list: async (): Promise<Vertical[]> => {
+    const { data, error } = await supabase.from('verticals').select('*').eq('active', true).order('label')
+    if (error) throw new Error(error.message)
+    return (data ?? []) as Vertical[]
+  },
+}
+export const locationsApi = {
+  list: async (): Promise<SourcingLocation[]> => {
+    const rows = await fetchAll<SourcingLocation>((from, to) =>
+      supabase.from('search_locations').select('location,country').eq('active', true).order('location').range(from, to))
+    return rows
+  },
+}
+export const sourcingApi = {
+  get: async (): Promise<SourcingProfile | null> => {
+    const org = effectiveOrgId()
+    if (!org) return null
+    const { data } = await supabase.from('sourcing_profiles').select('*').eq('org_id', org).maybeSingle()
+    return (data as SourcingProfile) ?? null
+  },
+  save: async (body: Omit<SourcingProfile, 'org_id'>): Promise<void> => {
+    const org = effectiveOrgId()
+    if (!org) throw new Error('No organization selected.')
+    const { error } = await supabase.from('sourcing_profiles').upsert({ org_id: org, ...body, updated_at: new Date().toISOString() }, { onConflict: 'org_id' })
+    if (error) throw new Error(error.message)
+  },
 }
 
 // ---- Cadences / sequences (§10). Org-scoped; owner/manager build, executor runs hourly. ----

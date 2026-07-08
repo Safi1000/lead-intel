@@ -64,6 +64,7 @@ const HolidaysPage = lazyPage(() => import('../features/sales/Holidays').then((m
 const SearchPage = lazyPage(() => import('../features/leadwork/Search').then((m) => ({ default: m.SearchPage })))
 const CreditsPage = lazyPage(() => import('../features/sales/Credits').then((m) => ({ default: m.CreditsPage })))
 const CadencesPage = lazyPage(() => import('../features/leadwork/Cadences').then((m) => ({ default: m.CadencesPage })))
+const SourcingProfilePage = lazyPage(() => import('../features/pipeline/SourcingProfile').then((m) => ({ default: m.SourcingProfilePage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -176,6 +177,7 @@ export const router = createBrowserRouter([
                       { path: 'pipeline', element: L(<PipelinePage />) },
                       { path: 'discovery', element: L(<DiscoveryPage />) },
                       { path: 'credits', element: L(<CreditsPage />) },
+                      { path: 'sourcing', element: L(<SourcingProfilePage />) },
                     ],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.

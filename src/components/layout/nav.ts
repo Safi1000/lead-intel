@@ -40,6 +40,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OWNER, orgContext: true },
   // Sourcing
   { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
+  { label: 'Sourcing profile', to: '/sourcing', icon: 'Target', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Usage & credits', to: '/credits', icon: 'Wallet', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
