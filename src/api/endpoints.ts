@@ -815,6 +815,7 @@ const mapBatch = (r: Record<string, unknown>): LeadBatch => ({
   new_count: Number(r.new_count ?? 0), contacted_count: Number(r.contacted_count ?? 0),
   interested_count: Number(r.interested_count ?? 0), booked_count: Number(r.booked_count ?? 0),
   notnow_count: Number(r.notnow_count ?? 0), won_count: Number(r.won_count ?? 0), lost_count: Number(r.lost_count ?? 0),
+  done_count: Number(r.done_count ?? 0),
 })
 
 export const leadBatchesApi = {

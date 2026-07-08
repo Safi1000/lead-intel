@@ -197,9 +197,9 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
         {b.lead_count > 0 && (
           <div className="mt-1 w-24">
             <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-border)]">
-              <div className="h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${Math.round(((b.lead_count - b.new_count) / b.lead_count) * 100)}%` }} />
+              <div className="h-full rounded-full bg-[var(--color-primary)]" style={{ width: `${b.lead_count ? Math.round((b.done_count / b.lead_count) * 100) : 0}%` }} />
             </div>
-            <span className="text-[11px] text-[var(--color-text-muted)]">{b.lead_count - b.new_count}/{b.lead_count} worked</span>
+            <span className="text-[11px] text-[var(--color-text-muted)]">{b.done_count}/{b.lead_count} done</span>
           </div>
         )}
       </td>

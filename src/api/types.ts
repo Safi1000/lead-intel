@@ -772,6 +772,7 @@ export interface LeadBatch {
   notnow_count: number
   won_count: number
   lost_count: number
+  done_count: number
 }
 
 /** A setter/closer granted visibility of a batch by a manager. */
