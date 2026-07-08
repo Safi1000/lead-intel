@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { PanelLeftClose, PanelLeft } from 'lucide-react'
+import { PanelLeftClose, PanelLeft, ChevronDown } from 'lucide-react'
 import { CLIENT_NAV, CLIENT_NAV_BOTTOM, NAV_SECTIONS, type NavItem } from './nav'
 import { Icon } from './icon'
 import { useUIStore } from '../../stores/uiStore'
@@ -52,6 +52,8 @@ function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boo
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const toggle = useUIStore((s) => s.toggleSidebar)
+  const collapsedSections = useUIStore((s) => s.collapsedSections)
+  const toggleSection = useUIStore((s) => s.toggleSection)
   const role = useAuthStore((s) => s.role)
   const permissions = useAuthStore((s) => s.permissions)
   const inOrg = useAuthStore((s) => s.actingOrgId) != null
@@ -85,17 +87,28 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {ungrouped.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
           </div>
         )}
-        {groups.map((g) => (
-          <div key={g.section} className="mt-4 first:mt-0">
-            {!collapsed && (
-              <p className="px-3 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{g.section}</p>
-            )}
-            {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-[var(--color-border)]" />}
-            <div className="space-y-0.5">
-              {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+        {groups.map((g) => {
+          const secCollapsed = collapsedSections.includes(g.section)
+          return (
+            <div key={g.section} className="mt-4 first:mt-0">
+              {!collapsed && (
+                <button
+                  onClick={() => toggleSection(g.section)}
+                  className="flex w-full items-center justify-between px-3 pb-1.5 pt-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-secondary)]"
+                >
+                  {g.section}
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-150', secCollapsed && '-rotate-90')} />
+                </button>
+              )}
+              {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-[var(--color-border)]" />}
+              {(collapsed || !secCollapsed) && (
+                <div className="space-y-0.5">
+                  {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </nav>
 
       <div className="space-y-0.5 border-t border-[var(--color-border)] p-3">
