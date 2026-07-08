@@ -184,7 +184,6 @@ export function ManualLeadDetailPage() {
               <Button variant="outline" size="sm"><FileText className="h-4 w-4" /> Audit PDF</Button>
             </Link>
           )}
-          <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => changeStage(s)} />
         </div>
       </div>
 
