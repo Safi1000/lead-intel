@@ -43,6 +43,7 @@ function tabsFor(role: string | null): Tab[] {
       { key: 'all', label: 'All', filter: () => true },
       { key: 'incomplete', label: 'Incomplete', filter: (l) => !l.done_at },
       { key: 'done', label: 'Done', filter: (l) => !!l.done_at },
+      { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
     ]
   }
   return [
@@ -51,6 +52,7 @@ function tabsFor(role: string | null): Tab[] {
     { key: 'unassigned', label: 'Unassigned', filter: (l) => !l.setter_id },
     { key: 'incomplete', label: 'Incomplete', filter: (l) => !l.done_at },
     { key: 'done', label: 'Done', filter: (l) => !!l.done_at },
+    { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
   ]
 }
 
@@ -213,15 +215,6 @@ export function LeadQueuePage() {
         ) : undefined}
       />
 
-      {isManager && batch && (
-        <div className="mb-4 flex flex-wrap gap-2 text-[12px] text-[var(--color-text-muted)]">
-          <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.unassigned_count} unassigned</span>
-          <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 font-medium">{batch.assigned_count} assigned</span>
-          <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-medium text-amber-700 dark:text-amber-400">{batch.booked_count} booked</span>
-          <span className="rounded-full bg-green-500/10 px-2.5 py-1 font-medium text-green-700 dark:text-green-400">{batch.won_count} won</span>
-          <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-medium text-red-600 dark:text-red-400">{batch.lost_count} lost</span>
-        </div>
-      )}
 
       {isManager && batchId && <BatchAccess batchId={batchId} />}
 
