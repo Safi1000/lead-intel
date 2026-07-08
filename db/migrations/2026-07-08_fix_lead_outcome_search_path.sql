@@ -1,0 +1,5 @@
+-- Fix: "relation lead_outcomes does not exist" when a manager assigned leads. The table exists in
+-- public, but log_lead_outcome() (SECURITY DEFINER) had no SET search_path, so it resolved the
+-- unqualified table against the CALLER's search_path (fine from a psql session, fails from the app).
+-- Add SET search_path = public. (Body unchanged otherwise.)
+-- See db diff — function re-created with `set search_path = public`.
