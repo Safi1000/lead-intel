@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, CheckCircle2, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
@@ -13,7 +13,6 @@ import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isManagerRole } from './workflow'
-import { LeadDrawer } from './LeadDrawer'
 import { LEAD_STAGES } from '../../api/types'
 import type { LeadStage, ManualLead, ManagedUser, Paginated } from '../../api/types'
 
@@ -147,7 +146,7 @@ export function LeadQueuePage() {
   const [tab, setTab] = useState(tabs[0]?.key ?? 'all')
   const [searchRaw, setSearchRaw] = useState('')
   const search = useDebounce(searchRaw, 200).toLowerCase()
-  const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null)
+  const navigate = useNavigate()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [assignSetterId, setAssignSetterId] = useState('')
   const bulkAssign = useMutation({
@@ -303,7 +302,7 @@ export function LeadQueuePage() {
               </thead>
               <tbody>
                 {filtered.map((l) => (
-                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit} slaMs={slaMs} onOpen={setDrawerLeadId}
+                  <LeadRow key={l.id} lead={l} role={role} isManager={isManager} canEdit={canEdit} slaMs={slaMs} onOpen={(id) => navigate(`/leads/manual/${id}`)}
                     selectable={selectable} checked={selected.has(l.id)} onToggle={() => toggle(l.id)}
                     onStage={(stage) => patch.mutate({ id: l.id, body: { stage } })}
                     onFollowUp={(date) => patch.mutate({ id: l.id, body: { next_follow_up: date } })}
@@ -314,9 +313,6 @@ export function LeadQueuePage() {
           </div>
         )}
       </Card>
-
-
-      <LeadDrawer leadId={drawerLeadId} onClose={() => setDrawerLeadId(null)} />
     </div>
   )
 }

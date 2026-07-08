@@ -7,6 +7,7 @@ import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
+import { LEAD_STAGES } from '../../api/types'
 import type { Cadence, CadenceAction, CadenceStep } from '../../api/types'
 
 const ACTIONS: { value: CadenceAction; label: string }[] = [
@@ -14,7 +15,8 @@ const ACTIONS: { value: CadenceAction; label: string }[] = [
   { value: 'email', label: 'Send email' },
   { value: 'move', label: 'Move stage' },
 ]
-const MOVE_STATES = ['In Progress', 'Nurture', 'Lost', 'Disqualified', 'DNC']
+// Move a lead to one of the user-facing stages (never back to 'New').
+const MOVE_STATES = LEAD_STAGES.filter((s) => s !== 'New')
 
 export function CadencesPage() {
   const qc = useQueryClient()
