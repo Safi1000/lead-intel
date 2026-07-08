@@ -158,6 +158,15 @@ export function LeadQueuePage() {
   const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [assignSetterId, setAssignSetterId] = useState('')
+  const bulkAssign = useMutation({
+    mutationFn: () => assignmentApi.assignLeadIdsToSetter(assignSetterId, [...selected]),
+    onSuccess: (n) => {
+      toast.success(`Assigned ${n} of ${selected.size} lead${selected.size === 1 ? '' : 's'}${n < selected.size ? ' — the rest hit the setter’s WIP cap' : ''}`)
+      setSelected(new Set()); setAssignSetterId(''); qc.invalidateQueries()
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
   const bulkUnassign = useMutation({
     mutationFn: (ids: string[]) => manualLeadsApi.unassignMany(ids),
     onSuccess: ({ unassigned, locked }) => {
@@ -169,15 +178,11 @@ export function LeadQueuePage() {
   })
   const [setterFilter, setSetterFilter] = useState('all')
   const [closerFilter, setCloserFilter] = useState('all')
-  const [lifecycleFilter, setLifecycleFilter] = useState('all')
   const [attemptsFilter, setAttemptsFilter] = useState('all')
-  const [webFilter, setWebFilter] = useState('all')
   const [dueFilter, setDueFilter] = useState('all')
   const [doneFilter, setDoneFilter] = useState('all')
   const [hideDnc, setHideDnc] = useState(false)
   const [scoreMin, setScoreMin] = useState('')
-  const [ratingMin, setRatingMin] = useState('all')
-  const [staleFilter, setStaleFilter] = useState('all')
   const [tier1Filter, setTier1Filter] = useState('all')
   const [tier2Filter, setTier2Filter] = useState('all')
 
@@ -188,7 +193,6 @@ export function LeadQueuePage() {
   // Distinct setters/closers present in this batch, for the filter dropdowns.
   const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
   const closerNames = useMemo(() => [...new Set(leads.map((l) => l.closer).filter((n): n is string => !!n))].sort(), [leads])
-  const lifecycleStates = useMemo(() => [...new Set(leads.map((l) => l.lifecycle_state).filter((s): s is NonNullable<typeof s> => s != null))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
     // Hard guarantee: a setter/closer only ever sees leads that belong to them, whatever the source
@@ -198,18 +202,12 @@ export function LeadQueuePage() {
     if (activeTab && !activeTab.filter(l)) return false
     if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
     if (closerFilter !== 'all' && l.closer !== (closerFilter === 'none' ? null : closerFilter)) return false
-    if (lifecycleFilter !== 'all' && l.lifecycle_state !== lifecycleFilter) return false
     if (hideDnc && l.dnc) return false
     if (attemptsFilter !== 'all') {
       const a = l.attempt_count
       if (attemptsFilter === '0' && a !== 0) return false
       if (attemptsFilter === '12' && (a < 1 || a > 2)) return false
       if (attemptsFilter === '3' && a < 3) return false
-    }
-    if (webFilter !== 'all') {
-      const has = !!(l.data['Website'] ?? '').trim()
-      if (webFilter === 'has' && !has) return false
-      if (webFilter === 'none' && has) return false
     }
     if (dueFilter !== 'all') {
       const today = new Date().toISOString().slice(0, 10)
@@ -224,11 +222,6 @@ export function LeadQueuePage() {
       if (doneFilter === 'notdone' && isDone) return false
     }
     if (scoreMin) { if (Number(l.data['Quality Score'] ?? 0) < Number(scoreMin)) return false }
-    if (ratingMin !== 'all') { if (Number(l.data['Rating'] ?? l.data['rating'] ?? 0) < Number(ratingMin)) return false }
-    if (staleFilter !== 'all') {
-      const t = l.last_touched_at ? new Date(l.last_touched_at).getTime() : 0
-      if (!(t && (Date.now() - t) / 86_400_000 > Number(staleFilter))) return false
-    }
     if (tier1Filter !== 'all' && l.last_tier1 !== tier1Filter) return false
     if (tier2Filter !== 'all' && l.last_tier2 !== tier2Filter) return false
     if (search) {
@@ -236,7 +229,7 @@ export function LeadQueuePage() {
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, lifecycleFilter, attemptsFilter, webFilter, dueFilter, hideDnc, scoreMin, ratingMin, staleFilter, tier1Filter, tier2Filter, doneFilter])
+  }), [leads, role, user?.id, activeTab, search, setterFilter, closerFilter, attemptsFilter, dueFilter, hideDnc, scoreMin, tier1Filter, tier2Filter, doneFilter])
 
   // Manager selects leads (typically Booked) to hand to a closer.
   const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
@@ -310,18 +303,8 @@ export function LeadQueuePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
         </div>
-        {lifecycleStates.length > 0 && (
-          <select value={lifecycleFilter} onChange={(e) => setLifecycleFilter(e.target.value)} aria-label="Filter by lifecycle state"
-            className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="all">All states</option>
-            {lifecycleStates.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
         <select value={attemptsFilter} onChange={(e) => setAttemptsFilter(e.target.value)} aria-label="Filter by attempts" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any attempts</option><option value="0">0 attempts</option><option value="12">1–2</option><option value="3">3+</option>
-        </select>
-        <select value={webFilter} onChange={(e) => setWebFilter(e.target.value)} aria-label="Filter by website" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any site</option><option value="has">Has website</option><option value="none">No website</option>
         </select>
         <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} aria-label="Filter by follow-up" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">This week</option>
@@ -331,12 +314,6 @@ export function LeadQueuePage() {
         </select>
         <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
         <Input type="number" min={0} value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} placeholder="Min score" aria-label="Minimum quality score" className="h-9 w-28" />
-        <select value={ratingMin} onChange={(e) => setRatingMin(e.target.value)} aria-label="Minimum rating" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any rating</option><option value="4">4.0+</option><option value="4.5">4.5+</option>
-        </select>
-        <select value={staleFilter} onChange={(e) => setStaleFilter(e.target.value)} aria-label="Last touched age" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any age</option><option value="7">Stale 7d+</option><option value="14">14d+</option><option value="30">30d+</option>
-        </select>
         <select value={tier1Filter} onChange={(e) => setTier1Filter(e.target.value)} aria-label="Connection outcome" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any T1</option>{DISPOSITION_TIER1.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -368,7 +345,17 @@ export function LeadQueuePage() {
         <div className="mb-3 flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-primary)] bg-blue-50/50 px-4 py-2.5 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
+            {tab === 'unassigned' ? (
+              <>
+                <select value={assignSetterId} onChange={(e) => setAssignSetterId(e.target.value)} aria-label="Assign selected to setter" className="h-8 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[13px]">
+                  <option value="">Assign to…</option>
+                  {orgSetters.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+                <Button size="sm" disabled={!assignSetterId} loading={bulkAssign.isPending} onClick={() => bulkAssign.mutate()}><UserPlus className="h-3.5 w-3.5" /> Assign {selected.size}</Button>
+              </>
+            ) : (
+              <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
+            )}
             <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]"><X className="h-4 w-4" /></button>
           </div>
         </div>

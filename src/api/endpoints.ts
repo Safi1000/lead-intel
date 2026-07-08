@@ -879,6 +879,12 @@ export const assignmentApi = {
     if (error) throw new Error(error.message)
     return Number(data ?? 0)
   },
+  /** Assign SPECIFIC selected leads to a setter (WIP-capped). Returns # actually assigned. */
+  assignLeadIdsToSetter: async (setterId: string, leadIds: string[]): Promise<number> => {
+    const { data, error } = await supabase.rpc('assign_lead_ids_to_setter', { p_setter: setterId, p_lead_ids: leadIds })
+    if (error) throw new Error(error.message)
+    return Number(data ?? 0)
+  },
   /** Assign specific (typically warm) leads in a batch to a closer. Returns # assigned. */
   assignLeadsToCloser: async (batchId: string, closerId: string, leadIds: string[]): Promise<number> => {
     const { data, error } = await supabase.rpc('assign_leads_to_closer', { p_batch: batchId, p_closer: closerId, p_lead_ids: leadIds })
