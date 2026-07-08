@@ -169,10 +169,12 @@ export function LeadQueuePage() {
   })
   const [hideDnc, setHideDnc] = useState(false)
   const [stageFilter, setStageFilter] = useState('all')
+  const [setterFilter, setSetterFilter] = useState('all')
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
   const overdue = useMemo(() => leads.filter((l) => isSlaBreach(l, slaMs)).length, [leads, slaMs])
+  const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
     // Hard guarantee: a setter/closer only ever sees leads that belong to them, whatever the source
@@ -182,12 +184,13 @@ export function LeadQueuePage() {
     if (activeTab && !activeTab.filter(l)) return false
     if (hideDnc && l.dnc) return false
     if (stageFilter !== 'all' && l.stage !== stageFilter) return false
+    if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
     if (search) {
       const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, role, user?.id, activeTab, search, hideDnc, stageFilter])
+  }), [leads, role, user?.id, activeTab, search, hideDnc, stageFilter, setterFilter])
 
   // Manager selects leads to assign (Unassigned tab) or unassign (Assigned tab).
   const selectable = isManager && (tab === 'assigned' || tab === 'unassigned')
@@ -215,8 +218,6 @@ export function LeadQueuePage() {
         ) : undefined}
       />
 
-
-      {isManager && batchId && <BatchAccess batchId={batchId} />}
 
       {isManager && overdue > 0 && (
         <div className="mb-3 rounded-[10px] border border-red-200 bg-red-500/10 px-4 py-2.5 text-[13px] font-medium text-red-700 dark:text-red-400">
@@ -252,6 +253,13 @@ export function LeadQueuePage() {
         <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} aria-label="Filter by stage" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
           <option value="all">Any stage</option>{LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
+        {isManager && (
+          <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+            <option value="all">All setters</option>
+            <option value="none">Unassigned</option>
+            {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        )}
         <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
       </div>
 
@@ -347,32 +355,6 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.closer ?? '—'}</td>}
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}</td>
     </tr>
-  )
-}
-
-function BatchAccess({ batchId }: { batchId: string }) {
-  const qc = useQueryClient()
-  const { data: assignments } = useQuery({ queryKey: ['batch-assignments', batchId], queryFn: () => assignmentApi.listForBatch(batchId) })
-  const { data: usersList } = useQuery({ queryKey: ['users'], queryFn: () => usersApi.list() })
-  const nameFor = (id: string) => usersList?.find((u) => u.id === id)?.name ?? 'User'
-  const revoke = useMutation({
-    mutationFn: (userId: string) => assignmentApi.unassignBatch(batchId, userId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['batch-assignments', batchId] }),
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  const list = assignments ?? []
-  if (list.length === 0) return null
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <span className="text-[12px] font-medium text-[var(--color-text-muted)]">Access:</span>
-      {list.map((a) => (
-        <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] py-1 pl-2.5 pr-1 text-[12px]">
-          <span className="font-medium">{nameFor(a.user_id)}</span>
-          <span className="text-[var(--color-text-muted)]">{a.role}</span>
-          <button onClick={() => revoke.mutate(a.user_id)} className="rounded-full p-0.5 text-[var(--color-text-muted)] hover:bg-[var(--color-border)]" aria-label="Revoke"><X className="h-3 w-3" /></button>
-        </span>
-      ))}
-    </div>
   )
 }
 
