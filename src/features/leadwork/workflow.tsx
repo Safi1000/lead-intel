@@ -10,9 +10,8 @@ export const STAGE_META: Record<LeadStage, { label: string; className: string; d
   Contacted: { label: 'Contacted', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', dot: 'bg-blue-500' },
   Interested: { label: 'Interested', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
   Booked: { label: 'Booked', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
-  'Not Now': { label: 'Not Now', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },
-  Won: { label: 'Won', className: 'bg-green-500/10 text-green-700 dark:text-green-400', dot: 'bg-green-500' },
-  Lost: { label: 'Lost', className: 'bg-red-500/10 text-red-600 dark:text-red-400', dot: 'bg-red-500' },
+  Voicemail: { label: 'Voicemail', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },
+  'Follow-up': { label: 'Follow-up', className: 'bg-teal-500/10 text-teal-700 dark:text-teal-400', dot: 'bg-teal-500' },
 }
 
 export const isManagerRole = (role: Role | null) => role === 'manager' || role === 'admin' || role === 'superadmin' || role === 'owner'
@@ -26,11 +25,7 @@ export function canWorkLeads(role: Role | null): boolean {
  * Stage options a `role` may set on a lead.
  * Setters/managers drive the full pipeline; closers update the outcome after the call.
  */
-export function stageOptionsFor(role: Role | null, current: LeadStage): LeadStage[] {
-  if (role === 'closer') {
-    const allowed: LeadStage[] = ['Booked', 'Won', 'Lost', 'Not Now']
-    return allowed.includes(current) ? allowed : [current, ...allowed]
-  }
+export function stageOptionsFor(_role: Role | null, _current: LeadStage): LeadStage[] {
   return STAGE_ORDER
 }
 

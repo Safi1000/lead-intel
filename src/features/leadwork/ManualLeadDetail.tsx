@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
-import { activitiesApi, cadencesApi, dealsApi, dispositionsApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isOverdue } from './workflow'
-import { ACTIVITY_TYPES, DEAL_STAGES, DISPOSITION_TIER1, DISPOSITION_TIER2, TIER2_NEEDS_DATE, type ActivityType, type DealStage, type DispositionTier1, type DispositionTier2, type LeadStage, type ManualLead } from '../../api/types'
+import { type ActivityType, type LeadStage, type ManualLead } from '../../api/types'
 
 const digits = (s: string) => s.replace(/[^\d]/g, '')
 const looksEmail = (s: string) => /^\S+@\S+\.\S+$/.test(s.trim())
@@ -108,6 +108,12 @@ export function ManualLeadDetailPage() {
     onSuccess: () => invalidate(),
     onError: (e) => toast.error(normalizeError(e).message),
   })
+  // Stage is the single activity signal now: changing it updates the lead AND logs to the Activity panel.
+  const changeStage = (s: LeadStage) => {
+    update.mutate({ stage: s })
+    activitiesApi.add(id as string, { type: 'Stage Change', note: `Stage → ${s}` })
+      .then(() => qc.invalidateQueries({ queryKey: ['activities', id] })).catch(() => {})
+  }
   const addRemark = useMutation({
     mutationFn: () => manualLeadsApi.addRemark(id as string, { text: remark, author: me, author_role: role! }),
     onSuccess: () => { setRemark(''); toast.success('Remark added'); invalidate() },
@@ -116,11 +122,6 @@ export function ManualLeadDetailPage() {
   const markDone = useMutation({
     mutationFn: (done: boolean) => manualLeadsApi.markDone(id as string, done),
     onSuccess: (_d, done) => { toast.success(done ? 'Marked as done' : 'Reopened'); invalidate(); qc.invalidateQueries({ queryKey: ['my-progress'] }); qc.invalidateQueries({ queryKey: ['setter-progress'] }) },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  const setVerdict = useMutation({
-    mutationFn: (v: 'warm' | 'not_warm') => manualLeadsApi.setCloserVerdict(id as string, v),
-    onSuccess: (_d, v) => { toast.success(v === 'warm' ? 'Marked as genuinely warm' : 'Flagged as not warm'); invalidate() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const unassign = useMutation({
@@ -178,10 +179,12 @@ export function ManualLeadDetailPage() {
               <Button variant="outline" size="sm"><CalendarClock className="h-4 w-4" /> Book a meeting</Button>
             </Link>
           )}
-          <Link to={`/leads/manual/${lead.id}/audit?print=1`} target="_blank" rel="noreferrer" title="Open a branded, client-ready audit PDF">
-            <Button variant="outline" size="sm"><FileText className="h-4 w-4" /> Audit PDF</Button>
-          </Link>
-          <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => update.mutate({ stage: s })} />
+          {(role === 'manager' || role === 'owner' || role === 'superadmin' || role === 'admin') && (
+            <Link to={`/leads/manual/${lead.id}/audit?print=1`} target="_blank" rel="noreferrer" title="Open a branded, client-ready audit PDF">
+              <Button variant="outline" size="sm"><FileText className="h-4 w-4" /> Audit PDF</Button>
+            </Link>
+          )}
+          <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => changeStage(s)} />
         </div>
       </div>
 
@@ -189,7 +192,6 @@ export function ManualLeadDetailPage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          {canWork && <DispositionBar leadId={lead.id} onLogged={invalidate} />}
           {canWork && <CadenceCard leadId={lead.id} />}
           {/* Lead data */}
           <Card className="p-5">
@@ -226,16 +228,9 @@ export function ManualLeadDetailPage() {
 
           {/* Activity log */}
           <Card className="p-5">
-            <h2 className="mb-3 text-[15px] font-semibold">Activity log {acts.length > 0 && <span className="text-[var(--color-text-muted)]">({acts.length})</span>}</h2>
-            {canWork && (
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                {ACTIVITY_TYPES.map((t) => (
-                  <button key={t} onClick={() => setLogType(t)} className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">{t}</button>
-                ))}
-              </div>
-            )}
+            <h2 className="mb-3 text-[15px] font-semibold">Activity {acts.length > 0 && <span className="text-[var(--color-text-muted)]">({acts.length})</span>}</h2>
             {acts.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)]">No activity logged yet. Use the buttons above to record each touch.</p>
+              <p className="text-sm text-[var(--color-text-muted)]">No activity yet — stage changes are logged here.</p>
             ) : (
               <ul className="space-y-2.5">
                 {acts.map((a) => (
@@ -290,7 +285,7 @@ export function ManualLeadDetailPage() {
             <div className="space-y-3">
               <div>
                 <Label className="mb-1.5">Stage</Label>
-                <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => update.mutate({ stage: s })} />
+                <StageSelect stage={lead.stage} role={role} disabled={!canWork} onChange={(s) => changeStage(s)} />
               </div>
               <div>
                 <Label className="mb-1.5 flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5" /> Next follow-up</Label>
@@ -310,32 +305,6 @@ export function ManualLeadDetailPage() {
             </div>
           </Card>
 
-          {/* Closer outcome shortcuts */}
-          {role === 'closer' && (
-            <Card className="p-5">
-              <h2 className="mb-3 text-[15px] font-semibold">Call outcome</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {(['Won', 'Lost', 'Not Now'] as LeadStage[]).map((s) => (
-                  <Button key={s} size="sm" variant={lead.stage === s ? 'primary' : 'outline'} loading={update.isPending && update.variables?.stage === s} onClick={() => update.mutate({ stage: s })}>{s}</Button>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Handoff verdict — was the setter's "qualified" lead actually warm? Keeps setters honest. */}
-          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && (lead.closer || lead.stage === 'Booked' || lead.stage === 'Won' || lead.stage === 'Lost') && (
-            <Card className="p-5">
-              <h2 className="mb-1 text-[15px] font-semibold">Handoff verdict</h2>
-              <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">Was this lead genuinely warm when the setter handed it off?</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button size="sm" variant={lead.closer_verdict === 'warm' ? 'primary' : 'outline'} loading={setVerdict.isPending && setVerdict.variables === 'warm'} onClick={() => setVerdict.mutate('warm')}>Genuinely warm</Button>
-                <Button size="sm" variant={lead.closer_verdict === 'not_warm' ? 'primary' : 'outline'} loading={setVerdict.isPending && setVerdict.variables === 'not_warm'} onClick={() => setVerdict.mutate('not_warm')}>Not warm</Button>
-              </div>
-              {lead.closer_verdict && <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">Recorded {lead.closer_verdict_at ? formatDistanceToNow(new Date(lead.closer_verdict_at), { addSuffix: true }) : ''}</p>}
-            </Card>
-          )}
-
-          {(role === 'closer' || role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && <DealCard leadId={lead.id} />}
 
           <Card className="p-5">
             <h2 className="mb-3 text-[15px] font-semibold">Assignment</h2>
@@ -375,71 +344,7 @@ export function ManualLeadDetailPage() {
   )
 }
 
-/** §7 disposition bar — log tier-1 connection then (if Connected) tier-2 outcome. The insert drives
- * lifecycle_state / attempt_count / dnc via the DB trigger; the endpoint also syncs the coarse stage. */
-function DispositionBar({ leadId, onLogged }: { leadId: string; onLogged: () => void }) {
-  const qc = useQueryClient()
-  const [tier1, setTier1] = useState<DispositionTier1 | null>(null)
-  const [tier2, setTier2] = useState<DispositionTier2 | null>(null)
-  const [note, setNote] = useState('')
-  const [when, setWhen] = useState('')
-  const { data: history } = useQuery({ queryKey: ['dispositions', leadId], queryFn: () => dispositionsApi.list(leadId) })
-  const log = useMutation({
-    mutationFn: () => dispositionsApi.add(leadId, { tier1: tier1!, tier2, notes: note, next_action_at: when ? new Date(when).toISOString() : null }),
-    onSuccess: () => { toast.success('Outcome logged'); setTier1(null); setTier2(null); setNote(''); setWhen(''); qc.invalidateQueries({ queryKey: ['dispositions', leadId] }); onLogged() },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  const connected = tier1 === 'Connected'
-  const needsDate = !!tier2 && TIER2_NEEDS_DATE.includes(tier2)
-  const canLog = !!tier1 && (!connected || !!tier2) && (!needsDate || !!when)
-  const chip = (active: boolean) => cn('rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors',
-    active ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]')
-  return (
-    <Card className="p-5">
-      <h2 className="mb-3 text-[15px] font-semibold">Log call outcome</h2>
-      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Connection</p>
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {DISPOSITION_TIER1.map((t) => (
-          <button key={t} type="button" className={chip(tier1 === t)} onClick={() => { setTier1(t); if (t !== 'Connected') setTier2(null) }}>{t}</button>
-        ))}
-      </div>
-      {connected && (
-        <>
-          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Outcome</p>
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {DISPOSITION_TIER2.map((t) => (
-              <button key={t} type="button" className={chip(tier2 === t)} onClick={() => setTier2(t)}>{t}</button>
-            ))}
-          </div>
-        </>
-      )}
-      {needsDate && (
-        <div className="mb-3">
-          <Label htmlFor="disp-when" className="mb-1">{tier2 === 'Callback scheduled' ? 'Callback time' : 'Follow-up / wake date'}</Label>
-          <Input id="disp-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
-        </div>
-      )}
-      {tier1 && <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Note (optional)…" className="mb-3" />}
-      <div className="flex justify-end">
-        <Button size="sm" loading={log.isPending} disabled={!canLog} onClick={() => log.mutate()}>Log outcome</Button>
-      </div>
-      {history && history.length > 0 && (
-        <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-3">
-          {history.slice(0, 6).map((d) => (
-            <li key={d.id} className="flex items-center gap-2 text-[12px] text-[var(--color-text-secondary)]">
-              <span className="font-medium text-[var(--color-text)]">{d.tier2 ?? d.tier1}</span>
-              {d.tier2 && <span className="text-[var(--color-text-muted)]">· {d.tier1}</span>}
-              {d.notes && <span className="truncate text-[var(--color-text-muted)]">— {d.notes}</span>}
-              <span className="ml-auto shrink-0 text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(d.created_at), { addSuffix: true })}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
 
-/** §3/§8 Deal — closer records the money + pipeline stage; feeds revenue targets and closer KPIs. */
 /** §10 enroll this lead into a follow-up sequence + show/stop active enrollments. */
 function CadenceCard({ leadId }: { leadId: string }) {
   const qc = useQueryClient()
@@ -477,38 +382,6 @@ function CadenceCard({ leadId }: { leadId: string }) {
   )
 }
 
-function DealCard({ leadId }: { leadId: string }) {
-  const qc = useQueryClient()
-  const { data: deals } = useQuery({ queryKey: ['deals', leadId], queryFn: () => dealsApi.forLead(leadId) })
-  const deal = deals?.[0]
-  const [stage, setStage] = useState<DealStage>('new')
-  const [value, setValue] = useState('')
-  useEffect(() => { if (deal) { setStage(deal.stage); setValue(deal.value != null ? String(deal.value) : '') } }, [deal])
-  const save = useMutation({
-    mutationFn: () => dealsApi.save(leadId, { id: deal?.id, stage, value: value ? Number(value) : null }),
-    onSuccess: () => { toast.success('Deal saved'); qc.invalidateQueries({ queryKey: ['deals', leadId] }); qc.invalidateQueries({ queryKey: ['manual-lead'] }) },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-  return (
-    <Card className="p-5">
-      <h2 className="mb-3 text-[15px] font-semibold">Deal</h2>
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="deal-stage" className="mb-1">Stage</Label>
-          <select id="deal-stage" value={stage} onChange={(e) => setStage(e.target.value as DealStage)}
-            className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm capitalize">
-            {DEAL_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="deal-value" className="mb-1">Value (USD)</Label>
-          <Input id="deal-value" type="number" min={0} value={value} onChange={(e) => setValue(e.target.value)} placeholder="0" />
-        </div>
-        <Button size="sm" className="w-full" loading={save.isPending} onClick={() => save.mutate()}>{deal ? 'Update deal' : 'Record deal'}</Button>
-      </div>
-    </Card>
-  )
-}
 
 /** Feature 4 — clean call card surfaced when a lead is Booked. */
 function CallCard({ lead }: { lead: ManualLead }) {

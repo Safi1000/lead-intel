@@ -960,21 +960,16 @@ export const statsApi = {
       out.totals.leads += 1
       if (l.stage === 'New') out.totals.new += 1
       else if (l.stage === 'Booked') out.totals.booked += 1
-      else if (l.stage === 'Won') out.totals.won += 1
-      else if (l.stage === 'Lost') out.totals.lost += 1
       if (l.setter) {
         const s = (out.bySetter[l.setter] ??= { total: 0, contacted: 0, booked: 0, won: 0 })
         s.total += 1
         if (l.stage !== 'New') s.contacted += 1
         if (l.stage === 'Booked') s.booked += 1
-        if (l.stage === 'Won') s.won += 1
       }
       if (l.closer) {
         const c = (out.byCloser[l.closer] ??= { total: 0, booked: 0, won: 0, lost: 0 })
         c.total += 1
         if (l.stage === 'Booked') c.booked += 1
-        if (l.stage === 'Won') c.won += 1
-        if (l.stage === 'Lost') c.lost += 1
       }
     }
     return out

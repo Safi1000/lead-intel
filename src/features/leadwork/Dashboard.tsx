@@ -46,8 +46,8 @@ export function WorkHomePage() {
             <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" icon={CalendarClock} />
             <StatCard label="New" value={byStage('New')} to="/leads" icon={Sparkles} />
             <StatCard label="Booked" value={byStage('Booked')} to="/leads" icon={CalendarCheck} />
-            <StatCard label="Won" value={byStage('Won')} to="/leads" icon={Trophy} />
-            <StatCard label="Lost" value={byStage('Lost')} to="/leads" icon={XCircle} />
+            <StatCard label="Contacted" value={byStage('Contacted')} to="/leads" icon={Trophy} />
+            <StatCard label="Interested" value={byStage('Interested')} to="/leads" icon={XCircle} />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">

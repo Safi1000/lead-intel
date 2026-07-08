@@ -14,7 +14,7 @@ import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isManagerRole } from './workflow'
 import { LeadDrawer } from './LeadDrawer'
-import { DISPOSITION_TIER1, DISPOSITION_TIER2 } from '../../api/types'
+import { LEAD_STAGES } from '../../api/types'
 import type { LeadStage, ManualLead, ManagedUser, Paginated } from '../../api/types'
 
 /** Shift-time elapsed (ms) inside the PKT calling window 19:00–02:00 (= 14:00–21:00 UTC daily). */
@@ -38,28 +38,19 @@ function isSlaBreach(l: ManualLead, slaMs: number): boolean {
 interface Tab { key: string; label: string; filter: (l: ManualLead) => boolean }
 
 function tabsFor(role: string | null): Tab[] {
-  if (role === 'setter') {
+  if (role === 'setter' || role === 'closer') {
     return [
-      { key: 'all', label: 'My leads', filter: () => true },
-      { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
-      { key: 'notnow', label: 'Not Now', filter: (l) => l.stage === 'Not Now' },
-    ]
-  }
-  if (role === 'closer') {
-    return [
-      { key: 'tocall', label: 'To call', filter: (l) => l.stage === 'Booked' },
-      { key: 'won', label: 'Won', filter: (l) => l.stage === 'Won' },
-      { key: 'lost', label: 'Lost', filter: (l) => l.stage === 'Lost' },
       { key: 'all', label: 'All', filter: () => true },
+      { key: 'incomplete', label: 'Incomplete', filter: (l) => !l.done_at },
+      { key: 'done', label: 'Done', filter: (l) => !!l.done_at },
     ]
   }
   return [
     { key: 'all', label: 'All', filter: () => true },
-    { key: 'unassigned', label: 'Unassigned', filter: (l) => !l.setter_id },
     { key: 'assigned', label: 'Assigned', filter: (l) => !!l.setter_id },
-    { key: 'booked', label: 'Booked', filter: (l) => l.stage === 'Booked' },
-    { key: 'won', label: 'Won', filter: (l) => l.stage === 'Won' },
-    { key: 'lost', label: 'Lost', filter: (l) => l.stage === 'Lost' },
+    { key: 'unassigned', label: 'Unassigned', filter: (l) => !l.setter_id },
+    { key: 'incomplete', label: 'Incomplete', filter: (l) => !l.done_at },
+    { key: 'done', label: 'Done', filter: (l) => !!l.done_at },
   ]
 }
 
@@ -174,21 +165,12 @@ export function LeadQueuePage() {
     },
     onError: (e) => toast.error(normalizeError(e).message),
   })
-  const [setterFilter, setSetterFilter] = useState('all')
-  const [attemptsFilter, setAttemptsFilter] = useState('all')
-  const [dueFilter, setDueFilter] = useState('all')
-  const [doneFilter, setDoneFilter] = useState('all')
   const [hideDnc, setHideDnc] = useState(false)
-  const [scoreMin, setScoreMin] = useState('')
-  const [tier1Filter, setTier1Filter] = useState('all')
-  const [tier2Filter, setTier2Filter] = useState('all')
+  const [stageFilter, setStageFilter] = useState('all')
 
   const activeTab = tabs.find((t) => t.key === tab) ?? tabs[0]
   const leads = data?.data ?? []
   const overdue = useMemo(() => leads.filter((l) => isSlaBreach(l, slaMs)).length, [leads, slaMs])
-
-  // Distinct setters/closers present in this batch, for the filter dropdowns.
-  const setterNames = useMemo(() => [...new Set(leads.map((l) => l.setter).filter((n): n is string => !!n))].sort(), [leads])
 
   const filtered = useMemo(() => leads.filter((l) => {
     // Hard guarantee: a setter/closer only ever sees leads that belong to them, whatever the source
@@ -196,38 +178,17 @@ export function LeadQueuePage() {
     if (role === 'setter' && l.setter_id !== user?.id) return false
     if (role === 'closer' && l.closer_id !== user?.id) return false
     if (activeTab && !activeTab.filter(l)) return false
-    if (setterFilter !== 'all' && l.setter !== (setterFilter === 'none' ? null : setterFilter)) return false
     if (hideDnc && l.dnc) return false
-    if (attemptsFilter !== 'all') {
-      const a = l.attempt_count
-      if (attemptsFilter === '0' && a !== 0) return false
-      if (attemptsFilter === '12' && (a < 1 || a > 2)) return false
-      if (attemptsFilter === '3' && a < 3) return false
-    }
-    if (dueFilter !== 'all') {
-      const today = new Date().toISOString().slice(0, 10)
-      if (!l.next_follow_up) return false
-      if (dueFilter === 'overdue' && !(l.next_follow_up < today)) return false
-      if (dueFilter === 'today' && l.next_follow_up !== today) return false
-      if (dueFilter === 'week') { const wk = new Date(Date.now() + 6 * 86_400_000).toISOString().slice(0, 10); if (!(l.next_follow_up >= today && l.next_follow_up <= wk)) return false }
-    }
-    if (doneFilter !== 'all') {
-      const isDone = !!l.done_at
-      if (doneFilter === 'done' && !isDone) return false
-      if (doneFilter === 'notdone' && isDone) return false
-    }
-    if (scoreMin) { if (Number(l.data['Quality Score'] ?? 0) < Number(scoreMin)) return false }
-    if (tier1Filter !== 'all' && l.last_tier1 !== tier1Filter) return false
-    if (tier2Filter !== 'all' && l.last_tier2 !== tier2Filter) return false
+    if (stageFilter !== 'all' && l.stage !== stageFilter) return false
     if (search) {
       const hay = (l.display_name + ' ' + Object.values(l.data).join(' ')).toLowerCase()
       if (!hay.includes(search)) return false
     }
     return true
-  }), [leads, role, user?.id, activeTab, search, setterFilter, attemptsFilter, dueFilter, hideDnc, scoreMin, tier1Filter, tier2Filter, doneFilter])
+  }), [leads, role, user?.id, activeTab, search, hideDnc, stageFilter])
 
-  // Manager selects leads (typically Booked) to hand to a closer.
-  const selectable = isManager && (tab === 'booked' || tab === 'assigned' || tab === 'unassigned')
+  // Manager selects leads to assign (Unassigned tab) or unassign (Assigned tab).
+  const selectable = isManager && (tab === 'assigned' || tab === 'unassigned')
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const allShownSelected = filtered.length > 0 && filtered.every((l) => selected.has(l.id))
   const toggleAll = () => setSelected((s) => {
@@ -295,36 +256,10 @@ export function LeadQueuePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
         </div>
-        <select value={attemptsFilter} onChange={(e) => setAttemptsFilter(e.target.value)} aria-label="Filter by attempts" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any attempts</option><option value="0">0 attempts</option><option value="12">1–2</option><option value="3">3+</option>
-        </select>
-        <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} aria-label="Filter by follow-up" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any follow-up</option><option value="overdue">Overdue</option><option value="today">Due today</option><option value="week">This week</option>
-        </select>
-        <select value={doneFilter} onChange={(e) => setDoneFilter(e.target.value)} aria-label="Filter by done status" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any status</option><option value="done">Marked done</option><option value="notdone">Not done</option>
+        <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} aria-label="Filter by stage" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <option value="all">Any stage</option>{LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
-        <Input type="number" min={0} value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} placeholder="Min score" aria-label="Minimum quality score" className="h-9 w-28" />
-        <select value={tier1Filter} onChange={(e) => setTier1Filter(e.target.value)} aria-label="Connection outcome" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any T1</option>{DISPOSITION_TIER1.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={tier2Filter} onChange={(e) => setTier2Filter(e.target.value)} aria-label="Contact outcome" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="all">Any T2</option>{DISPOSITION_TIER2.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        {isManager && (
-          <>
-            <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter"
-              className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-              <option value="all">All setters</option>
-              <option value="none">Unassigned</option>
-              {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-            {setterFilter !== 'all' && (
-              <button onClick={() => setSetterFilter('all')} className="text-[13px] text-[var(--color-primary)] hover:underline">Clear</button>
-            )}
-          </>
-        )}
       </div>
 
       {selectable && selected.size > 0 && (

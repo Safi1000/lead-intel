@@ -567,8 +567,8 @@ export type LeadStatus =
 export type Temperature = 'warm' | 'cold' | null
 
 /** Feature 1 — the sales pipeline stage. 7 fixed values; default "New". */
-export type LeadStage = 'New' | 'Contacted' | 'Interested' | 'Booked' | 'Not Now' | 'Won' | 'Lost'
-export const LEAD_STAGES: LeadStage[] = ['New', 'Contacted', 'Interested', 'Booked', 'Not Now', 'Won', 'Lost']
+export type LeadStage = 'New' | 'Contacted' | 'Interested' | 'Booked' | 'Voicemail' | 'Follow-up'
+export const LEAD_STAGES: LeadStage[] = ['New', 'Contacted', 'Interested', 'Booked', 'Voicemail', 'Follow-up']
 
 /** Disposition taxonomy (§7). Tier-1 = connection outcome; tier-2 = contact outcome (if Connected). */
 export type DispositionTier1 = 'No answer' | 'Voicemail' | 'Busy' | 'Bad/Wrong number' | 'Gatekeeper block' | 'Connected'
@@ -580,12 +580,12 @@ export type LifecycleState = 'Unassigned' | 'Assigned' | 'In Progress' | 'Booked
 /** Keep the legacy coarse `stage` in sync when a tier-2 outcome is logged (front-end write). */
 export const TIER2_TO_STAGE: Record<DispositionTier2, LeadStage> = {
   'Booked': 'Booked',
-  'Interested – follow up': 'Interested',
-  'Callback scheduled': 'Contacted',
-  'Nurture / not now': 'Not Now',
-  'Not interested': 'Lost',
-  'Do not call': 'Lost',
-  'Not a fit / not DM': 'Lost',
+  'Interested – follow up': 'Follow-up',
+  'Callback scheduled': 'Follow-up',
+  'Nurture / not now': 'Follow-up',
+  'Not interested': 'Contacted',
+  'Do not call': 'Contacted',
+  'Not a fit / not DM': 'Contacted',
 }
 /** Which tier-2 dispositions require a date (callback/nurture wake time). */
 export const TIER2_NEEDS_DATE: DispositionTier2[] = ['Callback scheduled', 'Nurture / not now']
