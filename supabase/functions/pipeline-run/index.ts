@@ -124,6 +124,17 @@ async function dbUpsert(table: string, body: unknown, onConflict: string): Promi
   if (!res.ok) console.error(`dbUpsert ${table}: ${res.status} ${await res.text()}`)
 }
 
+// Insert but ignore a duplicate key (on_conflict do-nothing). Lets a 2nd tenant "insert" a place
+// the global sourced_places master already holds without erroring — the master keeps one row/place.
+async function dbInsertIgnore(table: string, body: unknown, onConflict: string): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: svcHeaders({ Prefer: 'resolution=ignore-duplicates,return=minimal' }),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) console.error(`dbInsertIgnore ${table}: ${res.status} ${await res.text()}`)
+}
+
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
@@ -815,7 +826,7 @@ Deno.serve(async (req: Request) => {
 
     if (allPlaceIds.length > 0) {
       const existing = await dbSelect<{ place_id: string }>(
-        'sourced_places',
+        'tenant_seen_places',
         `place_id=in.(${allPlaceIds.map((id) => `"${id}"`).join(',')})&org_id=eq.${orgId}&select=place_id`,
       )
       const existingSet = new Set(existing.map((r) => r.place_id))
@@ -911,13 +922,14 @@ Deno.serve(async (req: Request) => {
       const placeType = result.primaryType ?? result.types?.[0] ?? ''
       if (placeType && profile.excludeTypes.has(placeType)) {
         try {
-          await dbInsert('sourced_places', {
+          await dbInsertIgnore('sourced_places', {
             place_id: placeId, org_id: orgId, pipeline_run_id: runId,
             search_term: result._search_term, search_location: result._location,
             name: result._name, address: result._address,
             is_correct_niche: false, quality_score: 1, low_fit: true,
             status_reason: `Excluded by Google business type: ${placeType}`,
-          })
+          }, 'place_id')
+          await dbInsertIgnore('tenant_seen_places', { org_id: orgId, place_id: placeId }, 'org_id,place_id')
         } catch (e) { console.error(`[${placeId}] type-filter insert failed:`, (e as Error).message) }
         console.log(`[${placeId}] pre-filtered (type: ${placeType})`)
         return
@@ -940,13 +952,14 @@ Deno.serve(async (req: Request) => {
         null
       if (preGateReason) {
         try {
-          await dbInsert('sourced_places', {
+          await dbInsertIgnore('sourced_places', {
             place_id: placeId, org_id: orgId, pipeline_run_id: runId,
             search_term: result._search_term, search_location: result._location,
             name: details.name, address: result._address, phone: details.phone,
             website: details.website, rating: details.rating,
             is_correct_niche: false, quality_score: 1, low_fit: true, status_reason: preGateReason,
-          })
+          }, 'place_id')
+          await dbInsertIgnore('tenant_seen_places', { org_id: orgId, place_id: placeId }, 'org_id,place_id')
         } catch (e) { console.error(`[${placeId}] pre-gate insert failed:`, (e as Error).message) }
         console.log(`[${placeId}] pre-gated: ${preGateReason}`)
         return
@@ -971,7 +984,7 @@ Deno.serve(async (req: Request) => {
       // Insert into sourced_places now (marks the place as seen even if later steps fail).
       // No-website leads are KEPT and scored too — they go to the "build from scratch" batch.
       try {
-        await dbInsert('sourced_places', {
+        await dbInsertIgnore('sourced_places', {
           place_id: placeId,
           org_id: orgId,
           pipeline_run_id: runId,
@@ -983,7 +996,8 @@ Deno.serve(async (req: Request) => {
           website: details?.website ?? null,
           rating: details?.rating ?? null,
           error: rowError,
-        })
+        }, 'place_id')
+        await dbInsertIgnore('tenant_seen_places', { org_id: orgId, place_id: placeId }, 'org_id,place_id')
       } catch (e) {
         console.error(`[${placeId}] sourced_places insert failed:`, (e as Error).message)
         return
