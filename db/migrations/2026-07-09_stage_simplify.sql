@@ -6,3 +6,8 @@ update leads set stage = case
   when stage = 'Not Now' then 'Follow-up'
   else stage end
 where stage in ('Won','Lost','Not Now');
+
+-- Update the CHECK constraint to the new stage set (the app writes Voicemail/Follow-up now).
+alter table leads drop constraint if exists leads_stage_check;
+alter table leads add constraint leads_stage_check
+  check (stage = any (array['New','Contacted','Interested','Booked','Voicemail','Follow-up']));
