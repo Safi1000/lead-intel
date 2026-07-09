@@ -8,6 +8,7 @@ import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progress
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
@@ -249,15 +250,19 @@ export function LeadQueuePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
         </div>
-        <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} aria-label="Filter by stage" className="h-9 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
-          <option value="all">Any stage</option>{LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        <Select
+          value={stageFilter}
+          onValueChange={setStageFilter}
+          aria-label="Filter by stage"
+          options={[{ value: 'all', label: 'Any stage' }, ...LEAD_STAGES.map((s) => ({ value: s, label: s }))]}
+        />
         {isManager && (
-          <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter" className="h-9 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
-            <option value="all">All setters</option>
-            <option value="none">Unassigned</option>
-            {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
+          <Select
+            value={setterFilter}
+            onValueChange={setSetterFilter}
+            aria-label="Filter by setter"
+            options={[{ value: 'all', label: 'All setters' }, { value: 'none', label: 'Unassigned' }, ...setterNames.map((n) => ({ value: n, label: n }))]}
+          />
         )}
         <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
       </div>
@@ -268,10 +273,14 @@ export function LeadQueuePage() {
           <div className="flex items-center gap-2">
             {tab === 'unassigned' ? (
               <>
-                <select value={assignSetterId} onChange={(e) => setAssignSetterId(e.target.value)} aria-label="Assign selected to setter" className="h-8 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-[13px]">
-                  <option value="">Assign to…</option>
-                  {orgSetters.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
+                <Select
+                  value={assignSetterId}
+                  onValueChange={setAssignSetterId}
+                  aria-label="Assign selected to setter"
+                  placeholder="Assign to…"
+                  className="h-8"
+                  options={orgSetters.map((u) => ({ value: u.id, label: u.name }))}
+                />
                 <Button size="sm" disabled={!assignSetterId} loading={bulkAssign.isPending} onClick={() => bulkAssign.mutate()}><UserPlus className="h-3.5 w-3.5" /> Assign {selected.size}</Button>
               </>
             ) : (

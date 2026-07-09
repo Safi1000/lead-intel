@@ -9,6 +9,7 @@ import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
 import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Input, Label, Textarea } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { Dialog } from '../../components/ui/Dialog'
 import { ErrorState, LoadingState } from '../../components/feedback'
 import { toast } from 'sonner'
@@ -319,11 +320,12 @@ export function ManualLeadDetailPage() {
             {(role === 'manager' || role === 'superadmin' || role === 'admin' || role === 'owner') && teams && (
               <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                 <Label className="mb-1 text-[12px]">Team</Label>
-                <select value={lead.team_id ?? ''} onChange={(e) => update.mutate({ team_id: e.target.value || null })}
-                  className="h-9 w-full rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
-                  <option value="">— none —</option>
-                  {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <Select
+                  value={lead.team_id ?? ''}
+                  onValueChange={(v) => update.mutate({ team_id: v || null })}
+                  className="w-full"
+                  options={[{ value: '', label: '— none —' }, ...teams.map((t) => ({ value: t.id, label: t.name }))]}
+                />
               </div>
             )}
           </Card>
@@ -370,10 +372,13 @@ function CadenceCard({ leadId }: { leadId: string }) {
       )}
       {activeCadences.length > 0 ? (
         <div className="flex gap-2">
-          <select value={cid} onChange={(e) => setCid(e.target.value)} className="h-9 flex-1 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
-            <option value="">Enroll in…</option>
-            {activeCadences.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <Select
+            value={cid}
+            onValueChange={setCid}
+            placeholder="Enroll in…"
+            className="flex-1"
+            options={activeCadences.map((c) => ({ value: c.id, label: c.name }))}
+          />
           <Button size="sm" disabled={!cid} loading={enroll.isPending} onClick={() => enroll.mutate()}>Enroll</Button>
         </div>
       ) : <p className="text-[13px] text-[var(--color-text-muted)]">No active sequences yet.</p>}

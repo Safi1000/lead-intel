@@ -5,6 +5,7 @@ import { Check, Search } from 'lucide-react'
 import { locationsApi, sourcingApi, verticalsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 
@@ -53,10 +54,13 @@ export function SourcingProfilePage() {
       <Card className="space-y-4 p-5">
         <div>
           <Label>Niche</Label>
-          <select value={verticalKey} onChange={(e) => setVerticalKey(e.target.value)} className="h-9 w-full max-w-xs rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">Select a niche…</option>
-            {(verticals ?? []).map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
-          </select>
+          <Select
+            value={verticalKey}
+            onValueChange={setVerticalKey}
+            placeholder="Select a niche…"
+            className="w-full max-w-xs"
+            options={(verticals ?? []).map((v) => ({ value: v.key, label: v.label }))}
+          />
           <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Need a niche we don't list? Ask us and we'll add it.</p>
         </div>
 
