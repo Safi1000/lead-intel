@@ -127,7 +127,7 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
 // Pre-run cost model (folds in the old Discovery page): metros saturate so the qualify
 // rate drifts — a guide, recomputed live as the target changes.
 const QUAL_RATE = 0.15
-const CREDIT_USD = 0.5 // 1 Lead Credit = 1 qualified lead = $0.50 to the customer
+const CREDIT_USD = 0.25 // 1 Lead Credit = 1 qualified lead; fresh = $0.25 (cached = $0.225, applied at run)
 
 function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
