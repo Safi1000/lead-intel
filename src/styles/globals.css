@@ -181,6 +181,42 @@
   .stagger-in > * { opacity: 1; animation: none; }
   .lift:hover { transform: none; }
 }
+
+/* ---- Continuous "running" border-light on cards ----
+ * A single bright arc of the signal colour perpetually travels the card's
+ * border. Painted on a ::after ring via a masked conic-gradient whose angle is
+ * animated through an @property custom property (GPU-composited, one paint/frame).
+ * The base border shows underneath; this only adds a moving highlight. */
+@property --run-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes runBorder { to { --run-angle: 360deg; } }
+.card-run { position: relative; }
+.card-run::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px; /* ring thickness */
+  background: conic-gradient(
+    from var(--run-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--color-signal) 90%, transparent) 30deg,
+    transparent 80deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.75;
+  animation: runBorder 5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-run::after { animation: none; opacity: 0; }
+}
 .stagger-1 { animation-delay: 0.04s; }
 .stagger-2 { animation-delay: 0.10s; }
 .stagger-3 { animation-delay: 0.16s; }

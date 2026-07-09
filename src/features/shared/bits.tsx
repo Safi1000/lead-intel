@@ -66,7 +66,7 @@ export function StatCard({
   icon?: LucideIcon
 }) {
   const inner = (
-    <div className={cn('lift group relative flex h-full flex-col overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5', to && 'cursor-pointer')}>
+    <div className={cn('card-run lift group relative flex h-full flex-col overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5', to && 'cursor-pointer')}>
       {/* soft cobalt glow in the corner — intensifies on hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[var(--color-primary)]/10 opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
       <div className="relative flex flex-1 items-start justify-between gap-3">
@@ -109,7 +109,7 @@ export function SectionCard({
   className?: string
 }) {
   return (
-    <div className={cn('overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm', className)}>
+    <div className={cn('card-run overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm', className)}>
       <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3.5">
         <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{title}</h2>
         {action}
