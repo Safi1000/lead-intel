@@ -20,7 +20,7 @@ export interface AiScore {
   personalization_notes: string
   // The strongest sellable gap → the setter's opener. Set deterministically in scorePlace from the
   // website signals (not the model): 'none' means nothing to sell (a well-served business we skip).
-  primary_angle?: 'first_website' | 'redesign' | 'seo' | 'booking' | 'none'
+  primary_angle?: 'first_website' | 'broken_site' | 'redesign' | 'lead_capture' | 'seo' | 'booking' | 'reputation' | 'none'
 }
 
 export interface PlaceForScoring {
@@ -29,6 +29,7 @@ export interface PlaceForScoring {
   phone: string | null
   website: string | null
   rating: number | null
+  reviewCount?: number | null // TOTAL Google review count (userRatingCount), for the reputation-vs-peers gap
   businessType?: string | null // Google Places primaryType, e.g. "medical_spa", "beauty_salon"
   reviews: Array<{ text: string; rating: number }>
   email: string | null
@@ -355,6 +356,7 @@ export async function scorePlace(
   model: string,
   apiKey: string,
   niche?: { label: string; prompt: string | null },
+  peerMedianReviews?: number,
 ): Promise<{ score: AiScore; raw: unknown }> {
   // ---- Sellable-gap detection (deterministic, from the website signals — the authoritative gate) ----
   // Computed BEFORE scoring so the model writes site_issue_note for the real gap; finalized AFTER
@@ -362,12 +364,22 @@ export async function scorePlace(
   // count — a JS-shell / unreachable page has seoScore null and never trips a false gap.
   const ws = place.websiteSignals
   const noWebsite = !place.website
-  const seoGap = !!ws && ws.seoScore != null && (ws.seoScore < 60 || ws.detectedIssues.some((i) => /Missing SEO basics/i.test(i)))
-  const bookingGap = !!ws && ws.seoScore != null && ws.reachable && !ws.hasBookingWidget
+  const brokenSite = !!ws && ws.siteBroken
+  const verifiable = !!ws && ws.seoScore != null // we could actually READ the page (not a JS shell / render fallback)
+  const seoGap = verifiable && (ws!.seoScore! < 60 || ws!.detectedIssues.some((i) => /Missing SEO basics/i.test(i)))
+  const noOnsiteCapture = verifiable && !ws!.hasBookingWidget // no form / booking / CTA / contact link on a readable page
+  const leadCaptureGap = noOnsiteCapture && !place.email       // phone-only: nothing to capture a lead online
+  const bookingGap = noOnsiteCapture && !!place.email          // has email but no scheduling/form
+  const peerMed = peerMedianReviews ?? null
+  const reputationGap = place.reviewCount != null && peerMed != null && peerMed >= 25 && place.reviewCount < Math.round(0.35 * peerMed)
+  const chatGap = verifiable && !ws!.hasChat                   // secondary upsell tag only, never a primary qualifier
   const gapHint = [
     noWebsite ? 'NO website (first-website pitch)' : '',
+    brokenSite ? 'BROKEN/parked site — no real site behind the domain (full-rebuild pitch)' : '',
+    leadCaptureGap ? 'NO online lead capture — phone-only, no form/booking/email (lead-capture pitch)' : '',
     seoGap ? `WEAK SEO — site-health ${ws?.seoScore}/100 / missing SEO basics (search-visibility pitch)` : '',
     bookingGap ? 'NO online booking on a readable site (booking-setup pitch)' : '',
+    reputationGap ? `THIN reputation — ${place.reviewCount} reviews vs local median ~${peerMed} (review-generation pitch)` : '',
   ].filter(Boolean).join('; ')
 
   const userPrompt = buildUserPrompt(place, qualityThreshold, niche, gapHint)
@@ -406,9 +418,12 @@ export async function scorePlace(
   )
   const angle: NonNullable<AiScore['primary_angle']> =
     noWebsite ? 'first_website'
+    : brokenSite ? 'broken_site'
     : buildWeak ? 'redesign'
+    : leadCaptureGap ? 'lead_capture'
     : seoGap ? 'seo'
     : bookingGap ? 'booking'
+    : reputationGap ? 'reputation'
     : score.website_status === 'weak' ? 'redesign'   // model saw a weakness we couldn't classify (e.g. via the render fallback)
     : 'none'
   score.primary_angle = angle
@@ -435,19 +450,34 @@ export async function scorePlace(
   // setter with no hook. Synthesize the opener from the concrete signals when that happens.
   const noNote = !score.site_issue_note || /^n\/?a\.?$/i.test(score.site_issue_note.trim()) || /^insufficient/i.test(score.site_issue_note.trim())
   const who = /dental|med spa|clinic|spa|chiro|physio|vet|health/i.test(niche?.label ?? 'Med Spa') ? 'patients' : 'clients'
-  if (noNote && (angle === 'seo' || angle === 'booking' || angle === 'redesign')) {
-    if (angle === 'seo') {
+  const oneWho = who.replace(/s$/, '')
+  if (noNote && angle !== 'none' && angle !== 'first_website') {
+    if (angle === 'broken_site') {
+      score.site_issue_note = `Your website is a parked/placeholder page right now — anyone who looks you up online finds no real site, so you're invisible to ${who} searching for you and losing them to competitors.`
+    } else if (angle === 'lead_capture') {
+      score.site_issue_note = `There's no way to reach you online — no contact form, booking, or email on the site — so every prospective ${oneWho} has to phone you, and the ones who won't just go elsewhere.`
+    } else if (angle === 'reputation') {
+      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while the top ${niche?.label ?? 'businesses'} near you average around ${peerMed ?? 'many more'} — ${who} comparing options online pick the one with the stronger reputation.`
+    } else if (angle === 'seo') {
       const bits: string[] = []
       if (ws?.detectedIssues.some((i) => /Missing SEO basics/i.test(i))) bits.push('missing key SEO basics')
       if (ws?.seoScore != null) bits.push(`site-health only ${ws.seoScore}/100`)
       score.site_issue_note = `Your website isn't built to be found on Google${bits.length ? ` (${bits.join(', ')})` : ''} — ${who} searching for a ${niche?.label ?? 'business'} like yours land on competitors instead of you.`
     } else if (angle === 'booking') {
       score.site_issue_note = `There's no way to book online on your site, so every appointment ties up your front desk and you lose after-hours ${who} who won't call.`
-    } else {
+    } else { // redesign
       const probs = (ws?.detectedIssues ?? []).filter((i) => /mobile|slow|copyright|table-based|No SSL|free[, ]/i.test(i)).slice(0, 2)
       score.site_issue_note = probs.length ? probs.join('; ') : `Your website's build is dated and holding you back with prospective ${who}.`
     }
     if (score.website_status === 'good') score.status_reason = `Site looks modern but has a sellable "${angle}" gap.`
+  }
+
+  // Secondary upsell: no live-chat / AI chatbot (never the reason we import — appended to the notes
+  // so the setter can raise it once the lead already qualifies on something real).
+  if (chatGap && angle !== 'none') {
+    const chatNote = 'Upsell: no live-chat/AI chatbot on the site — a 24/7 chatbot would capture visitors who arrive after hours.'
+    score.personalization_notes = score.personalization_notes && !/insufficient/i.test(score.personalization_notes)
+      ? `${score.personalization_notes} ${chatNote}` : chatNote
   }
 
   return { score, raw: data }

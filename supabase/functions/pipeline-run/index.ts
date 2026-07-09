@@ -819,6 +819,26 @@ Deno.serve(async (req: Request) => {
 
     totalSearched = allResults.length
 
+    // Per-metro peer benchmark for the reputation-vs-peers gap: median TOTAL review count across the
+    // local competitor set we just pulled for each location. Uses userRatingCount already in the
+    // search results (zero extra cost). Needs a handful of peers to be trustworthy.
+    const peerMedianByLocation = new Map<string, number>()
+    {
+      const byLoc = new Map<string, number[]>()
+      for (const r of allResults) {
+        if (r.userRatingCount == null) continue
+        const arr = byLoc.get(r._location) ?? []
+        arr.push(r.userRatingCount)
+        byLoc.set(r._location, arr)
+      }
+      for (const [loc, counts] of byLoc) {
+        if (counts.length < 6) continue // too few peers to trust a median
+        counts.sort((a, b) => a - b)
+        const mid = Math.floor(counts.length / 2)
+        peerMedianByLocation.set(loc, counts.length % 2 ? counts[mid] : Math.round((counts[mid - 1] + counts[mid]) / 2))
+      }
+    }
+
     // -------------------------------------------------------------------------
     // Phase 2: DEDUP — one batch query, filter already-seen place_ids
     // -------------------------------------------------------------------------
@@ -1078,12 +1098,13 @@ Deno.serve(async (req: Request) => {
             phone: details.phone,
             website: hasWebsite ? details.website : null, // platform-only → score as no-website
             rating: details.rating,
+            reviewCount: result.userRatingCount ?? null,
             businessType: placeType || null,
             reviews: details.reviews,
             email: emailResult.email,
             websiteSignals: websiteResult,
           }
-          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY, { label: profile.nicheLabel, prompt: profile.nichePrompt })
+          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY, { label: profile.nicheLabel, prompt: profile.nichePrompt }, peerMedianByLocation.get(result._location))
           aiScore = score
           aiRaw = raw
           // Pin website_status to reality regardless of the model's guess: no real website → 'none';

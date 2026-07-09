@@ -28,6 +28,9 @@ export interface WebsiteResult {
   seoScore: number | null // 0-100 site-health score from verified signals; null when unverifiable (JS shell / render fallback)
   techStack: string | null // detected platform/builder ("WordPress (theme: x)", "Shopify", "Wix", ...)
   emailMxOk: boolean | null // MX record exists for the found email's domain (null = no email / not checked)
+  siteBroken: boolean // the reachable page is a parked/for-sale/suspended/server-default placeholder (no real site)
+  brokenReason: string | null // human-readable reason when siteBroken (for the pitch)
+  hasChat: boolean // a live-chat / chatbot widget was detected (absence = a chatbot upsell angle)
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +166,17 @@ const FORM_PLATFORM_RE = /(calendly|hs-form|hsforms|hubspot|jotform|typeform|gra
 const CONTACT_LINK_RE = /(?:href|action)\s*=\s*["'][^"']*(?:\/contact|contact-us|\/appointments?|\/book|\/booking|\/schedul|\/consult|get-started)[^"']*["']/i
 // Visible-text CTAs a real page shows for booking/contact (matched against stripped text, not scripts).
 const CONTACT_KEYWORD_RE = /\b(?:book\s*(?:now|online|an?\s*appointment|a?\s*consultation)?|schedule\s*(?:an?\s*)?(?:appointment|consultation|call|visit|now|online)?|request\s*(?:an?\s*)?(?:appointment|consultation|callback)|make\s*an?\s*appointment|online\s*booking|reserve\s*(?:your|a)?\s*(?:spot|appointment|table)?|free\s*consultation|contact\s*us|get\s*started)\b/i
+
+// Broken / dead / parked site — an UNAMBIGUOUS placeholder where a real site should be (domain
+// parked or for sale, host suspended, un-configured server default page). A business whose "website"
+// is one of these effectively has no working site → a high-quality full-rebuild lead we currently
+// throw away as 'unknown'. Kept strict (no "coming soon" / "under construction" — those appear on
+// real sites) so we never mislabel a live site as broken.
+const PARKING_RE = /this (?:web ?)?page is parked|this domain(?: name)? is for sale|buy this domain|is available for purchase|domain(?: name)? for sale|sedoparking\.com|parkingcrew\.net|bodis\.com|hugedomains\.com|\bdan\.com\b|afternic\.com|this account has been suspended|account has been suspended|apache2? (?:ubuntu|debian) default page|welcome to nginx!|default web(?: ?site)? page|website is temporarily unavailable due to (?:maintenance|scheduled)/i
+
+// Live-chat / chatbot widget fingerprints. Absence is a SECONDARY upsell tag (an AI chatbot is a
+// service we sell), never a primary qualifier on its own — too many good sites lack one.
+const CHAT_RE = /intercom\.io|intercomcdn|drift\.com|driftt|tawk\.to|tidio|crisp\.chat|zopim|zdassets|zendesk|livechatinc|livechat\.com|freshchat|freshworks|\bolark\b|gorgias|manychat|kommunicate|smartsupp|jivochat|jivosite|userlike|liveperson|podium\.com|birdeye|leadconnector.{0,20}chat|widget.{0,10}chat/i
 
 // ---------------------------------------------------------------------------
 // Chain / multi-location signals
@@ -557,6 +571,7 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
     hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null,
     copyrightYear: null, detectedIssues: [], chainSignals: [], visibleTextExcerpt: null,
     seoScore: null, techStack: null, emailMxOk: null,
+    siteBroken: false, brokenReason: null, hasChat: false,
   }
 
   if (!websiteUri) return noResult
@@ -743,6 +758,16 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
       (isFreeTier ? 0 : 5)
   }
 
+  // Broken/parked-site + chat-widget detection (from the raw homepage we actually fetched).
+  const siteBroken = !!homepageHtml && PARKING_RE.test(homepageHtml.slice(0, 8000))
+  const brokenReason = siteBroken
+    ? 'The domain resolves to a parked / for-sale / suspended placeholder — there is no real website behind it'
+    : null
+  const hasChat = !!homepageHtml && CHAT_RE.test(homepageHtml)
+  if (siteBroken) {
+    qualitySignals.detectedIssues.push('CONFIRMED broken site: the website is a parked/placeholder page, not a real site — anyone who looks the business up online finds nothing')
+  }
+
   return {
     email,
     emailSource,
@@ -754,5 +779,8 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
     seoScore,
     techStack,
     emailMxOk,
+    siteBroken,
+    brokenReason,
+    hasChat,
   }
 }
