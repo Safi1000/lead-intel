@@ -1197,7 +1197,7 @@ Deno.serve(async (req: Request) => {
             display_name: details.name,
             status: 'new',
             source_type: 'google_maps',
-            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status, place_id: placeId },
+            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status, place_id: placeId, from_cache: fromCache },
             data: {
               'Business Name': details.name,
               'Address': result._address,
