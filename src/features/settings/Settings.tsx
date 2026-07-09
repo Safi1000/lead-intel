@@ -19,6 +19,7 @@ const TABS: Tab[] = [
   { to: '/settings/goals', label: 'Goals', roles: ['superadmin', 'admin', 'manager'] },
   // Holiday calendar feeds pace targets — lives here now, not a top-level nav item.
   { to: '/settings/holidays', label: 'Holidays', roles: ['superadmin', 'manager', 'owner'] },
+  { to: '/settings/credits', label: 'Usage & credits', roles: ['superadmin', 'owner'] },
   // User management lives in the dedicated Users page now. Hidden until later
   // phases: Notifications, API Keys, Webhooks, Billing, Integrations, AI, Branding.
 ]

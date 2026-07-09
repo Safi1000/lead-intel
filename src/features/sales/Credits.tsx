@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { kpisApi, orgCreditsApi, targetsApi } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
 import { LoadingState } from '../../components/feedback'
-import { PageHeader, StatCard } from '../shared/bits'
+import { StatCard } from '../shared/bits'
 
 const COST_PER_LEAD = 0.02
 // Estimated provider split of the blended per-lead cost (a live per-provider ledger needs engine hooks).
@@ -28,7 +28,6 @@ export function CreditsPage() {
 
   return (
     <div className="reveal">
-      <PageHeader title="Usage & credits" subtitle="Spend and unit economics across delivered leads." />
       <div className="stagger-in mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Leads delivered" value={leadCount ?? 0} />
         <StatCard label="Est. spend" value={`$${Math.round(spend).toLocaleString()}`} />

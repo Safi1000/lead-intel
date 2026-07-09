@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, Input, Label } from '../../components/ui/primitives'
-import { PageHeader } from '../shared/bits'
 
 // Rough model from the cost audit: metros saturate, so the qualify rate drifts — this is a guide.
 const QUAL_RATE = 0.15
@@ -25,7 +24,6 @@ export function DiscoveryPage() {
   const cost = n * COST_PER_QUALIFIED
   return (
     <div className="reveal max-w-lg">
-      <PageHeader title="Lead discovery" subtitle="Estimate what a pull costs before you run it." />
       <Card className="space-y-4 p-5">
         <div>
           <Label htmlFor="target">Target qualified leads</Label>

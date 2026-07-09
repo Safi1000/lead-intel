@@ -9,7 +9,6 @@ import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import type { LeadTemplate } from '../../api/types'
 
@@ -44,17 +43,11 @@ export function TemplatesPage() {
 
   return (
     <div className="reveal">
-      <PageHeader
-        title="Upload templates"
-        subtitle="Define the exact columns an Excel sheet must provide. Header matching is case-sensitive."
-        actions={
-          canManage && (
-            <Button onClick={() => setEditing('new')}>
-              <Plus className="h-4 w-4" /> New template
-            </Button>
-          )
-        }
-      />
+      {canManage && (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> New template</Button>
+        </div>
+      )}
 
       {isLoading ? (
         <LoadingState />

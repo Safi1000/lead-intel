@@ -34,12 +34,8 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Performance', to: '/performance', icon: 'BarChart3', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'setter', 'owner'], orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
   // Sourcing
-  { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
-  { label: 'Sourcing profile', to: '/sourcing', icon: 'Target', section: 'Sourcing', roles: OWNER, orgContext: true },
-  { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OWNER, orgContext: true },
-  { label: 'Usage & credits', to: '/credits', icon: 'Wallet', section: 'Sourcing', roles: OWNER, orgContext: true },
-  { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
-  { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true },
+  { label: 'Sourcing', to: '/sourcing', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
+  { label: 'Import', to: '/import', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true },
   // Operations
   { label: 'Playbook', to: '/playbook', icon: 'FileText', section: 'Operations', roles: WORKERS_NAV, orgContext: true },
   { label: 'Activity', to: '/activity', icon: 'Activity', section: 'Operations', roles: OVERSEERS, orgContext: true },

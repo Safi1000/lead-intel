@@ -84,6 +84,35 @@ export function PeopleHub() {
   )
 }
 
+/** Sourcing hub: run the pipeline, tune the profile, estimate discovery cost. */
+export function SourcingHub() {
+  return (
+    <HubLayout
+      title="Sourcing"
+      subtitle="Run the pipeline, tune your profile, and estimate costs."
+      tabs={[
+        { to: '/sourcing', label: 'Pipeline', end: true },
+        { to: '/sourcing/profile', label: 'Profile' },
+        { to: '/sourcing/discovery', label: 'Discovery' },
+      ]}
+    />
+  )
+}
+
+/** Import hub: upload sheets + manage the templates they must match. */
+export function ImportHub() {
+  return (
+    <HubLayout
+      title="Import leads"
+      subtitle="Upload sheets and manage the templates they must match."
+      tabs={[
+        { to: '/import', label: 'Upload', end: true },
+        { to: '/import/templates', label: 'Templates' },
+      ]}
+    />
+  )
+}
+
 /** Performance hub: Team funnel · Progress (done counts) · Targets. */
 export function PerformanceHub() {
   return (

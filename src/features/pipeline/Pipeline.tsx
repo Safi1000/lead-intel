@@ -9,7 +9,6 @@ import { normalizeError } from '../../api/client'
 import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
 // ---------------------------------------------------------------------------
@@ -514,7 +513,6 @@ export function PipelinePage() {
   if (!orgId) {
     return (
       <div className="reveal">
-        <PageHeader title="Lead Pipeline" subtitle="Automated Google Maps lead sourcing." />
         <Card className="p-8 text-center text-[var(--color-text-secondary)]">
           No organisation selected. Enter an org from the Organizations page first.
         </Card>
@@ -524,10 +522,6 @@ export function PipelinePage() {
 
   return (
     <div className="reveal flex flex-col gap-6">
-      <PageHeader
-        title="Lead Pipeline"
-        subtitle="Searches 20 US metros for med spas, scores each website, and imports ready-to-call leads."
-      />
       <NicheBanner />
       {role === 'superadmin' && <DailyRunPanel orgId={orgId} />}
       <ConfigPanel orgId={orgId} />

@@ -6,7 +6,6 @@ import { locationsApi, sourcingApi, verticalsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
 /** Per-tenant sourcing profile — niche + target cities + safe field toggles. Drives the engine. */
@@ -50,7 +49,6 @@ export function SourcingProfilePage() {
 
   return (
     <div className="reveal max-w-3xl space-y-5">
-      <PageHeader title="Sourcing profile" subtitle="Choose your niche, target cities, and which data to fetch. Your pipeline runs on this." />
 
       <Card className="space-y-4 p-5">
         <div>

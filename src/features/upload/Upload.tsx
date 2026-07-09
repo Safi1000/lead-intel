@@ -9,7 +9,6 @@ import { normalizeError } from '../../api/client'
 import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Label } from '../../components/ui/primitives'
 import { EmptyState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import type { ImportResult, LeadTemplate } from '../../api/types'
 
@@ -85,7 +84,6 @@ export function UploadPage() {
 
   return (
     <div className="reveal max-w-3xl">
-      <PageHeader title="Upload leads" subtitle="Pick a template, then upload an Excel or CSV sheet. Column headers must match the template exactly (case-sensitive)." />
 
       {noTemplates ? (
         <EmptyState

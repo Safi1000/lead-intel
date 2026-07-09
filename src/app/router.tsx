@@ -72,6 +72,8 @@ const PerformanceHub = lazyPage(() => import('../features/shared/Hubs').then((m)
 const ActivityHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.ActivityHub })))
 const PlaybookHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PlaybookHub })))
 const PeopleHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PeopleHub })))
+const SourcingHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.SourcingHub })))
+const ImportHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.ImportHub })))
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const PipelinePage = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.PipelinePage })))
@@ -208,26 +210,38 @@ export const router = createBrowserRouter([
                   { path: 'progress', element: <Navigate to="/performance/progress" replace /> },
                   { path: 'targets', element: <Navigate to="/performance/targets" replace /> },
                   { path: 'holidays', element: <Navigate to="/settings/holidays" replace /> },
+                  { path: 'pipeline', element: <Navigate to="/sourcing" replace /> },
+                  { path: 'discovery', element: <Navigate to="/sourcing/discovery" replace /> },
+                  { path: 'templates', element: <Navigate to="/import/templates" replace /> },
+                  { path: 'upload', element: <Navigate to="/import" replace /> },
+                  { path: 'credits', element: <Navigate to="/settings/credits" replace /> },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
+                  // Import hub — Upload sheets · Templates
                   {
-                    element: <RequirePermission resource="templates" action="view" />,
-                    children: [{ path: 'templates', element: L(<LeadTemplatesPage />) }],
-                  },
-                  {
-                    element: <RequirePermission resource="upload" action="create" />,
-                    children: [{ path: 'upload', element: L(<UploadPage />) }],
+                    path: 'import',
+                    element: L(<ImportHub />),
+                    children: [
+                      { element: <RequirePermission resource="upload" action="create" />, children: [{ index: true, element: L(<UploadPage />) }] },
+                      { element: <RequirePermission resource="templates" action="view" />, children: [{ path: 'templates', element: L(<LeadTemplatesPage />) }] },
+                    ],
                   },
                   {
                     // §2 matrix: scrape/global pool + "see all managers/teams" = Owner only.
                     element: <RequireRole roles={['superadmin', 'owner']} />,
                     children: [
                       { path: 'cockpit', element: L(<CockpitPage />) },
-                      { path: 'pipeline', element: L(<PipelinePage />) },
-                      { path: 'discovery', element: L(<DiscoveryPage />) },
-                      { path: 'credits', element: L(<CreditsPage />) },
-                      { path: 'sourcing', element: L(<SourcingProfilePage />) },
+                      // Sourcing hub — Pipeline · Profile · Discovery
+                      {
+                        path: 'sourcing',
+                        element: L(<SourcingHub />),
+                        children: [
+                          { index: true, element: L(<PipelinePage />) },
+                          { path: 'profile', element: L(<SourcingProfilePage />) },
+                          { path: 'discovery', element: L(<DiscoveryPage />) },
+                        ],
+                      },
                     ],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.
@@ -299,6 +313,10 @@ export const router = createBrowserRouter([
                   {
                     element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [{ path: 'holidays', element: L(<HolidaysPage />) }],
+                  },
+                  {
+                    element: <RequireRole roles={['superadmin', 'owner']} />,
+                    children: [{ path: 'credits', element: L(<CreditsPage />) }],
                   },
                   { path: 'notifications', element: <NotificationsSettingsPage /> },
                   { element: <SettingsGate flag="apiKeys" title="API Keys" />, children: [{ path: 'api-keys', element: L(<ApiKeysSettingsPage />) }, { path: 'api-keys/docs', element: L(<ApiDocsPage />) }] },
