@@ -35,20 +35,31 @@ export function SourcingConfig() {
     })
     return () => { alive = false }
   }, [])
+  const savedSnapshotRef = useRef('')
 
   useEffect(() => {
     if (profile) {
       setVerticalKey(profile.vertical_key ?? '')
       setMetros(profile.metros ?? [])
       setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
+      savedSnapshotRef.current = JSON.stringify({ v: profile.vertical_key ?? '', m: profile.metros ?? [], a: profile.fetch_ads, e: profile.fetch_email, h: profile.fetch_hours })
     }
   }, [profile])
 
   const save = useMutation({
     mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: profile?.daily_limit ?? 1000, active: true }),
-    onSuccess: () => { toast.success('Sourcing profile saved'); qc.invalidateQueries({ queryKey: ['sourcing-profile'] }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['sourcing-profile'] }) },
     onError: (e) => toast.error(normalizeError(e).message),
   })
+
+  // Auto-save the config (debounced) so the single "Start run" below just runs.
+  const cfgKey = JSON.stringify({ v: verticalKey, m: metros, a: fetchAds, e: fetchEmail, h: fetchHours })
+  useEffect(() => {
+    if (!profile || cfgKey === savedSnapshotRef.current) return
+    const t = setTimeout(() => { save.mutate(undefined, { onSuccess: () => { savedSnapshotRef.current = cfgKey } }) }, 800)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfgKey, profile])
 
   const filtered = useMemo(() => {
     const data = citiesRef.current
@@ -135,8 +146,8 @@ export function SourcingConfig() {
         </div>
       </Card>
 
-      <div className="flex justify-end">
-        <Button loading={save.isPending} onClick={() => save.mutate()}>Save profile</Button>
+      <div className="flex justify-end text-[12px] text-[var(--color-text-muted)]">
+        {save.isPending ? 'Saving…' : 'Changes save automatically'}
       </div>
     </div>
   )
