@@ -5,7 +5,7 @@ import { Check, Search } from 'lucide-react'
 import { locationsApi, sourcingApi, verticalsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
-import { Select } from '../../components/ui/controls'
+import { Select, Checkbox } from '../../components/ui/controls'
 import { LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 
@@ -67,16 +67,16 @@ export function SourcingProfilePage() {
         <div>
           <Label>Data to fetch</Label>
           <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={fetchAds} onChange={(e) => setFetchAds(e.target.checked)} className="h-4 w-4" /> Google Ads check</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={fetchEmail} onChange={(e) => setFetchEmail(e.target.checked)} className="h-4 w-4" /> Email enrichment</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={fetchHours} onChange={(e) => setFetchHours(e.target.checked)} className="h-4 w-4" /> Business hours</label>
+            <label htmlFor="f-ads" className="flex cursor-pointer items-center gap-2"><Checkbox id="f-ads" checked={fetchAds} onCheckedChange={setFetchAds} aria-label="Google Ads check" /> Google Ads check</label>
+            <label htmlFor="f-email" className="flex cursor-pointer items-center gap-2"><Checkbox id="f-email" checked={fetchEmail} onCheckedChange={setFetchEmail} aria-label="Email enrichment" /> Email enrichment</label>
+            <label htmlFor="f-hours" className="flex cursor-pointer items-center gap-2"><Checkbox id="f-hours" checked={fetchHours} onCheckedChange={setFetchHours} aria-label="Business hours" /> Business hours</label>
           </div>
           <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Website + reviews are always fetched (they drive the score). Turning the others off lowers your cost per lead.</p>
         </div>
 
         <div className="grid max-w-sm grid-cols-2 gap-3">
           <div><Label>Daily lead limit</Label><Input type="number" min={1} value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} /></div>
-          <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4" /> Sourcing active</label>
+          <label htmlFor="f-active" className="flex cursor-pointer items-center gap-2 pb-2 text-sm"><Checkbox id="f-active" checked={active} onCheckedChange={setActive} aria-label="Sourcing active" /> Sourcing active</label>
         </div>
       </Card>
 

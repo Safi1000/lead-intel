@@ -8,7 +8,7 @@ import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progress
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input } from '../../components/ui/primitives'
-import { Select } from '../../components/ui/controls'
+import { Select, Checkbox } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
@@ -264,7 +264,7 @@ export function LeadQueuePage() {
             options={[{ value: 'all', label: 'All setters' }, { value: 'none', label: 'Unassigned' }, ...setterNames.map((n) => ({ value: n, label: n }))]}
           />
         )}
-        <label className="inline-flex items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]"><input type="checkbox" checked={hideDnc} onChange={(e) => setHideDnc(e.target.checked)} className="h-4 w-4 rounded border-[var(--color-border)]" /> Hide DNC</label>
+        <label htmlFor="hide-dnc" className="inline-flex cursor-pointer items-center gap-2 text-[13px] text-[var(--color-text-secondary)]"><Checkbox id="hide-dnc" checked={hideDnc} onCheckedChange={setHideDnc} aria-label="Hide DNC" /> Hide DNC</label>
       </div>
 
       {selectable && selected.size > 0 && (
@@ -299,7 +299,7 @@ export function LeadQueuePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-border)] text-left text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                  {selectable && <th className="px-4 py-2.5"><input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>}
+                  {selectable && <th className="px-4 py-2.5"><Checkbox checked={allShownSelected ? true : filtered.some((l) => selected.has(l.id)) ? 'indeterminate' : false} onCheckedChange={toggleAll} aria-label="Select all" /></th>}
                   <th className="px-5 py-2.5 font-medium">Lead</th>
                   <th className="px-3 py-2.5 font-medium">Status</th>
                   <th className="px-3 py-2.5 font-medium">Follow-up</th>
@@ -333,7 +333,7 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
 }) {
   return (
     <tr className={cn('border-b border-[var(--color-border)] last:border-0', l.done_at ? 'bg-green-500/10 hover:bg-green-500/15' : 'hover:bg-[var(--color-surface-2)]')}>
-      {selectable && <td className="px-4 py-3"><input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={checked} onChange={onToggle} aria-label="Select lead" /></td>}
+      {selectable && <td className="px-4 py-3"><Checkbox checked={checked} onCheckedChange={onToggle} aria-label="Select lead" /></td>}
       <td className="px-5 py-3">
         <button type="button" onClick={() => onOpen(l.id)} className="text-left font-medium text-[var(--color-text)] hover:text-[var(--color-primary)]">{l.display_name}</button>
         {isSlaBreach(l, slaMs) && <span className="ml-2 rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold text-red-600 dark:text-red-400">SLA</span>}

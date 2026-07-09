@@ -19,6 +19,7 @@ import { formatNumber, formatPercent, formatMoney, cn } from '../../lib/utils'
 import { relativeTime, absoluteTime } from '../../lib/time'
 import { useRealtime } from '../../realtime/realtime'
 import { Button, Card, Input, Badge } from '../../components/ui/primitives'
+import { RadioGroup } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState, TableSkeleton } from '../../components/feedback'
 import { PageHeader, SectionCard, ProgressBar } from '../shared/bits'
 
@@ -262,24 +263,13 @@ export function NewCampaignPage() {
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">Schedule</label>
                   <div className="flex flex-wrap items-center gap-3">
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--color-text)]">
-                      <input
-                        type="radio"
-                        name="schedule"
-                        checked={schedule === 'now'}
-                        onChange={() => setSchedule('now')}
-                      />
-                      Send now
-                    </label>
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--color-text)]">
-                      <input
-                        type="radio"
-                        name="schedule"
-                        checked={schedule === 'later'}
-                        onChange={() => setSchedule('later')}
-                      />
-                      Schedule for later
-                    </label>
+                    <RadioGroup
+                      value={schedule}
+                      onValueChange={(v) => setSchedule(v as 'now' | 'later')}
+                      aria-label="Schedule"
+                      className="flex-row items-center gap-4"
+                      options={[{ value: 'now', label: 'Send now' }, { value: 'later', label: 'Schedule for later' }]}
+                    />
                     {schedule === 'later' && (
                       <input
                         type="datetime-local"
