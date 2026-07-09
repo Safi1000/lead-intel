@@ -10,7 +10,7 @@ import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Checkbox } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/Dialog'
-import { sourcingApi } from '../../api/endpoints'
+import { sourcingApi, orgCreditsApi } from '../../api/endpoints'
 import { PageHeader } from '../shared/bits'
 import { SourcingConfig } from './SourcingProfile'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
@@ -154,14 +154,37 @@ function RunTrigger({ orgId }: { orgId: string }) {
 
   const targetN = Math.max(0, Number(qualifiedTarget) || 0)
   const estScanned = Math.round(targetN / QUAL_RATE)
-  const estCredits = targetN // 1 Lead Credit per qualified lead
 
-  // Daily lead limit (set per org). A request over it is warned + confirmed before running.
   const { data: sourcingProfile } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
+
+  // Wallet balance, shown as Lead Credits (1 credit = 1 fresh lead = $0.25).
+  const { data: balanceUsd } = useQuery({ queryKey: ['org-credits'], queryFn: () => orgCreditsApi.mine() })
+  const balanceCredits = Math.floor((balanceUsd ?? 0) / CREDIT_USD)
+
+  // Cache availability for this niche+cities → cached leads cost 0.9 credits (10% off).
+  const { data: cache } = useQuery({
+    queryKey: ['cache-preview', orgId, sourcingProfile?.vertical_key, (sourcingProfile?.metros ?? []).join('|')],
+    queryFn: () => pipelineApi.cachePreview(orgId, sourcingProfile?.vertical_key ?? null, sourcingProfile?.metros ?? []),
+    enabled: !!sourcingProfile,
+  })
+  const cachedUsed = Math.min(targetN, cache?.available ?? 0)
+  const freshCount = targetN - cachedUsed
+  const costCredits = Math.round(freshCount + cachedUsed * 0.9) // fresh = 1, cached = 0.9
+
+  // Cumulative daily cap: leads already generated today count against the org's daily limit.
   const dailyLimit = sourcingProfile?.daily_limit ?? 0
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
+  const usedToday = (recentRuns ?? []).filter((r) => new Date(r.started_at) >= startOfToday).reduce((s, r) => s + (r.total_imported ?? 0), 0)
+  const remainingToday = dailyLimit > 0 ? Math.max(0, dailyLimit - usedToday) : Infinity
+  const overLimit = dailyLimit > 0 && targetN > remainingToday
+  const insufficient = targetN > 0 && costCredits > balanceCredits
+
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const overLimit = dailyLimit > 0 && targetN > dailyLimit
-  const startRun = () => { if (overLimit) setConfirmOpen(true); else trigger.mutate() }
+  const startRun = () => {
+    if (insufficient) { toast.error(`Not enough Lead Credits — ${balanceCredits.toLocaleString()} left, this run needs ${costCredits.toLocaleString()}.`); return }
+    if (overLimit) { setConfirmOpen(true); return }
+    trigger.mutate()
+  }
 
   useEffect(() => {
     if (!activeRunId || !orgId) return
@@ -262,11 +285,13 @@ function RunTrigger({ orgId }: { orgId: string }) {
       </div>
 
       {targetN > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5 text-[13px]">
-          <span className="font-medium text-[var(--color-text)]">Estimate · {targetN.toLocaleString()} qualified</span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5 text-[13px]">
+          <span className="font-medium text-[var(--color-text)]">Cost <span className="tabular-nums text-[var(--color-primary)]">{costCredits.toLocaleString()} Lead Credits</span></span>
+          {cachedUsed > 0 && (
+            <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[12px] font-medium text-green-700 dark:text-green-400">Enjoy 10% off on {cachedUsed.toLocaleString()} lead{cachedUsed === 1 ? '' : 's'} this run</span>
+          )}
           <span className="text-[var(--color-text-secondary)]">Scan ~<strong className="tabular-nums text-[var(--color-text)]">{estScanned.toLocaleString()}</strong> businesses</span>
-          <span className="text-[var(--color-text-secondary)]">Cost <strong className="tabular-nums text-[var(--color-primary)]">{estCredits.toLocaleString()} Lead Credits</strong> <span className="text-[var(--color-text-muted)]">≈ ${(estCredits * CREDIT_USD).toFixed(2)}</span></span>
-          <span className="text-[12px] text-[var(--color-text-muted)]">updates live · actuals vary with saturation</span>
+          <span className={cn('text-[12px]', insufficient ? 'font-medium text-red-600 dark:text-red-400' : 'text-[var(--color-text-muted)]')}>Balance {balanceCredits.toLocaleString()} credits{insufficient ? ' — not enough' : ''}</span>
         </div>
       )}
 
@@ -317,8 +342,8 @@ function RunTrigger({ orgId }: { orgId: string }) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Over your daily lead limit"
-        message={`Your daily lead limit is ${dailyLimit.toLocaleString()}. This run asks for ${targetN.toLocaleString()}, so only ${dailyLimit.toLocaleString()} leads will be generated today. Proceed anyway?`}
+        title="Over today's lead limit"
+        message={`You have ${remainingToday.toLocaleString()} of today's ${dailyLimit.toLocaleString()}-lead limit left (${usedToday.toLocaleString()} already generated). This run asks for ${targetN.toLocaleString()}, so only ${remainingToday.toLocaleString()} more will be generated today. Proceed anyway?`}
         confirmLabel="Start run"
         loading={trigger.isPending}
         onConfirm={() => { setConfirmOpen(false); trigger.mutate() }}

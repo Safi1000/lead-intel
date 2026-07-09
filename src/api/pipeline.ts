@@ -112,6 +112,19 @@ export const pipelineApi = {
   getStatus: (orgId: string, runId: string) =>
     call<PipelineRun>(`/status?orgId=${encodeURIComponent(orgId)}&runId=${encodeURIComponent(runId)}`),
 
+  // How many leads for this niche+cities are already in the shared cache (→ 10% discount).
+  // Tolerant: returns { available: 0 } until the engine ships the endpoint (no discount shown).
+  cachePreview: async (orgId: string, verticalKey: string | null, metros: string[]): Promise<{ available: number }> => {
+    try {
+      return await call<{ available: number }>('/cache-preview', {
+        method: 'POST',
+        body: JSON.stringify({ org_id: orgId, vertical_key: verticalKey, metros }),
+      })
+    } catch {
+      return { available: 0 }
+    }
+  },
+
   stopRun: (body: { run_id: string; org_id: string }) =>
     call<{ ok: boolean }>('/stop', { method: 'POST', body: JSON.stringify(body) }),
 
