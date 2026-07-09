@@ -106,11 +106,11 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
             />
           </div>
           <label className="flex cursor-pointer items-center gap-2 pt-5">
-            <input
-              type="checkbox" className="h-5 w-5 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+            <Checkbox
               checked={enabled}
-              onChange={(e) => save.mutate({ daily_run_enabled: e.target.checked })}
+              onCheckedChange={(v) => save.mutate({ daily_run_enabled: v })}
               disabled={save.isPending}
+              aria-label="Daily auto-run"
             />
             <span className={cn('text-sm font-medium', enabled ? 'text-green-700 dark:text-green-400' : 'text-[var(--color-text-muted)]')}>
               {enabled ? 'Enabled' : 'Disabled'}

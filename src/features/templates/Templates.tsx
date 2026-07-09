@@ -7,6 +7,7 @@ import { templatesApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Checkbox } from '../../components/ui/controls'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
@@ -190,7 +191,7 @@ function TemplateBuilder({ template, onClose, onSaved }: { template: LeadTemplat
                   className="font-mono"
                 />
                 <label className="flex shrink-0 items-center gap-1.5 text-[13px] text-[var(--color-text-secondary)]">
-                  <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={c.required} onChange={(e) => setCol(i, { required: e.target.checked })} />
+                  <Checkbox checked={c.required} onCheckedChange={(v) => setCol(i, { required: v })} aria-label="Required" />
                   Required
                 </label>
                 <Button
