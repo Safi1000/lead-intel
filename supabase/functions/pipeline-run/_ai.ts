@@ -451,13 +451,15 @@ export async function scorePlace(
   const noNote = !score.site_issue_note || /^n\/?a\.?$/i.test(score.site_issue_note.trim()) || /^insufficient/i.test(score.site_issue_note.trim())
   const who = /dental|med spa|clinic|spa|chiro|physio|vet|health/i.test(niche?.label ?? 'Med Spa') ? 'patients' : 'clients'
   const oneWho = who.replace(/s$/, '')
-  if (noNote && angle !== 'none' && angle !== 'first_website') {
+  // Reputation always authored here (only we have the peer median) and led with the RANKING
+  // consequence — lost patients, not vanity. Everything else only when the model returned N/A.
+  if (angle === 'reputation' || (noNote && angle !== 'none' && angle !== 'first_website')) {
     if (angle === 'broken_site') {
       score.site_issue_note = `Your website is a parked/placeholder page right now — anyone who looks you up online finds no real site, so you're invisible to ${who} searching for you and losing them to competitors.`
     } else if (angle === 'lead_capture') {
       score.site_issue_note = `There's no way to reach you online — no contact form, booking, or email on the site — so every prospective ${oneWho} has to phone you, and the ones who won't just go elsewhere.`
     } else if (angle === 'reputation') {
-      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while the top ${niche?.label ?? 'businesses'} near you average around ${peerMed ?? 'many more'} — ${who} comparing options online pick the one with the stronger reputation.`
+      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while the top ${niche?.label ?? 'businesses'} near you average ~${peerMed ?? 'many more'} — and because review count is one of the biggest Google Maps ranking factors, you're showing up below them in local search, so the new ${who} searching right now are booking with them instead of you.`
     } else if (angle === 'seo') {
       const bits: string[] = []
       if (ws?.detectedIssues.some((i) => /Missing SEO basics/i.test(i))) bits.push('missing key SEO basics')
