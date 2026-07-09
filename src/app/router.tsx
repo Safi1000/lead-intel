@@ -68,6 +68,7 @@ const SourcingProfilePage = lazyPage(() => import('../features/pipeline/Sourcing
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
+const PerformanceHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PerformanceHub })))
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const PipelinePage = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.PipelinePage })))
@@ -102,6 +103,13 @@ const L = (el: React.ReactNode) => <Suspense fallback={<LoadingState />}>{el}</S
 function Landing() {
   const role = useAuthStore((s) => s.role)
   return <Navigate to={role === 'setter' ? '/today' : '/home'} replace />
+}
+
+/** Performance hub index: overseers see the Team funnel; everyone else lands on Progress. */
+function PerfIndex() {
+  const role = useAuthStore((s) => s.role)
+  const overseer = role === 'superadmin' || role === 'manager' || role === 'owner'
+  return overseer ? L(<PerformancePage />) : <Navigate to="/performance/progress" replace />
 }
 
 export const router = createBrowserRouter([
@@ -141,18 +149,31 @@ export const router = createBrowserRouter([
                     element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [
                       { path: 'activity', element: L(<ActivityPage />) },
-                      { path: 'performance', element: L(<PerformancePage />) },
-                      { path: 'targets', element: L(<TargetsPage />) },
-                      { path: 'holidays', element: L(<HolidaysPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
                       { path: 'audit-log', element: L(<AuditLogPage />) },
                       { path: 'cadences', element: L(<CadencesPage />) },
                     ],
                   },
+                  // Performance hub — Team funnel (overseers) · Progress · Targets (overseers)
+                  {
+                    path: 'performance',
+                    element: L(<PerformanceHub />),
+                    children: [
+                      { index: true, element: <PerfIndex /> },
+                      { path: 'progress', element: L(<ProgressPage />) },
+                      {
+                        element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                        children: [{ path: 'targets', element: L(<TargetsPage />) }],
+                      },
+                    ],
+                  },
                   { path: 'deals', element: L(<DealsPage />) },
                   { path: 'search', element: L(<SearchPage />) },
                   { path: 'scripts', element: L(<ScriptsPage />) },
-                  { path: 'progress', element: L(<ProgressPage />) },
+                  // Legacy paths → Performance hub / Settings
+                  { path: 'progress', element: <Navigate to="/performance/progress" replace /> },
+                  { path: 'targets', element: <Navigate to="/performance/targets" replace /> },
+                  { path: 'holidays', element: <Navigate to="/settings/holidays" replace /> },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
@@ -245,6 +266,10 @@ export const router = createBrowserRouter([
                   {
                     element: <RequireRole roles={['superadmin', 'admin', 'manager']} />,
                     children: [{ path: 'goals', element: L(<GoalsSettingsPage />) }],
+                  },
+                  {
+                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                    children: [{ path: 'holidays', element: L(<HolidaysPage />) }],
                   },
                   { path: 'notifications', element: <NotificationsSettingsPage /> },
                   { element: <SettingsGate flag="apiKeys" title="API Keys" />, children: [{ path: 'api-keys', element: L(<ApiKeysSettingsPage />) }, { path: 'api-keys/docs', element: L(<ApiDocsPage />) }] },

@@ -1,5 +1,4 @@
 import { Card } from '../../components/ui/primitives'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import { HOLIDAY_CALENDAR, type Holiday } from './pace'
 
@@ -16,11 +15,9 @@ const monShort = (d: string) => utc(d).toLocaleDateString('en-US', { month: 'sho
 /** §8 Holiday calendar — US + Canada national holidays excluded from the pace working-days denominator. */
 export function HolidaysPage() {
   const today = new Date().toISOString().slice(0, 10)
-  const year = HOLIDAY_CALENDAR[0]?.date.slice(0, 4) ?? ''
 
   return (
     <div className="reveal max-w-2xl">
-      <PageHeader title="Holiday calendar" subtitle={`US + Canada national holidays for ${year}, excluded from pace targets.`} />
 
       <Card className="mb-4 p-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">
         These national holidays are removed from the working-days denominator, so pace-to-target isn't

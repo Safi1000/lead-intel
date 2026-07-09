@@ -4,7 +4,7 @@ import { BarChart3 } from 'lucide-react'
 import { kpisApi } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader, StatCard } from '../shared/bits'
+import { StatCard } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
 const RANGES = [
@@ -43,8 +43,6 @@ export function PerformancePage() {
 
   return (
     <div className="reveal">
-      <PageHeader title="Performance" subtitle="Setter funnel from logged call outcomes." />
-
       <div className="mb-4 flex flex-wrap gap-2">
         {RANGES.map((r) => (
           <button key={r.key} onClick={() => setRange(r.key)}

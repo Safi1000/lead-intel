@@ -6,7 +6,6 @@ import { targetsApi, teamsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { blendedStatus, expectedByNow, monthPeriod, paceExpected, paceStatus, type PaceStatus } from './pace'
 import { cn } from '../../lib/utils'
 import { useAuth } from '../../hooks'
@@ -85,8 +84,6 @@ export function TargetsPage() {
 
   return (
     <div className="reveal max-w-3xl">
-      <PageHeader title="Targets" subtitle={`Blended revenue + closes · ${period}`} />
-
       <Card className="mb-5 p-5">
         <div className="mb-4 flex items-center gap-2">
           <span className={cn('h-3 w-3 rounded-full', STATUS_COLOR[blended])} />

@@ -6,7 +6,6 @@ import { progressApi, type DoneCounts, type Periods, type SetterDoneStat } from 
 import { useAuth } from '../../hooks'
 import { Card } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 
 // Working week is Monday–Saturday (Sunday off).
@@ -146,10 +145,6 @@ export function ProgressPage() {
 
   return (
     <div className="reveal">
-      <PageHeader
-        title={isOverseer ? 'Setter progress' : 'My progress'}
-        subtitle={isOverseer ? 'Leads processed (marked done) by each setter — daily, weekly, monthly.' : 'Leads you’ve marked done against the daily goal.'}
-      />
       {isOverseer ? <OverseerProgress periods={periods} goal={goal} /> : <MyProgress periods={periods} goal={goal} />}
     </div>
   )

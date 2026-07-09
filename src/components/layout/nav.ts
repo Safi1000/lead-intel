@@ -29,13 +29,10 @@ export const CLIENT_NAV: NavItem[] = [
   // Work
   { label: 'Leads', to: '/leads', icon: 'Users', section: 'Work', orgContext: true },
   { label: 'Due Today', to: '/today', icon: 'CalendarClock', section: 'Work', roles: WORKERS_NAV, orgContext: true },
-  { label: 'Progress', to: '/progress', icon: 'Target', section: 'Work', roles: ['superadmin', 'admin', 'manager', 'setter', 'owner'], orgContext: true },
   { label: 'Meetings', to: '/bookings', icon: 'CalendarCheck', section: 'Work', flag: 'bookings', perm: { resource: 'bookings', action: 'view' }, orgContext: true },
   { label: 'Book a meeting', to: '/bookings/new', icon: 'CalendarPlus', section: 'Work', flag: 'bookings', perm: { resource: 'bookings', action: 'create' }, orgContext: true },
   // Sales
-  { label: 'Performance', to: '/performance', icon: 'BarChart3', section: 'Sales', roles: OVERSEERS, orgContext: true },
-  { label: 'Targets', to: '/targets', icon: 'Crosshair', section: 'Sales', roles: OVERSEERS, orgContext: true },
-  { label: 'Holidays', to: '/holidays', icon: 'CalendarDays', section: 'Sales', roles: OVERSEERS, orgContext: true },
+  { label: 'Performance', to: '/performance', icon: 'BarChart3', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'setter', 'owner'], orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
   { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OWNER, orgContext: true },
   // Sourcing
