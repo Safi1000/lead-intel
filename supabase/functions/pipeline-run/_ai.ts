@@ -18,6 +18,9 @@ export interface AiScore {
   confidence: 'high' | 'low'
   pain_points: string
   personalization_notes: string
+  // The strongest sellable gap → the setter's opener. Set deterministically in scorePlace from the
+  // website signals (not the model): 'none' means nothing to sell (a well-served business we skip).
+  primary_angle?: 'first_website' | 'redesign' | 'seo' | 'booking' | 'none'
 }
 
 export interface PlaceForScoring {
@@ -46,11 +49,16 @@ NOT our niche: gyms, yoga studios, dental offices, hair salons, nail salons, reg
 The data may include a "Google business type" — Google's own classification of this business. Treat it as STRONG evidence for is_correct_niche: types like medical_spa / skin_care_clinic / aesthetics strongly support true; hair_salon / dentist / gym strongly support false. Ambiguous types (spa, beauty_salon, doctor) — judge from the name, reviews and website instead.
 The data may also include a "Page text excerpt" — the site's actual visible wording. Use it as primary evidence for the niche (what services they really offer) and to sharpen hooks: quoting or referencing the clinic's own copy in site_issue_note / personalization_notes is far more persuasive than generic phrasing. Its absence is NOT a weakness.
 
-OUR PRODUCT: A premium website redesign. We are NOT selling the idea of having a website — the business must already have one. We are selling an UPGRADE from a current bad/outdated site to a modern one.
+WHAT WE SELL (several services — a business is a GOOD lead if it has AT LEAST ONE of these gaps):
+- Website redesign — the current site is WEAK/outdated (slow, not mobile-friendly, dated design, free-builder subdomain).
+- First website — the business has NO site at all.
+- SEO — the site is poorly optimized / hard to find on Google (missing SEO basics, thin content, low site-health) EVEN IF it looks fine.
+- Online-booking setup — the site has NO online scheduling EVEN IF it looks fine.
+A business is a SKIP only when it has a strong, modern, well-optimized site that ALSO already has online booking — i.e. no gap left to sell. A good-LOOKING site is NOT automatically a skip: if it has weak SEO or no online booking, sell that instead.
 
 WHAT WE WANT (ideal lead):
 - Active med spa with solid Google reviews (real patients spending money, not brand-new)
-- Has a website, but it is clearly WEAK: slow to load, not mobile-friendly, outdated design, or no online booking
+- Has a website with at least one sellable gap: slow to load, not mobile-friendly, outdated design, weak SEO (hard to find on Google), or no online booking
 - Small (1–3 locations) — the owner makes the decision, which means a faster close
 - Reachable: has a verified email and/or direct phone number
 
@@ -58,13 +66,13 @@ SECOND PRODUCT — NO WEBSITE:
 A business with NO website is NOT a skip — we sell those their FIRST website (a separate pitch). Mark website_status = 'none', but judge is_correct_niche purely on the business itself (name, Google business type, reviews). A med spa or aesthetics clinic with no website and real reviews is a GOOD lead. Never set is_correct_niche = false merely because there is no website or little website data.
 
 WHAT TO SKIP:
-- Business with a great modern website (fast, mobile-friendly, has online booking) — nothing to sell; mark website_status = 'good'
+- Business with a great modern website that is ALSO well-optimized for search AND already has online booking — no gap left to sell; mark website_status = 'good'. (A good-LOOKING site with weak SEO or no online booking is NOT a skip — sell the SEO or the booking.)
 - Wrong business type — mark is_correct_niche = false (this field is ONLY about the business type, never about website presence or review count)
 - Too new / too few reviews — not yet a proven money-making business; express this through a LOW quality_score, NOT through is_correct_niche
 
 WEBSITE STATUS RULES (set this based on the technical signals provided below):
 - 'weak': Has a website WITH at least one clear, CORROBORATED problem: not mobile-friendly, slow to load, or dated design (old copyright year, table-based layout). THIS IS OUR IDEAL TARGET.
-- 'good': Website is modern, mobile-friendly, and already has online booking. Skip — nothing to sell.
+- 'good': Website is modern and mobile-friendly. NOTE: 'good' describes the site's BUILD quality only — it does NOT by itself mean skip. If the site still has weak SEO or no online booking, it remains a sellable lead (SEO or booking pitch); only skip when it is well-optimized AND already has online booking.
 - 'none': No website URL provided. These go into a separate list; do not import as a CRM lead.
 - 'unknown': The site could not be fetched (timeout, bot-challenge, or geo-block). This is OFTEN a false negative for slow-but-real sites — do not lower quality_score for unreachability alone.
 
@@ -89,20 +97,20 @@ Explain plainly why you chose the website_status, so the team understands the ca
 - 'unknown': why it couldn't be assessed — e.g. "Site didn't respond to our scan (timeout or bot-block) — needs a manual look."
 - 'none': "No website listed on Google Maps."
 
-SITE ISSUE NOTE (our MAIN sales hook — mandatory for WEAK websites):
-List EVERY corroborated problem from the Auto-detected issues (there may be several) — do not stop at one. Write it as the line a setter opens with: name each specific problem and tie it to a consequence the owner feels. Separate multiple problems with "; ". Use ONLY corroborated issues (not mobile-friendly, slow load, old copyright, table layout, no email published). NEVER include "no online booking" and NEVER call a recent copyright year dated.
-Examples:
-  "Your site isn't mobile-friendly, so phone visitors hit a broken layout; it also loads slowly, and there's no email address anywhere for patients to reach you."
-  "The copyright reads 2018 and the layout is dated — it looks neglected next to newer spas nearby."
-If website_status is NOT 'weak', set site_issue_note to "N/A".
+SITE ISSUE NOTE (our MAIN sales hook — mandatory whenever there is a sellable gap):
+Name the PRIMARY gap and tie it to a consequence the owner feels — the line a setter opens with. Choose by what the signals show:
+- WEAK site: list EVERY corroborated problem (not mobile-friendly, slow load, old copyright, table layout, no email published, free-builder subdomain) — do not stop at one; separate with "; ".
+- Good-looking site but WEAK SEO: lead with search visibility — e.g. "your site is missing the basics Google needs (no meta description / thin content), so patients searching for a clinic like yours never find you."
+- Good site but NO online booking (only when 'CONFIRMED no online contact' is in the auto-detected issues): lead with that — e.g. "there's no way to book online, so every appointment ties up your front desk and you lose after-hours patients who won't call."
+NEVER call a recent copyright year dated. If there is NO sellable gap at all, set site_issue_note to "N/A".
 
-QUALITY SCORE (1-10) — this is LEAD FIT: "how good a SALES TARGET is this business FOR US", NOT how nice the business or its website is. We sell website REDESIGNS, so a business is only a target when its website is WEAK (something to upgrade). A great business with a great website is a BAD lead for us.
+QUALITY SCORE (1-10) — LEAD FIT: how good a SALES TARGET this business is FOR US, NOT how nice the business is. We sell website redesign, first-website, SEO, and online-booking setup, so a business is a target when it has AT LEAST ONE sellable gap: a WEAK site, NO site, WEAK SEO, or NO online booking. A real business with NONE of those gaps (strong modern site + good SEO + online booking) is a BAD lead — nothing to sell.
 Score using ONLY these tiers:
-- 8-10: WEAK website AND reachable (has an email or a phone). This is our ideal target — start at 8; go to 9-10 when it also has plenty of reviews and is a single, owner-run location.
-- 5-7: WEAK website but with a real gap — no reachable contact at all, very few reviews, or a borderline niche.
-- 4: WEAK website but a chain / multi-location (out of ICP).
-- 1-3: NOT a target for us — website is already 'good' (nothing to sell), OR 'none' (no site), OR 'unknown' (couldn't assess), OR wrong niche. A polished med spa with a modern site and 500 five-star reviews belongs HERE — a wonderful business, but a 1-3 LEAD, because we have nothing to sell it.
-Rule of thumb: if website_status is NOT 'weak', the score is 1-3, full stop. If it IS 'weak' and reachable, it is 8+.
+- 8-10: has ≥1 sellable gap (weak site / no site / weak SEO / no online booking) AND is reachable (email or phone). Ideal — start at 8; 9-10 when it also has plenty of reviews and is a single, owner-run location.
+- 5-7: has a sellable gap but with a real drawback — no reachable contact at all, very few reviews, or a borderline niche.
+- 4: has a gap but is a chain / multi-location (out of ICP).
+- 1-3: NO sellable gap (strong modern site with good SEO AND online booking), OR wrong niche, OR could not assess ('unknown'). A polished, well-optimized clinic with online booking and 500 five-star reviews belongs HERE — a wonderful business, but nothing for us to sell.
+Rule of thumb: if there is NO sellable gap, score 1-3. If there is a gap and the business is reachable, score 8+.
 
 REVIEW INSIGHTS (pain_points field):
 Google returns only ~5 reviews, so treat whatever is shown as your full evidence. UNLESS there are fewer than 3 reviews OR under 200 characters of review text in total, you MUST return a concrete, specific angle — never "insufficient data":
@@ -204,7 +212,7 @@ function outputSchema(niche?: { label: string; prompt: string | null }) {
   }
 }
 
-function buildUserPrompt(place: PlaceForScoring, qualityThreshold: number, niche?: { label: string; prompt: string | null }): string {
+function buildUserPrompt(place: PlaceForScoring, qualityThreshold: number, niche?: { label: string; prompt: string | null }, gapHint?: string): string {
   // Niche-aware wording for rule 1; med spa keeps its exact original phrasing.
   const nicheIsOther = !!niche && niche.label !== 'Med Spa'
   const rule1Niche = nicheIsOther
@@ -242,7 +250,11 @@ Page text excerpt (the site's own visible wording):
 """${ws.visibleTextExcerpt}"""` : ''}`
   }
 
-  return `Score this business as a lead for a website redesign sale.
+  const gapLine = gapHint && gapHint.length
+    ? `SELLABLE GAPS DETECTED (deterministic, from the signals above): ${gapHint}. Write site_issue_note as the pitch for the STRONGEST of these.`
+    : 'SELLABLE GAPS DETECTED: none from the automated signals — if website_status is not weak/none, there may be nothing to sell (set site_issue_note to N/A).'
+
+  return `Score this business as a lead for our services (website redesign, first website, SEO, or online-booking setup).
 
 BUSINESS:
 Name: ${place.name}
@@ -253,6 +265,8 @@ Google business type: ${place.businessType || 'not provided'}
 Google Rating: ${place.rating ?? 'N/A'} (showing ${reviewCount} most relevant reviews — the business may have many more)
 
 ${websiteSection}
+
+${gapLine}
 
 ${reviewSection}
 
@@ -342,7 +356,21 @@ export async function scorePlace(
   apiKey: string,
   niche?: { label: string; prompt: string | null },
 ): Promise<{ score: AiScore; raw: unknown }> {
-  const userPrompt = buildUserPrompt(place, qualityThreshold, niche)
+  // ---- Sellable-gap detection (deterministic, from the website signals — the authoritative gate) ----
+  // Computed BEFORE scoring so the model writes site_issue_note for the real gap; finalized AFTER
+  // (weak-site needs the model's website_status). Only SEO/booking gaps that we could actually verify
+  // count — a JS-shell / unreachable page has seoScore null and never trips a false gap.
+  const ws = place.websiteSignals
+  const noWebsite = !place.website
+  const seoGap = !!ws && ws.seoScore != null && (ws.seoScore < 60 || ws.detectedIssues.some((i) => /Missing SEO basics/i.test(i)))
+  const bookingGap = !!ws && ws.seoScore != null && ws.reachable && !ws.hasBookingWidget
+  const gapHint = [
+    noWebsite ? 'NO website (first-website pitch)' : '',
+    seoGap ? `WEAK SEO — site-health ${ws?.seoScore}/100 / missing SEO basics (search-visibility pitch)` : '',
+    bookingGap ? 'NO online booking on a readable site (booking-setup pitch)' : '',
+  ].filter(Boolean).join('; ')
+
+  const userPrompt = buildUserPrompt(place, qualityThreshold, niche, gapHint)
 
   let { score, data } = await callScoringModel(model, userPrompt, apiKey, niche)
 
@@ -364,21 +392,43 @@ export async function scorePlace(
   // Clamp score to valid range (Structured Outputs enforces schema, not value ranges)
   score.quality_score = Math.max(1, Math.min(10, Math.round(score.quality_score)))
 
-  // Lead-fit cap. quality_score means "how good a SALES TARGET is this for us", not "how nice is
-  // this business". We sell redesigns, so only a WEAK website is sellable — good/none/unknown sites
-  // can never rank above 3. Enforced in code because gpt-4o-mini keeps scoring polished non-weak
-  // sites 8–10, which would bury the real prospects when the list is sorted by quality_score.
-  if (score.website_status !== 'weak') {
-    score.quality_score = Math.min(score.quality_score, 3)
-  }
+  // ---- Finalize the sellable gap → primary_angle (the authoritative, auditable qualification) ----
+  // Priority: no site (first website) > bad BUILD (redesign) > weak SEO > no booking > nothing.
+  // "redesign" is reserved for genuine build/design problems (not-mobile / slow / dated / free-builder /
+  // no-SSL), computed deterministically — so an otherwise-fine site with only an SEO or booking gap
+  // gets the accurate pitch label instead of being lumped into "redesign".
+  const cy = new Date().getFullYear()
+  const buildWeak = !!ws && ws.seoScore != null && (
+    !ws.hasMobileViewport ||
+    ws.loadTimeMs > 3500 ||
+    (ws.copyrightYear != null && ws.copyrightYear <= cy - 3) ||
+    ws.detectedIssues.some((i) => /no ssl certificate|auto-generated\/template|free[, ].*(subdomain|auto-generated)|table-based page layout/i.test(i))
+  )
+  const angle: NonNullable<AiScore['primary_angle']> =
+    noWebsite ? 'first_website'
+    : buildWeak ? 'redesign'
+    : seoGap ? 'seo'
+    : bookingGap ? 'booking'
+    : score.website_status === 'weak' ? 'redesign'   // model saw a weakness we couldn't classify (e.g. via the render fallback)
+    : 'none'
+  score.primary_angle = angle
 
-  // Deterministic chain cap. Chains / multi-location are out of ICP no matter how polished.
+  // Lead-fit is driven by the presence of a sellable gap, not the old weak-website-only rubric.
+  // No gap → capped to 3 (nothing to sell). A real gap → floored so the model's stale weak-only
+  // scoring can't bury a genuine SEO/booking prospect below the import threshold.
   const chainSignals = place.websiteSignals?.chainSignals ?? []
-  if (chainSignals.length > 0) {
-    score.quality_score = Math.min(score.quality_score, 4)
+  const reachable = !!(place.phone || place.email)
+  if (angle === 'none') {
+    score.quality_score = Math.min(score.quality_score, 3)
+  } else if (reachable) {
+    score.quality_score = Math.max(score.quality_score, 8)
+  } else {
+    score.quality_score = Math.min(Math.max(score.quality_score, 5), 7)
   }
+  // Chains / multi-location are out of ICP no matter the gap — cap wins over the floor.
+  if (chainSignals.length > 0) score.quality_score = Math.min(score.quality_score, 4)
 
-  score.low_fit = score.quality_score < qualityThreshold || chainSignals.length > 0
+  score.low_fit = angle === 'none' || score.quality_score < qualityThreshold || chainSignals.length > 0
 
   return { score, raw: data }
 }

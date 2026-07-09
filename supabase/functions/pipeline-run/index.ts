@@ -1149,14 +1149,17 @@ Deno.serve(async (req: Request) => {
         console.error(`[${placeId}] sourced_places update failed:`, (e as Error).message)
       }
 
-      // Phase 6: Import decision (dual-batch, keyed by place_id).
-      //   WEBSITE batch    → correct niche + WEAK site + passes quality + reachable (redesign pitch)
-      //   NO-WEBSITE batch → correct niche + reachable (build-from-scratch pitch)
+      // Phase 6: Import decision (dual-batch, keyed by place_id). Qualification is now MULTI-GAP:
+      // import a real, reachable, in-niche business that has ANY sellable gap (primary_angle), not
+      // just a weak website. primary_angle is set deterministically by scorePlace from the signals.
+      //   NO-WEBSITE batch → no site at all (first-website pitch)
+      //   WEBSITE batch    → has a site with a gap: redesign / SEO / booking pitch
       const reachable = !!(emailResult.email || (details?.phone && String(details.phone).trim() !== ''))
+      const angle = aiScore?.primary_angle
       let importBatchId: string | null = null
-      if (aiScore && aiScore.is_correct_niche && reachable) {
-        if (aiScore.website_status === 'weak' && !aiScore.low_fit) importBatchId = batchId
-        else if (aiScore.website_status === 'none') importBatchId = batchIdNoWebsite
+      if (aiScore && aiScore.is_correct_niche && reachable && !aiScore.low_fit && angle && angle !== 'none') {
+        if (aiScore.website_status === 'none' || angle === 'first_website') importBatchId = batchIdNoWebsite
+        else importBatchId = batchId
       }
 
       // Website de-dup: the same clinic often has multiple Google listings (different locations) on
@@ -1198,7 +1201,7 @@ Deno.serve(async (req: Request) => {
             display_name: details.name,
             status: 'new',
             source_type: 'google_maps',
-            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status, place_id: placeId, from_cache: fromCache },
+            source_meta: { search_query: result._search_term, search_location: result._location, website_status: aiScore!.website_status, primary_angle: aiScore!.primary_angle ?? null, place_id: placeId, from_cache: fromCache },
             data: {
               'Business Name': details.name,
               'Address': result._address,
@@ -1212,6 +1215,7 @@ Deno.serve(async (req: Request) => {
               'Business Hours': profile.fetchHours ? (details.hoursPeriods?.length ? formatLocalHours(details.hoursPeriods) : 'Not listed on Google') : '',
               'Best Time to Call (PKT)': profile.fetchHours && details.hoursPeriods?.length ? formatPktCallWindow(details.hoursPeriods, details.utcOffsetMinutes) : '',
               'Website Status': aiScore?.website_status ?? '',
+              'Primary Angle': aiScore?.primary_angle ?? '',
               'Why This Status': aiScore?.status_reason ?? '',
               'Site Issue Note': aiScore?.site_issue_note ?? '',
               'Pain Points': aiScore?.pain_points ?? '',
@@ -1242,9 +1246,10 @@ Deno.serve(async (req: Request) => {
         const verdict = !aiScore ? 'no AI score'
           : !aiScore.is_correct_niche ? 'wrong niche'
           : !reachable ? 'not reachable'
-          : aiScore.website_status === 'none' ? 'WOULD IMPORT → no-website batch'
-          : (aiScore.website_status === 'weak' && !aiScore.low_fit) ? 'WOULD IMPORT → website batch'
-          : `skip (${aiScore.website_status}${aiScore.low_fit ? ' low_fit' : ''})`
+          : (!aiScore.primary_angle || aiScore.primary_angle === 'none') ? `skip (no sellable gap${aiScore.low_fit ? ', low_fit' : ''})`
+          : aiScore.low_fit ? `skip (low_fit, ${aiScore.primary_angle})`
+          : (aiScore.website_status === 'none' || aiScore.primary_angle === 'first_website') ? `WOULD IMPORT → no-website batch (${aiScore.primary_angle})`
+          : `WOULD IMPORT → website batch (${aiScore.primary_angle})`
         console.log(`[dry-run] ${details?.name} | ${verdict}`)
       }
 
