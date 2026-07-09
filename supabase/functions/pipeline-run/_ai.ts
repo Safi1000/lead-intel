@@ -430,5 +430,25 @@ export async function scorePlace(
 
   score.low_fit = angle === 'none' || score.quality_score < qualityThreshold || chainSignals.length > 0
 
+  // Guarantee a pitch for every sellable lead. The model often returns site_issue_note = "N/A" for a
+  // good-LOOKING site that nonetheless tripped a deterministic SEO/booking/build gap — leaving the
+  // setter with no hook. Synthesize the opener from the concrete signals when that happens.
+  const noNote = !score.site_issue_note || /^n\/?a\.?$/i.test(score.site_issue_note.trim()) || /^insufficient/i.test(score.site_issue_note.trim())
+  const who = /dental|med spa|clinic|spa|chiro|physio|vet|health/i.test(niche?.label ?? 'Med Spa') ? 'patients' : 'clients'
+  if (noNote && (angle === 'seo' || angle === 'booking' || angle === 'redesign')) {
+    if (angle === 'seo') {
+      const bits: string[] = []
+      if (ws?.detectedIssues.some((i) => /Missing SEO basics/i.test(i))) bits.push('missing key SEO basics')
+      if (ws?.seoScore != null) bits.push(`site-health only ${ws.seoScore}/100`)
+      score.site_issue_note = `Your website isn't built to be found on Google${bits.length ? ` (${bits.join(', ')})` : ''} — ${who} searching for a ${niche?.label ?? 'business'} like yours land on competitors instead of you.`
+    } else if (angle === 'booking') {
+      score.site_issue_note = `There's no way to book online on your site, so every appointment ties up your front desk and you lose after-hours ${who} who won't call.`
+    } else {
+      const probs = (ws?.detectedIssues ?? []).filter((i) => /mobile|slow|copyright|table-based|No SSL|free[, ]/i.test(i)).slice(0, 2)
+      score.site_issue_note = probs.length ? probs.join('; ') : `Your website's build is dated and holding you back with prospective ${who}.`
+    }
+    if (score.website_status === 'good') score.status_reason = `Site looks modern but has a sellable "${angle}" gap.`
+  }
+
   return { score, raw: data }
 }
