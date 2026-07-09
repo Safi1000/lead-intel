@@ -101,11 +101,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 </button>
               )}
               {collapsed && <div className="mx-auto mb-2 h-px w-6 bg-[var(--color-border)]" />}
-              {(collapsed || !secCollapsed) && (
-                <div className="space-y-0.5">
-                  {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+              <div
+                className={cn(
+                  'grid transition-[grid-template-rows] duration-200 ease-out',
+                  !collapsed && secCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="space-y-0.5">
+                    {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )
         })}

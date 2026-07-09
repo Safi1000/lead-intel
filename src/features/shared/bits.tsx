@@ -66,10 +66,10 @@ export function StatCard({
   icon?: LucideIcon
 }) {
   const inner = (
-    <div className={cn('lift group relative overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5', to && 'cursor-pointer')}>
+    <div className={cn('lift group relative flex h-full flex-col overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-5', to && 'cursor-pointer')}>
       {/* soft cobalt glow in the corner — intensifies on hover */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[var(--color-primary)]/10 opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex flex-1 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--color-text-muted)]">{label}</p>
           <div className="mt-2.5 flex items-end gap-2">
@@ -94,7 +94,7 @@ export function StatCard({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-signal)] transition-transform duration-300 group-hover:scale-x-100" />
     </div>
   )
-  return to ? <Link to={to}>{inner}</Link> : inner
+  return to ? <Link to={to} className="block h-full">{inner}</Link> : inner
 }
 
 export function SectionCard({
