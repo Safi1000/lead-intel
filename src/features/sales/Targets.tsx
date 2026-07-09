@@ -83,8 +83,9 @@ export function TargetsPage() {
   const repSum = [...repTargets.values()].reduce((s, t) => ({ rev: s.rev + t.revenue_value, cl: s.cl + t.closes_value }), { rev: 0, cl: 0 })
 
   return (
-    <div className="reveal max-w-3xl">
-      <Card className="mb-5 p-5">
+    <div className="reveal space-y-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+      <Card className={cn('p-5', !isOwner && 'lg:col-span-2')}>
         <div className="mb-4 flex items-center gap-2">
           <span className={cn('h-3 w-3 rounded-full', STATUS_COLOR[blended])} />
           <h2 className="text-[15px] font-semibold">This month{orgTarget ? '' : ' — no target set'}</h2>
@@ -99,7 +100,7 @@ export function TargetsPage() {
       </Card>
 
       {isOwner && (
-        <Card className="mb-5 max-w-md p-5">
+        <Card className="p-5">
           <div className="mb-1 flex items-center gap-2"><Target className="h-5 w-5 text-[var(--color-primary)]" /><h2 className="text-[16px] font-semibold">Set org target</h2></div>
           <p className="mb-4 text-sm text-[var(--color-text-secondary)]">Changing mid-month prorates forward — it won't penalise what's already banked.</p>
           <div className="grid grid-cols-2 gap-3">
@@ -109,9 +110,10 @@ export function TargetsPage() {
           <Button className="mt-3" loading={save.isPending} onClick={() => save.mutate()}>Save target</Button>
         </Card>
       )}
+      </div>
 
       {isOwner && (teams?.length ?? 0) > 0 && (
-        <Card className="mb-5">
+        <Card>
           <div className="border-b border-[var(--color-border)] px-5 py-3"><h2 className="text-[15px] font-semibold">Team targets</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -152,7 +154,7 @@ export function TargetsPage() {
       </Card>
 
       {(users ?? []).some((u) => u.role === 'setter') && (
-        <Card className="mt-5">
+        <Card>
           <div className="border-b border-[var(--color-border)] px-5 py-3">
             <h2 className="text-[15px] font-semibold">Setter targets <span className="text-[12px] font-normal text-[var(--color-text-muted)]">— "closes" = booked meetings</span></h2>
           </div>

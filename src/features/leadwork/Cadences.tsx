@@ -30,7 +30,7 @@ export function CadencesPage() {
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
   return (
-    <div className="reveal max-w-3xl space-y-5">
+    <div className="reveal space-y-5">
       {editing ? (
         <CadenceEditor cadence={editing} onClose={() => { setEditing(null); qc.invalidateQueries({ queryKey: ['cadences'] }) }} />
       ) : (

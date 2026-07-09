@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Download, Info, Play, RefreshCw, Square, Timer } from 'lucide-react'
+import { Download, Play, RefreshCw, Square, Timer } from 'lucide-react'
 import { format } from 'date-fns'
 import { pipelineApi, pipelineOrgId } from '../../api/pipeline'
 import type { PipelineConfig, PipelineRun } from '../../api/pipeline'
@@ -14,103 +14,6 @@ import { cn } from '../../lib/utils'
 // ---------------------------------------------------------------------------
 // Niche info banner
 // ---------------------------------------------------------------------------
-
-function NicheBanner() {
-  return (
-    <Card className="flex items-start gap-3 px-5 py-4 border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10">
-      <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
-      <div className="text-sm text-[var(--color-primary)]">
-        <span className="font-semibold">Target niche: US Med Spas & Aesthetic Clinics</span>
-        <span className="mx-2 text-[var(--color-primary)]">·</span>
-        <span>Terms: med spa, medical spa, aesthetic clinic, botox clinic, skin clinic</span>
-        <span className="mx-2 text-[var(--color-primary)]">·</span>
-        <span>20 US metros (NY, LA, Miami, Houston, Dallas, Chicago, Atlanta, Scottsdale…)</span>
-        <span className="mx-2 text-[var(--color-primary)]">·</span>
-        <span className="font-medium">Only imports leads with a weak website, verified contact, and enough reviews.</span>
-      </div>
-    </Card>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Config panel — quality threshold + AI model
-// ---------------------------------------------------------------------------
-
-function ConfigPanel({ orgId }: { orgId: string }) {
-  const qc = useQueryClient()
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['pipeline-config', orgId],
-    queryFn: () => pipelineApi.getConfig(orgId),
-  })
-
-  const [threshold, setThreshold] = useState('6')
-  const [model, setModel] = useState('gpt-4o-mini')
-
-  useEffect(() => {
-    if (data) {
-      setThreshold(String(data.quality_threshold ?? 6))
-      setModel(data.openai_model ?? 'gpt-4o-mini')
-    }
-  }, [data])
-
-  const save = useMutation({
-    mutationFn: () => pipelineApi.saveConfig({
-      org_id: orgId,
-      icp_rubric: data?.icp_rubric ?? '',
-      quality_threshold: Math.max(1, Math.min(10, Number(threshold) || 6)),
-      max_places_per_run: data?.max_places_per_run ?? 100,
-      openai_model: model,
-    } satisfies PipelineConfig),
-    onSuccess: () => {
-      toast.success('Config saved')
-      qc.invalidateQueries({ queryKey: ['pipeline-config', orgId] })
-    },
-    onError: (e) => toast.error(normalizeError(e).message),
-  })
-
-  if (isLoading) return <LoadingState />
-  if (isError) return <ErrorState onRetry={() => refetch()} />
-
-  return (
-    <Card className="p-5 flex flex-col gap-4">
-      <h2 className="text-[15px] font-semibold">Scoring settings</h2>
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <Label htmlFor="threshold">Min quality score (1–10)</Label>
-          <Input
-            id="threshold"
-            type="number"
-            min={1}
-            max={10}
-            value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
-          />
-          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            Leads scoring below this are not imported. 6 is a good starting point.
-          </p>
-        </div>
-        <div className="flex-1">
-          <Label htmlFor="model">AI model</Label>
-          <select
-            id="model"
-            className="mt-1 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          >
-            <option value="gpt-4o-mini">gpt-4o-mini (fast, cheap)</option>
-            <option value="gpt-4o">gpt-4o (highest quality)</option>
-          </select>
-          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-            Used for niche check, website grading, and site issue notes.
-          </p>
-        </div>
-      </div>
-      <Button onClick={() => save.mutate()} loading={save.isPending} className="self-start">
-        Save settings
-      </Button>
-    </Card>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -522,9 +425,7 @@ export function PipelinePage() {
 
   return (
     <div className="reveal flex flex-col gap-6">
-      <NicheBanner />
       {role === 'superadmin' && <DailyRunPanel orgId={orgId} />}
-      <ConfigPanel orgId={orgId} />
       <RunTrigger orgId={orgId} />
       <RunHistory orgId={orgId} />
     </div>

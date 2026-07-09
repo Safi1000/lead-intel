@@ -35,7 +35,7 @@ export function ScriptsPage() {
   if (isError) return <ErrorState onRetry={() => refetch()} />
 
   return (
-    <div className="reveal max-w-3xl space-y-5">
+    <div className="reveal space-y-5">
       {canEdit && !editing && <div className="flex justify-end"><Button onClick={() => setEditing({ ...BLANK })}><Plus className="h-4 w-4" /> New template</Button></div>}
 
       {editing && (

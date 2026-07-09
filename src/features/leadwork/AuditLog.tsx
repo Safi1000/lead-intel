@@ -25,7 +25,7 @@ export function AuditLogPage() {
   const rows = data ?? []
 
   return (
-    <div className="reveal max-w-3xl">
+    <div className="reveal">
       {rows.length === 0 ? (
         <EmptyState icon={FileClock} title="No activity yet" message="Actions appear here as your team works leads." />
       ) : (
