@@ -237,7 +237,7 @@ export function LeadQueuePage() {
           return (
             <button key={t.key} onClick={() => { setTab(t.key); setSelected(new Set()) }}
               className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-                tab === t.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}>
+                tab === t.key ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]')}>
               {t.label} <span className="tabular-nums opacity-70">{count}</span>
             </button>
           )
@@ -249,11 +249,11 @@ export function LeadQueuePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
           <Input value={searchRaw} onChange={(e) => setSearchRaw(e.target.value)} placeholder="Search leads…" className="pl-9" />
         </div>
-        <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} aria-label="Filter by stage" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+        <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} aria-label="Filter by stage" className="h-9 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
           <option value="all">Any stage</option>{LEAD_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         {isManager && (
-          <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter" className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <select value={setterFilter} onChange={(e) => setSetterFilter(e.target.value)} aria-label="Filter by setter" className="h-9 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
             <option value="all">All setters</option>
             <option value="none">Unassigned</option>
             {setterNames.map((n) => <option key={n} value={n}>{n}</option>)}

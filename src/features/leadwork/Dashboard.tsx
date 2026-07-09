@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarCheck, CalendarClock, FileSpreadsheet, FileUp, Sparkles, Trophy, Users, XCircle } from 'lucide-react'
+import { CalendarCheck, CalendarClock, FileSpreadsheet, FileUp, Phone, Sparkles, Star, Users } from 'lucide-react'
 import { manualLeadsApi } from '../../api/endpoints'
 import { useAuth } from '../../hooks'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -46,15 +46,17 @@ export function WorkHomePage() {
             <StatCard label="Due today" value={due} to="/today" hint="Follow-ups owed" icon={CalendarClock} />
             <StatCard label="New" value={byStage('New')} to="/leads" icon={Sparkles} />
             <StatCard label="Booked" value={byStage('Booked')} to="/leads" icon={CalendarCheck} />
-            <StatCard label="Contacted" value={byStage('Contacted')} to="/leads" icon={Trophy} />
-            <StatCard label="Interested" value={byStage('Interested')} to="/leads" icon={XCircle} />
+            <StatCard label="Contacted" value={byStage('Contacted')} to="/leads" icon={Phone} />
+            <StatCard label="Interested" value={byStage('Interested')} to="/leads" icon={Star} />
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
             {/* Pipeline breakdown */}
-            <Card className="p-5">
-              <h2 className="mb-3 text-[15px] font-semibold">Pipeline</h2>
-              <div className="space-y-2">
+            <Card className="p-0">
+              <div className="border-b border-[var(--color-border)] px-5 py-3.5">
+                <h2 className="text-[15px] font-semibold">Pipeline</h2>
+              </div>
+              <div className="space-y-2 p-5">
                 {STAGE_ORDER.map((s) => (
                   <div key={s} className="flex items-center justify-between">
                     <StageBadge stage={s} />

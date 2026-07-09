@@ -20,7 +20,7 @@ function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boo
           'group relative flex items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] font-medium transition-all duration-150',
           collapsed && 'justify-center px-0',
           item.primary
-            ? 'bg-[var(--color-primary)] text-white shadow-sm hover:bg-[var(--color-primary-hover)]'
+            ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-sm hover:bg-[var(--color-primary-hover)]'
             : isActive
               ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
               : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]',
@@ -77,7 +77,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       )}
     >
       <div className={cn('flex h-14 items-center gap-2.5 border-b border-[var(--color-border)] px-4', collapsed && 'justify-center px-0')}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--color-primary)] text-sm font-bold text-white shadow-sm">Li</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--color-primary)] text-sm font-bold text-[var(--color-primary-fg)] shadow-sm">Li</div>
         {!collapsed && <span className="font-display text-[15px] font-bold tracking-tight">LeadIntel</span>}
       </div>
 

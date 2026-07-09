@@ -320,7 +320,7 @@ export function ManualLeadDetailPage() {
               <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                 <Label className="mb-1 text-[12px]">Team</Label>
                 <select value={lead.team_id ?? ''} onChange={(e) => update.mutate({ team_id: e.target.value || null })}
-                  className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+                  className="h-9 w-full rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
                   <option value="">— none —</option>
                   {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
@@ -370,7 +370,7 @@ function CadenceCard({ leadId }: { leadId: string }) {
       )}
       {activeCadences.length > 0 ? (
         <div className="flex gap-2">
-          <select value={cid} onChange={(e) => setCid(e.target.value)} className="h-9 flex-1 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
+          <select value={cid} onChange={(e) => setCid(e.target.value)} className="h-9 flex-1 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-sm">
             <option value="">Enroll in…</option>
             {activeCadences.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>

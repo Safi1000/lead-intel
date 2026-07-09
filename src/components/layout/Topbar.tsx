@@ -122,7 +122,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         <DropdownMenu>
           <DropdownTrigger asChild>
             <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-[var(--color-surface-2)]">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-[13px] font-semibold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-[13px] font-semibold text-[var(--color-primary-fg)]">
                 {initials}
               </span>
               <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />
