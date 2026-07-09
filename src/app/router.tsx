@@ -74,6 +74,7 @@ const ImportHub = lazyPage(() => import('../features/shared/Hubs').then((m) => (
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const SourcingWorkspace = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.SourcingWorkspace })))
+const SourcingLimitSettings = lazyPage(() => import('../features/pipeline/SourcingProfile').then((m) => ({ default: m.SourcingSettingsPage })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
 const UsagePage = lazyPage(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
@@ -315,7 +316,10 @@ export const router = createBrowserRouter([
                   },
                   {
                     element: <RequireRole roles={['superadmin', 'owner']} />,
-                    children: [{ path: 'credits', element: L(<CreditsPage />) }],
+                    children: [
+                      { path: 'credits', element: L(<CreditsPage />) },
+                      { path: 'sourcing', element: L(<SourcingLimitSettings />) },
+                    ],
                   },
                   { path: 'notifications', element: <NotificationsSettingsPage /> },
                   { element: <SettingsGate flag="apiKeys" title="API Keys" />, children: [{ path: 'api-keys', element: L(<ApiKeysSettingsPage />) }, { path: 'api-keys/docs', element: L(<ApiDocsPage />) }] },

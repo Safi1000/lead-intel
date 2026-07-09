@@ -21,7 +21,6 @@ export function SourcingConfig() {
   const [fetchAds, setFetchAds] = useState(true)
   const [fetchEmail, setFetchEmail] = useState(true)
   const [fetchHours, setFetchHours] = useState(true)
-  const [dailyLimit, setDailyLimit] = useState('')
   const [search, setSearch] = useState('')
 
   // Worldwide city list (~148k), lazy-loaded so it doesn't bloat the initial bundle.
@@ -42,12 +41,11 @@ export function SourcingConfig() {
       setVerticalKey(profile.vertical_key ?? '')
       setMetros(profile.metros ?? [])
       setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
-      setDailyLimit(profile.daily_limit ? String(profile.daily_limit) : '')
     }
   }, [profile])
 
   const save = useMutation({
-    mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: Number(dailyLimit) || 1000, active: true }),
+    mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: profile?.daily_limit ?? 1000, active: true }),
     onSuccess: () => { toast.success('Sourcing profile saved'); qc.invalidateQueries({ queryKey: ['sourcing-profile'] }) },
     onError: (e) => toast.error(normalizeError(e).message),
   })
@@ -103,10 +101,6 @@ export function SourcingConfig() {
           <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Website + reviews are always fetched (they drive the score). Turning the others off lowers your cost per lead.</p>
         </div>
 
-        <div className="max-w-[200px]">
-          <Label>Daily lead limit</Label>
-          <Input type="number" min={1} placeholder="e.g. 1000" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} />
-        </div>
       </Card>
 
       <Card className="p-5">
@@ -144,6 +138,41 @@ export function SourcingConfig() {
       <div className="flex justify-end">
         <Button loading={save.isPending} onClick={() => save.mutate()}>Save profile</Button>
       </div>
+    </div>
+  )
+}
+
+/** Settings → Sourcing: the org's daily lead limit (caps manual runs + daily auto-run). */
+export function SourcingSettingsPage() {
+  const qc = useQueryClient()
+  const { data: profile, isLoading } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
+  const [limit, setLimit] = useState('')
+  useEffect(() => { if (profile) setLimit(profile.daily_limit ? String(profile.daily_limit) : '') }, [profile])
+  const save = useMutation({
+    mutationFn: () => sourcingApi.save({
+      vertical_key: profile?.vertical_key ?? null,
+      search_terms: null,
+      metros: profile?.metros ?? [],
+      fetch_ads: profile?.fetch_ads ?? true,
+      fetch_email: profile?.fetch_email ?? true,
+      fetch_hours: profile?.fetch_hours ?? true,
+      daily_limit: Number(limit) || 0,
+      active: true,
+    }),
+    onSuccess: () => { toast.success('Daily lead limit saved'); qc.invalidateQueries({ queryKey: ['sourcing-profile'] }) },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  if (isLoading) return <LoadingState />
+  return (
+    <div className="max-w-md">
+      <Card className="space-y-3 p-5">
+        <div>
+          <Label htmlFor="dll">Daily lead limit</Label>
+          <Input id="dll" type="number" min={0} placeholder="e.g. 1000" value={limit} onChange={(e) => setLimit(e.target.value)} className="max-w-[220px]" />
+          <p className="mt-1.5 text-[12px] text-[var(--color-text-muted)]">The most leads this org can generate per day, across manual runs and the daily auto-run. Leave blank for no limit.</p>
+        </div>
+        <Button loading={save.isPending} onClick={() => save.mutate()}>Save limit</Button>
+      </Card>
     </div>
   )
 }

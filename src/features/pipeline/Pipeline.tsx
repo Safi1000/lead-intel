@@ -67,6 +67,8 @@ function StatusBadge({ status }: { status: PipelineRun['status'] }) {
 function DailyRunPanel({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
   const { data: cfg } = useQuery({ queryKey: ['pipeline-config', orgId], queryFn: () => pipelineApi.getConfig(orgId) })
+  const { data: profile } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
+  const cap = profile?.daily_limit && profile.daily_limit > 0 ? profile.daily_limit : 1000
   const [target, setTarget] = useState<string | null>(null) // null = not edited yet
 
   const save = useMutation({
@@ -93,17 +95,17 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
         <div>
           <h2 className="text-[15px] font-semibold">Daily auto-run <span className="ml-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 dark:text-violet-400">Superadmin</span></h2>
           <p className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">
-            Every day at 8:00 AM, automatically create the day's batch (named by date) and run until the qualified target is met. Untick to skip — it stays off until you re-enable it.
+            Every day at 8:00 AM, automatically create the day's batch (named by date) and run until the qualified target is met. Untick to skip — it stays off until you re-enable it. Capped at your daily lead limit ({cap.toLocaleString()}).
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div>
             <Label htmlFor="daily-target">Qualified target</Label>
             <Input
-              id="daily-target" type="number" min={1} max={1000} className="w-28"
+              id="daily-target" type="number" min={1} max={cap} className="w-28"
               value={targetValue}
               onChange={(e) => setTarget(e.target.value)}
-              onBlur={() => { const n = Number(targetValue); if (n >= 1 && n !== cfg.daily_run_target) save.mutate({ daily_run_target: n }) }}
+              onBlur={() => { const n = Math.min(Math.max(1, Number(targetValue) || 1), cap); setTarget(String(n)); if (n !== cfg.daily_run_target) save.mutate({ daily_run_target: n }) }}
               disabled={save.isPending}
             />
           </div>
