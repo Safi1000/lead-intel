@@ -1157,9 +1157,19 @@ Deno.serve(async (req: Request) => {
       const reachable = !!(emailResult.email || (details?.phone && String(details.phone).trim() !== ''))
       const angle = aiScore?.primary_angle
       let importBatchId: string | null = null
-      if (aiScore && aiScore.is_correct_niche && reachable && !aiScore.low_fit && angle && angle !== 'none') {
-        if (aiScore.website_status === 'none' || angle === 'first_website') importBatchId = batchIdNoWebsite
-        else importBatchId = batchId
+      if (aiScore && aiScore.is_correct_niche && reachable) {
+        if (angle !== undefined) {
+          // New multi-gap scoring: import any real business with a sellable gap.
+          if (!aiScore.low_fit && angle !== 'none') {
+            importBatchId = (aiScore.website_status === 'none' || angle === 'first_website') ? batchIdNoWebsite : batchId
+          }
+        } else {
+          // Legacy cached score (enriched before multi-gap shipped — no primary_angle). Fall back to
+          // the old weak/none gate so a stale cache entry keeps importing exactly as before, instead
+          // of silently dropping out until its 30-day TTL expires and it re-enriches with an angle.
+          if (aiScore.website_status === 'weak' && !aiScore.low_fit) importBatchId = batchId
+          else if (aiScore.website_status === 'none') importBatchId = batchIdNoWebsite
+        }
       }
 
       // Website de-dup: the same clinic often has multiple Google listings (different locations) on
