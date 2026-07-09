@@ -44,7 +44,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Discovery', to: '/discovery', icon: 'Calculator', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Usage & credits', to: '/credits', icon: 'Wallet', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
-  { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true, primary: true },
+  { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true },
   // Operations
   { label: 'Activity', to: '/activity', icon: 'Activity', section: 'Operations', roles: OVERSEERS, orgContext: true },
   { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', section: 'Operations', roles: OVERSEERS, orgContext: true },

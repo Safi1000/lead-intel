@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useMemo } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { PanelLeftClose, PanelLeft, ChevronDown } from 'lucide-react'
 import { CLIENT_NAV, CLIENT_NAV_BOTTOM, NAV_SECTIONS, type NavItem } from './nav'
 import { Icon } from './icon'
@@ -7,7 +8,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { can } from '../../config/permissions'
 import { cn } from '../../lib/utils'
 
-function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
+function NavRow({ item, active, collapsed, onNavigate }: { item: NavItem; active: boolean; collapsed: boolean; onNavigate?: () => void }) {
   const flagOn = useAuthStore((s) => (item.flag ? s.flags[item.flag] : true))
   const soon = item.flag && !flagOn
   return (
@@ -15,38 +16,47 @@ function NavRow({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boo
       to={item.to}
       onClick={onNavigate}
       title={collapsed ? item.label : undefined}
-      className={({ isActive }) =>
-        cn(
-          'group relative flex items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] font-medium transition-all duration-150',
-          collapsed && 'justify-center px-0',
-          item.primary
-            ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-sm hover:bg-[var(--color-primary-hover)]'
-            : isActive
-              ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-              : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]',
-        )
-      }
+      className={cn(
+        'group relative flex items-center gap-3 rounded-[9px] px-3 py-2 text-[13.5px] font-medium transition-all duration-150',
+        collapsed && 'justify-center px-0',
+        item.primary
+          ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-sm hover:bg-[var(--color-primary-hover)]'
+          : active
+            ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]',
+      )}
     >
-      {({ isActive }) => (
-        <>
-          {isActive && !item.primary && !collapsed && (
-            <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
-          )}
-          <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && (
-            <span className="flex flex-1 items-center justify-between">
-              {item.label}
-              {soon && (
-                <span className="rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
-                  Soon
-                </span>
-              )}
+      {active && !item.primary && !collapsed && (
+        <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
+      )}
+      <Icon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
+      {!collapsed && (
+        <span className="flex flex-1 items-center justify-between">
+          {item.label}
+          {soon && (
+            <span className="rounded-full bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-text-muted)]">
+              Soon
             </span>
           )}
-        </>
+        </span>
       )}
     </NavLink>
   )
+}
+
+/** Longest-prefix match so only the most specific nav item is active
+ * (e.g. /bookings/new highlights "Book a meeting", not also "Meetings"). */
+function useActiveTo(): string | null {
+  const { pathname } = useLocation()
+  return useMemo(() => {
+    let best: string | null = null
+    for (const it of [...CLIENT_NAV, ...CLIENT_NAV_BOTTOM]) {
+      const to = it.to
+      const matches = pathname === to || pathname.startsWith(to.endsWith('/') ? to : to + '/')
+      if (matches && (best === null || to.length > best.length)) best = to
+    }
+    return best
+  }, [pathname])
 }
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -57,6 +67,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const role = useAuthStore((s) => s.role)
   const permissions = useAuthStore((s) => s.permissions)
   const inOrg = useAuthStore((s) => s.actingOrgId) != null
+  const activeTo = useActiveTo()
 
   const visible = CLIENT_NAV.filter((item) => {
     if (role === 'client') return item.roles?.includes('client') ?? false
@@ -84,7 +95,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-3">
         {ungrouped.length > 0 && (
           <div className="space-y-0.5">
-            {ungrouped.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+            {ungrouped.map((item) => <NavRow key={item.to} item={item} active={item.to === activeTo} collapsed={collapsed} onNavigate={onNavigate} />)}
           </div>
         )}
         {groups.map((g) => {
@@ -109,7 +120,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <div className="overflow-hidden">
                   <div className="space-y-0.5">
-                    {g.items.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+                    {g.items.map((item) => <NavRow key={item.to} item={item} active={item.to === activeTo} collapsed={collapsed} onNavigate={onNavigate} />)}
                   </div>
                 </div>
               </div>
@@ -119,7 +130,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-0.5 border-t border-[var(--color-border)] p-3">
-        {CLIENT_NAV_BOTTOM.map((item) => <NavRow key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />)}
+        {CLIENT_NAV_BOTTOM.map((item) => <NavRow key={item.to} item={item} active={item.to === activeTo} collapsed={collapsed} onNavigate={onNavigate} />)}
         <button
           onClick={toggle}
           className={cn(
