@@ -576,6 +576,7 @@ const BOOKING_PLATFORM_DOMAINS = [
   'glossgenius.com', 'styleseat.com', 'schedulicity.com', 'mindbodyonline.com', 'setmore.com',
   'janeapp.com', 'calendly.com', 'acuityscheduling.com', 'simplybook.me', 'simplybook.it',
   'noterro.com', 'timetap.com', 'linktr.ee', 'instagram.com', 'facebook.com', 'linktree.com', 'carrd.co',
+  'zocdoc.com', // dental/medical booking marketplace — a Zocdoc-only listing is not an owned site
 ]
 function isBookingPlatformDomain(domain: string): boolean {
   const d = domain.replace(/^www\./, '').toLowerCase()
@@ -1027,7 +1028,7 @@ Deno.serve(async (req: Request) => {
       } catch (e) { console.error(`[${placeId}] place_cache read failed:`, (e as Error).message) }
       if (!fromCache && hasWebsite) {
         try {
-          websiteResult = await analyzeWebsite(details!.website!)
+          websiteResult = await analyzeWebsite(details!.website!, profile.verticalKey)
           if (websiteResult.email) {
             emailResult = { email: websiteResult.email, emailSource: websiteResult.emailSource, emailConfidence: websiteResult.emailConfidence }
             totalEmailed++

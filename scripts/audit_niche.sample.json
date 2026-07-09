@@ -1,0 +1,25 @@
+[
+  {
+    "name": "Example Family Dental",
+    "website": "https://www.example-dental-practice.com",
+    "address": "123 Main St, Austin, TX",
+    "phone": "+1 512 555 0100",
+    "rating": 4.8,
+    "businessType": "dentist",
+    "reviews": [
+      { "text": "Great cleaning but it's hard to reach the front desk to book.", "rating": 4 },
+      { "text": "Dr. Lee explained everything and the office is spotless.", "rating": 5 }
+    ]
+  },
+  {
+    "name": "Example Cosmetic Dentistry (no site)",
+    "website": null,
+    "address": "9 Elm Ave, Austin, TX",
+    "phone": "+1 512 555 0200",
+    "rating": 4.6,
+    "businessType": "dental_clinic",
+    "reviews": [
+      { "text": "Beautiful veneers, worth every penny.", "rating": 5 }
+    ]
+  }
+]

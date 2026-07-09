@@ -96,6 +96,58 @@ const BOOKING_PLATFORMS: Array<{ name: string; pattern: string }> = [
   { name: 'GoHighLevel', pattern: 'leadconnectorhq' }, // GHL booking widget host
 ]
 
+// ---------------------------------------------------------------------------
+// Per-vertical enrichment tuning. Med spa is the baseline (byte-for-byte identical to the historic
+// single-niche engine): no profile / unknown vertical → med-spa config. Other verticals add their
+// own scheduling platforms and opt out of med-spa-specific signals (e.g. social presence) that
+// don't apply. The AI score is cached per (place, vertical), so these never cross-contaminate.
+// ---------------------------------------------------------------------------
+interface NicheWebConfig {
+  extraBookingPlatforms: Array<{ name: string; pattern: string }>
+  // Whether "no Instagram/Facebook linked" should be flagged as a website weakness. True for med
+  // spas (patients pick a clinic off an active IG). False for dental/trades — those patients come
+  // from Google, insurance directories and referrals, so no social link is NOT a weakness.
+  expectsSocial: boolean
+}
+// Dental patient-scheduling / PMS-portal / reputation platforms whose booking widgets embed on the
+// practice site. Without these, a dentist on Zocdoc/NexHealth/Weave reads as "no online contact".
+const DENTAL_BOOKING: Array<{ name: string; pattern: string }> = [
+  { name: 'Zocdoc', pattern: 'zocdoc.com' },
+  { name: 'NexHealth', pattern: 'nexhealth.com' },
+  { name: 'LocalMed', pattern: 'localmed.com' },
+  { name: 'Weave', pattern: 'getweave.com' },
+  { name: 'Podium', pattern: 'podium.com' },
+  { name: 'Solutionreach', pattern: 'solutionreach.com' },
+  { name: 'RevenueWell', pattern: 'revenuewell.com' },
+  { name: 'Doctible', pattern: 'doctible.com' },
+  { name: 'Adit', pattern: 'adit.com' },
+  { name: 'Yapi', pattern: 'yapicentral.com' },
+  { name: 'Modento', pattern: 'modento.io' },
+  { name: 'CareStack', pattern: 'carestack.com' },
+  { name: 'Dental Intelligence', pattern: 'dentalintel.com' },
+  { name: 'Simplifeye', pattern: 'simplifeye' },
+  { name: 'Flexbooker', pattern: 'flexbooker.com' },
+  { name: 'Demandforce', pattern: 'demandforce.com' },
+  { name: 'Sesame', pattern: 'sesamecommunications' },
+  { name: 'Lighthouse 360', pattern: 'lh360' },
+  { name: 'Denticon', pattern: 'denticon.com' },
+  { name: 'Curve Dental', pattern: 'curvedental.com' },
+  { name: 'Dentrix', pattern: 'dentrix' },        // dentrix.com + dentrixascend patient portals
+  { name: 'Open Dental', pattern: 'opendental' },
+]
+const NICHE_WEB_CONFIG: Record<string, NicheWebConfig> = {
+  med_spa:  { extraBookingPlatforms: [], expectsSocial: true },
+  dental:   { extraBookingPlatforms: DENTAL_BOOKING, expectsSocial: false },
+  hvac:     { extraBookingPlatforms: [], expectsSocial: false },
+  law_firm: { extraBookingPlatforms: [], expectsSocial: false },
+}
+// No vertical (TXS / no profile) → the historic med-spa behavior. Known vertical → its config.
+// Unknown vertical → a neutral config (no med-spa social check, no extra platforms).
+function nicheWebConfig(vertical?: string): NicheWebConfig {
+  if (!vertical) return NICHE_WEB_CONFIG.med_spa
+  return NICHE_WEB_CONFIG[vertical] ?? { extraBookingPlatforms: [], expectsSocial: false }
+}
+
 // Custom / self-hosted booking is common (GoHighLevel /widget/form, PatientNow, in-house
 // booking pages). These won't match a platform host, so also look for booking LINKS in the
 // markup. Kept deliberately narrow (hyphenated slugs / path segments) so it does not fire on
@@ -299,7 +351,7 @@ async function fetchPage(url: string): Promise<{ html: string | null; loadTimeMs
 // Website quality signal detection (all from raw HTML, no headless browser)
 // ---------------------------------------------------------------------------
 
-function detectQualitySignals(html: string, loadTimeMs: number): {
+function detectQualitySignals(html: string, loadTimeMs: number, cfg: NicheWebConfig): {
   hasMobileViewport: boolean
   hasBookingWidget: boolean
   bookingPlatform: string | null
@@ -341,7 +393,8 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   //    an on-page <form>, a contact/appointment page link, or a contact/booking CTA in the text.
   //    A contact/appointment FORM counts as "reachable online" — NOT a "no booking" weakness.
   let bookingPlatform: string | null = null
-  for (const { name, pattern } of BOOKING_PLATFORMS) { if (htmlLower.includes(pattern)) { bookingPlatform = name; break } }
+  const platforms = cfg.extraBookingPlatforms.length ? [...BOOKING_PLATFORMS, ...cfg.extraBookingPlatforms] : BOOKING_PLATFORMS
+  for (const { name, pattern } of platforms) { if (htmlLower.includes(pattern)) { bookingPlatform = name; break } }
   if (!bookingPlatform && FORM_PLATFORM_RE.test(html)) bookingPlatform = 'Embedded form/scheduler'
   if (!bookingPlatform && BOOKING_LINK_RE.test(html)) bookingPlatform = 'Booking link'
   if (!bookingPlatform && CONTACT_LINK_RE.test(html)) bookingPlatform = 'Contact/appointment page'
@@ -394,7 +447,9 @@ function detectQualitySignals(html: string, loadTimeMs: number): {
   }
 
   // 7. Social presence — med spa patients expect an active Instagram; no IG/FB link is a weak signal.
-  if (!jsShell && !/instagram\.com/i.test(html) && !/facebook\.com/i.test(html)) {
+  //    Gated per vertical: dental/trades patients come from Google/insurance/referral, so a missing
+  //    social link there is NOT a weakness and firing it would manufacture false 'weak' leads.
+  if (cfg.expectsSocial && !jsShell && !/instagram\.com/i.test(html) && !/facebook\.com/i.test(html)) {
     issues.push('No Instagram or Facebook linked on the site — weak social presence for a med spa')
   }
 
@@ -494,7 +549,8 @@ async function checkMx(email: string | null): Promise<boolean | null> {
 // Main export
 // ---------------------------------------------------------------------------
 
-export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult> {
+export async function analyzeWebsite(websiteUri: string, vertical?: string): Promise<WebsiteResult> {
+  const cfg = nicheWebConfig(vertical)
   const noResult: WebsiteResult = {
     email: null, emailSource: 'none', emailConfidence: 'none',
     reachable: false, loadTimeMs: 0,
@@ -574,7 +630,7 @@ export async function analyzeWebsite(websiteUri: string): Promise<WebsiteResult>
 
   // Quality + chain signals come from the homepage only
   const qualitySignals = homepageHtml
-    ? detectQualitySignals(homepageHtml, homepageLoadMs)
+    ? detectQualitySignals(homepageHtml, homepageLoadMs, cfg)
     : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], hasTitle: false, hasMetaDescription: false, hasH1: false, jsShell: false, visibleTextExcerpt: null as string | null }
   const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
 
