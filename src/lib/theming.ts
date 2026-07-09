@@ -10,8 +10,8 @@ export interface TenantTheme {
 
 export const DEFAULT_THEME: TenantTheme = {
   brandName: 'LeadIntel',
-  primary: '#9a1750',
-  signal: '#ee4c7c',
+  primary: '#1466ff',
+  signal: '#4d8dff',
   logoText: 'Li',
   supportEmail: 'support@techexcel.io',
 }

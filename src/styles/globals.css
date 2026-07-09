@@ -16,27 +16,27 @@
    *  Every token below (light AND dark) is derived from these via color-mix().
    *  Change these five and the whole product recolours.
    * ====================================================================== */
-  --brand-bg:       #5D001E; /* 1 · primary background (deepest canvas)  */
-  --brand-surface:  #9A1750; /* 2 · secondary surface (panels & cards)   */
-  --brand-neutral:  #E3E2DF; /* 3 · neutral text                         */
-  --brand-accent:   #EE4C7C; /* 4 · primary accent                       */
-  --brand-accent-2: #E3AFBC; /* 5 · secondary accent                     */
+  --brand-bg:       #16181D; /* 1 · primary background (charcoal canvas) */
+  --brand-surface:  #20232B; /* 2 · secondary surface (panels & cards)   */
+  --brand-neutral:  #C7CAD3; /* 3 · neutral text                         */
+  --brand-accent:   #1466FF; /* 4 · primary accent (cobalt)              */
+  --brand-accent-2: #4D8DFF; /* 5 · secondary accent (electric blue)     */
   /* ==================================================================== */
 
-  /* Light theme — derived: accents carry through, surfaces resolve light,
-     text uses the deep brand-bg colour. */
-  --color-primary: var(--brand-accent-2);
-  --color-primary-hover: color-mix(in oklab, var(--brand-accent-2), black 10%);
-  --color-primary-fg: #ffffff; /* text on primary buttons */
+  /* Light theme — cobalt carries through on white; charcoal drives text.
+     Text steps are computed off brand-bg so they stay tonally consistent. */
+  --color-primary: var(--brand-accent);
+  --color-primary-hover: color-mix(in oklab, var(--brand-accent), black 12%);
+  --color-primary-fg: #ffffff; /* white on cobalt — identical in both modes */
   --color-signal: var(--brand-accent);
-  --color-signal-glow: color-mix(in srgb, var(--brand-accent) 45%, transparent);
-  --color-bg: color-mix(in oklab, var(--brand-neutral) 9%, white);
+  --color-signal-glow: color-mix(in srgb, var(--brand-accent) 32%, transparent);
+  --color-bg: color-mix(in oklab, var(--brand-surface) 4%, white);
   --color-surface: #ffffff;
-  --color-surface-2: color-mix(in oklab, var(--brand-neutral) 15%, white);
-  --color-border: color-mix(in oklab, var(--brand-surface) 15%, white);
+  --color-surface-2: color-mix(in oklab, var(--brand-surface) 6%, white);
+  --color-border: color-mix(in oklab, var(--brand-surface) 13%, white);
   --color-text: var(--brand-bg);
-  --color-text-secondary: var(--brand-surface);
-  --color-text-muted: color-mix(in oklab, var(--brand-surface) 55%, white);
+  --color-text-secondary: color-mix(in oklab, var(--brand-bg) 76%, white);
+  --color-text-muted: color-mix(in oklab, var(--brand-bg) 50%, white);
 
   /* Confidence system (semantic — do not theme) */
   --c-verified: #16a34a;
@@ -57,7 +57,7 @@
   --score-warm: #f59e0b;
   --score-cold: #64748b;
 
-  --color-admin: var(--brand-accent-2);
+  --color-admin: var(--brand-accent);
 
   /* Fonts */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -69,20 +69,19 @@
 }
 
 .dark {
-  /* Dark theme = default brand — every value derived from the five brand colours. */
+  /* Charcoal + cobalt — the default brand. primary-fg stays #fff (from :root). */
   --color-primary: var(--brand-accent);
-  --color-primary-hover: color-mix(in oklab, var(--brand-accent), white 18%);
-  --color-primary-fg: var(--brand-bg); /* deep-canvas text on the bright accent */
-  --color-signal: var(--brand-accent);
-  --color-signal-glow: color-mix(in srgb, var(--brand-accent) 55%, transparent);
-  --color-admin: var(--brand-accent);
+  --color-primary-hover: color-mix(in oklab, var(--brand-accent), white 14%);
+  --color-signal: var(--brand-accent-2);
+  --color-signal-glow: color-mix(in srgb, var(--brand-accent-2) 50%, transparent);
+  --color-admin: var(--brand-accent-2);
   --color-bg: var(--brand-bg);
   --color-surface: var(--brand-surface);
-  --color-surface-2: color-mix(in oklab, var(--brand-surface), white 8%); /* elevated */
-  --color-border: color-mix(in oklab, var(--brand-neutral) 14%, transparent);
-  --color-text: color-mix(in oklab, var(--brand-neutral), white 65%);
+  --color-surface-2: color-mix(in oklab, var(--brand-surface), white 6%); /* elevated */
+  --color-border: color-mix(in oklab, var(--brand-neutral) 12%, transparent);
+  --color-text: color-mix(in oklab, var(--brand-neutral), white 60%);
   --color-text-secondary: var(--brand-neutral);
-  --color-text-muted: color-mix(in oklab, var(--brand-neutral) 70%, transparent);
+  --color-text-muted: color-mix(in oklab, var(--brand-neutral) 62%, transparent);
 }
 
 @theme inline {
