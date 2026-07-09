@@ -12,6 +12,19 @@
       rel="stylesheet"
     />
     <title>LeadIntel — Lead Intelligence Platform</title>
+    <script>
+      // Apply the theme before first paint to avoid a flash. Dark is the default brand.
+      try {
+        var s = JSON.parse(localStorage.getItem('leadintel-ui') || '{}');
+        var t = (s && s.state && s.state.theme) || 'dark';
+        var dark = t !== 'light';
+        if (dark) document.documentElement.classList.add('dark');
+        document.documentElement.style.background = dark ? '#0b0c10' : '#f8fafc';
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.background = '#0b0c10';
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -184,7 +184,7 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
     <tr className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-2)]" onClick={onOpen}>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-blue-500/10 text-[var(--color-primary)]"><FileSpreadsheet className="h-4 w-4" /></span>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"><FileSpreadsheet className="h-4 w-4" /></span>
           <div className="min-w-0">
             <p className="truncate font-medium text-[var(--color-text)]">{b.file_name}{b.archived_at && <span className="ml-2 rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)]">Archived</span>}</p>
             <p className="truncate text-[12px] text-[var(--color-text-muted)]">{b.template_name}{b.created_by ? ` · by ${b.created_by}` : ''}</p>
@@ -206,7 +206,7 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
       <td className="px-3 py-3">
         <div className="flex flex-wrap gap-1">
           <Pill label="new" value={b.new_count} className="bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]" />
-          <Pill label="contacted" value={b.contacted_count} className="bg-blue-500/10 text-blue-700 dark:text-blue-400" />
+          <Pill label="contacted" value={b.contacted_count} className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] dark:text-[var(--color-primary)]" />
           <Pill label="interested" value={b.interested_count} className="bg-violet-500/10 text-violet-700 dark:text-violet-400" />
           <Pill label="booked" value={b.booked_count} className="bg-amber-500/10 text-amber-700 dark:text-amber-400" />
           <Pill label="won" value={b.won_count} className="bg-green-500/10 text-green-700 dark:text-green-400" />

@@ -18,15 +18,15 @@ import { cn } from '../../lib/utils'
 
 function NicheBanner() {
   return (
-    <Card className="flex items-start gap-3 px-5 py-4 border-blue-200 bg-blue-500/10">
-      <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
-      <div className="text-sm text-blue-800">
+    <Card className="flex items-start gap-3 px-5 py-4 border-[var(--color-primary)]/25 bg-[var(--color-primary)]/10">
+      <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-primary)]" />
+      <div className="text-sm text-[var(--color-primary)]">
         <span className="font-semibold">Target niche: US Med Spas & Aesthetic Clinics</span>
-        <span className="mx-2 text-blue-300">·</span>
+        <span className="mx-2 text-[var(--color-primary)]">·</span>
         <span>Terms: med spa, medical spa, aesthetic clinic, botox clinic, skin clinic</span>
-        <span className="mx-2 text-blue-300">·</span>
+        <span className="mx-2 text-[var(--color-primary)]">·</span>
         <span>20 US metros (NY, LA, Miami, Houston, Dallas, Chicago, Atlanta, Scottsdale…)</span>
-        <span className="mx-2 text-blue-300">·</span>
+        <span className="mx-2 text-[var(--color-primary)]">·</span>
         <span className="font-medium">Only imports leads with a weak website, verified contact, and enough reviews.</span>
       </div>
     </Card>
@@ -139,7 +139,7 @@ function ElapsedTimer({ startedAt, completedAt, running }: { startedAt: string; 
 
 function StatusBadge({ status }: { status: PipelineRun['status'] }) {
   const styles: Record<PipelineRun['status'], string> = {
-    running:   'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+    running:   'bg-[var(--color-primary)]/15 text-[var(--color-primary)] dark:text-[var(--color-primary)]',
     completed: 'bg-green-500/15 text-green-700 dark:text-green-400',
     failed:    'bg-red-500/15 text-red-700 dark:text-red-400',
     stopped:   'bg-amber-500/15 text-amber-700 dark:text-amber-400',

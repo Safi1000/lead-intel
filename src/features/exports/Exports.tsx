@@ -64,7 +64,7 @@ export function ExportsPage() {
               <p className="mb-1.5 text-sm font-medium">Format</p>
               <div className="flex gap-2">
                 {(['csv', 'xlsx'] as const).map((f) => (
-                  <button key={f} onClick={() => setFormat(f)} className={cn('flex flex-1 items-center justify-center gap-2 rounded-[8px] border py-2 text-sm font-medium', format === f ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]' : 'border-[var(--color-border)]')}>
+                  <button key={f} onClick={() => setFormat(f)} className={cn('flex flex-1 items-center justify-center gap-2 rounded-[8px] border py-2 text-sm font-medium', format === f ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'border-[var(--color-border)]')}>
                     {f === 'csv' ? <FileText className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}{f.toUpperCase()}
                   </button>
                 ))}

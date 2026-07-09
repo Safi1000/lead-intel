@@ -285,7 +285,7 @@ function NotesTags({ lead }: { lead: LeadDetail }) {
         <div>
           <div className="mb-1.5 flex flex-wrap gap-1.5">
             {tags.map((t) => (
-              <span key={t} className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[12px] font-medium text-[var(--color-primary)]">
+              <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[12px] font-medium text-[var(--color-primary)]">
                 {t}
                 <button onClick={() => removeTag(t)} aria-label={`Remove ${t}`}><X className="h-3 w-3" /></button>
               </span>

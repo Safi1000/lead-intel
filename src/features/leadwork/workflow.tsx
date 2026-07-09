@@ -7,7 +7,7 @@ export const STAGE_ORDER: LeadStage[] = LEAD_STAGES
 /** Colour-coded chip styling per pipeline stage (Feature 1). */
 export const STAGE_META: Record<LeadStage, { label: string; className: string; dot: string }> = {
   New: { label: 'New', className: 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]', dot: 'bg-slate-400' },
-  Contacted: { label: 'Contacted', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', dot: 'bg-blue-500' },
+  Contacted: { label: 'Contacted', className: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] dark:text-[var(--color-primary)]', dot: 'bg-[var(--color-primary)]' },
   Interested: { label: 'Interested', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
   Booked: { label: 'Booked', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500' },
   Voicemail: { label: 'Voicemail', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },

@@ -98,7 +98,7 @@ export function NewRunPage() {
                   className={cn(
                     'relative flex flex-col items-start gap-2 rounded-[12px] border p-4 text-left transition-colors',
                     !t.enabled && 'cursor-not-allowed opacity-60',
-                    trade === t.id ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
+                    trade === t.id ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
                   )}
                 >
                   <Icon name={t.icon} className={cn('h-6 w-6', trade === t.id ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]')} />

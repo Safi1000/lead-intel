@@ -312,7 +312,7 @@ export function NewBookingPage() {
                     className={cn(
                       'rounded-[8px] border px-3 py-2 text-sm font-medium transition-colors',
                       a.aeId === aeId
-                        ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]'
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                         : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
                     )}
                   >
@@ -322,7 +322,7 @@ export function NewBookingPage() {
               </div>
 
               {crmLeadId && (
-                <div className="mt-4 flex items-center justify-between gap-2 rounded-[10px] border border-blue-100 bg-blue-50/60 p-3">
+                <div className="mt-4 flex items-center justify-between gap-2 rounded-[10px] border border-[var(--color-primary)]/25 bg-[var(--color-signal)]/10 p-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Hash className="h-4 w-4 text-[var(--color-primary)]" />
                     <span className="text-[var(--color-text-secondary)]">CRM Lead ID (auto-filled — copy if you need to re-enter it):</span>

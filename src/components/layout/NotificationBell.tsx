@@ -53,7 +53,7 @@ export function NotificationBell() {
                 onClick={() => !n.read && markRead.mutate(n.id)}
                 className={cn(
                   'flex gap-3 border-b border-[var(--color-border)] px-4 py-3 last:border-0 hover:bg-[var(--color-surface-2)]',
-                  !n.read && 'bg-blue-50/40',
+                  !n.read && 'bg-[var(--color-signal)]/10',
                 )}
               >
                 <span

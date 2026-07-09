@@ -10,8 +10,8 @@ export interface TenantTheme {
 
 export const DEFAULT_THEME: TenantTheme = {
   brandName: 'LeadIntel',
-  primary: '#1466ff',
-  signal: '#00c2a8',
+  primary: '#45a29e',
+  signal: '#66fcf1',
   logoText: 'Li',
   supportEmail: 'support@techexcel.io',
 }
@@ -28,10 +28,11 @@ export function applyTheme(theme: Partial<TenantTheme>) {
 }
 
 export function resetTheme() {
+  // Revert to the CSS-var tokens so the per-mode (light/dark) brand palette governs again.
   const root = document.documentElement
-  root.style.setProperty('--color-primary', DEFAULT_THEME.primary)
-  root.style.setProperty('--color-primary-hover', shade(DEFAULT_THEME.primary, -12))
-  root.style.setProperty('--color-signal', DEFAULT_THEME.signal)
+  for (const v of ['--color-primary', '--color-primary-hover', '--color-admin', '--color-signal']) {
+    root.style.removeProperty(v)
+  }
 }
 
 function shade(hex: string, percent: number): string {

@@ -90,7 +90,7 @@ export function TeamSettingsPage() {
                   {m.status === 'invited' && (
                     <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">Pending</span>
                   )}
-                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'manager' ? 'bg-blue-500/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[12px] font-medium', m.role === 'manager' ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]')}>
                     {ROLE_LABELS[m.role]}
                   </span>
                   <Can action="manage" resource="users" fallback={<span className="w-8" />}>

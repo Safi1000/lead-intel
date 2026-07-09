@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils'
 import { HOLIDAY_CALENDAR, type Holiday } from './pace'
 
 const REGION_STYLE: Record<Holiday['region'], string> = {
-  US: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  US: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] dark:text-[var(--color-primary)]',
   CA: 'bg-red-500/10 text-red-600 dark:text-red-400',
   'US+CA': 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]',
 }

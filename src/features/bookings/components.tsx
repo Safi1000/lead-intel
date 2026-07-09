@@ -68,7 +68,7 @@ export function MatchBadge({ confidence }: { confidence: MatchConfidence }) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium',
-        isId ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+        isId ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] dark:text-[var(--color-primary)]',
       )}
     >
       {isId ? <BadgeCheck className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}

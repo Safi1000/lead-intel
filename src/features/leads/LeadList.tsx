@@ -177,7 +177,7 @@ export function LeadListPage() {
 
       {/* Bulk bar */}
       {selected.size > 0 && (
-        <div className="mb-2 flex items-center gap-3 rounded-[8px] border border-[var(--color-primary)] bg-blue-500/10 px-4 py-2 text-sm">
+        <div className="mb-2 flex items-center gap-3 rounded-[8px] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-4 py-2 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <Button size="sm" variant="outline" onClick={() => exportLeads.mutate('csv')}>Export selected</Button>
           <Button size="sm" variant="outline" onClick={() => toast.success(`Pushed ${selected.size} leads to CRM`)}>Push to CRM</Button>
@@ -255,7 +255,7 @@ function LeadRowView({
   return (
     <div
       style={{ ...style, borderLeft: `3px solid ${rowBorderColor(lead.row_confidence)}` }}
-      className={cn('flex items-center gap-3 border-b border-[var(--color-border)] px-4 text-sm hover:bg-[var(--color-surface-2)]', compact ? 'py-1.5' : 'py-2.5', selected && 'bg-blue-50/60')}
+      className={cn('flex items-center gap-3 border-b border-[var(--color-border)] px-4 text-sm hover:bg-[var(--color-surface-2)]', compact ? 'py-1.5' : 'py-2.5', selected && 'bg-[var(--color-signal)]/10')}
     >
       <span className="w-5"><Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Select ${lead.business_name}`} /></span>
       {cols.map((c) => (

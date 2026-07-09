@@ -164,7 +164,7 @@ export function SignupPage() {
               onClick={() => setIntent(opt.id)}
               className={cn(
                 'flex w-full items-start gap-3 rounded-[12px] border p-4 text-left transition-colors',
-                intent === opt.id ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
+                intent === opt.id ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
               )}
             >
               <span

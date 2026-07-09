@@ -67,7 +67,7 @@ function SetterNotesBlock({ row }: { row: MeetingWithLeadDTO }) {
   const { setter } = row.meeting
   const hasChips = setter.name || setter.leadSource
   return (
-    <div className="rounded-[10px] border border-blue-100 bg-blue-50/50 p-3">
+    <div className="rounded-[10px] border border-[var(--color-primary)]/25 bg-[var(--color-signal)]/10 p-3">
       <div className="mb-2 flex items-center gap-2 text-[var(--color-text)]">
         <StickyNote className="h-4 w-4 text-[var(--color-primary)]" />
         <span className="text-sm font-semibold">Setter prep</span>
@@ -84,7 +84,7 @@ function SetterNotesBlock({ row }: { row: MeetingWithLeadDTO }) {
         <p className="text-sm italic text-[var(--color-text-muted)]">No context note left by the setter.</p>
       )}
       {row.setterNotes.length > 0 && (
-        <ul className="mt-2 space-y-1.5 border-t border-blue-100 pt-2">
+        <ul className="mt-2 space-y-1.5 border-t border-[var(--color-primary)]/25 pt-2">
           {row.setterNotes.map((n) => (
             <li key={n.id} className="text-[13px] text-[var(--color-text-secondary)]">
               <span className="font-medium text-[var(--color-text)]">{n.author}: </span>{n.text}
@@ -236,7 +236,7 @@ export function MeetingsPage() {
               className={cn(
                 'rounded-[8px] border px-3 py-1.5 text-sm font-medium transition-colors',
                 a.aeId === pickedAe
-                  ? 'border-[var(--color-primary)] bg-blue-500/10 text-[var(--color-primary)]'
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                   : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]',
               )}
             >

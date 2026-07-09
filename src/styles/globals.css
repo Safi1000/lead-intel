@@ -5,23 +5,25 @@
 /*
  * Design system — "Signal Intelligence".
  * Display: Space Grotesk · Data/mono: JetBrains Mono · Body: Inter.
- * Brand: electric cobalt + mint-cyan "live" signal. Confidence palette is
- * semantic and untouched. All brand usage is via CSS vars so white-label
- * theming [P3] can override at runtime (§I-5) and dark mode is a token swap.
+ * Brand: bright-teal accent (#66FCF1) + deep-teal secondary (#45A29E) on a
+ * near-black canvas (#0B0C10). Dark is the default brand; light is an inverse.
+ * Confidence palette is semantic and untouched. All brand usage is via CSS vars
+ * so white-label theming [P3] can override at runtime (§I-5).
  */
 :root {
-  /* Brand & neutrals */
-  --color-primary: #1466ff;
-  --color-primary-hover: #0b4fd9;
-  --color-signal: #00c2a8; /* mint-cyan — live/real-time */
-  --color-signal-glow: rgba(0, 229, 199, 0.55);
-  --color-bg: #f6f8fc;
+  /* Brand & neutrals — light mode (teal-forward, secondary accent leads) */
+  --color-primary: #45a29e;
+  --color-primary-hover: #3b8b88;
+  --color-primary-fg: #ffffff; /* text on primary buttons */
+  --color-signal: #66fcf1; /* cyan highlight / live */
+  --color-signal-glow: rgba(102, 252, 241, 0.45);
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f5fb;
-  --color-border: #e3e9f2;
-  --color-text: #0a1124;
-  --color-text-secondary: #47536b;
-  --color-text-muted: #8a97ad;
+  --color-surface-2: #f1f5f9;
+  --color-border: #dbe4ec;
+  --color-text: #0b0c10;
+  --color-text-secondary: #1f2833;
+  --color-text-muted: rgba(31, 40, 51, 0.62);
 
   /* Confidence system (semantic — do not theme) */
   --c-verified: #16a34a;
@@ -42,7 +44,7 @@
   --score-warm: #f59e0b;
   --score-cold: #64748b;
 
-  --color-admin: #1466ff;
+  --color-admin: #45a29e;
 
   /* Fonts */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -54,18 +56,26 @@
 }
 
 .dark {
-  --color-bg: #060912;
-  --color-surface: #0d1426;
-  --color-surface-2: #111a30;
-  --color-border: #1d2942;
-  --color-text: #eef3fb;
-  --color-text-secondary: #aebbd2;
-  --color-text-muted: #5d6c87;
+  /* Dark mode = default brand: near-black canvas, bright-teal accent */
+  --color-primary: #66fcf1;
+  --color-primary-hover: #7ffdf5;
+  --color-primary-fg: #0b0c10; /* dark text on the bright-teal button */
+  --color-signal: #66fcf1;
+  --color-signal-glow: rgba(102, 252, 241, 0.55);
+  --color-admin: #66fcf1;
+  --color-bg: #0b0c10;
+  --color-surface: #1f2833;
+  --color-surface-2: #26313d; /* elevated: slightly lighter than surface */
+  --color-border: rgba(197, 198, 199, 0.14); /* low-opacity neutral */
+  --color-text: #ffffff;
+  --color-text-secondary: #c5c6c7;
+  --color-text-muted: rgba(197, 198, 199, 0.7);
 }
 
 @theme inline {
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
+  --color-primary-fg: var(--color-primary-fg);
   --color-signal: var(--color-signal);
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
@@ -187,16 +197,16 @@
 /* ---- Backgrounds: atmospheric depth ---- */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(20, 102, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 102, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(102, 252, 241, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 252, 241, 0.05) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 .mesh-bg {
   background:
-    radial-gradient(at 12% 18%, rgba(20, 102, 255, 0.28) 0, transparent 45%),
-    radial-gradient(at 88% 12%, rgba(0, 229, 199, 0.22) 0, transparent 42%),
-    radial-gradient(at 75% 88%, rgba(99, 102, 241, 0.20) 0, transparent 45%),
-    #060912;
+    radial-gradient(at 12% 18%, rgba(102, 252, 241, 0.24) 0, transparent 45%),
+    radial-gradient(at 88% 12%, rgba(69, 162, 158, 0.24) 0, transparent 42%),
+    radial-gradient(at 75% 88%, rgba(102, 252, 241, 0.14) 0, transparent 45%),
+    #0b0c10;
 }
 .noise::before {
   content: '';

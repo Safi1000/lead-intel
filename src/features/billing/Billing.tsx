@@ -108,7 +108,7 @@ function PlanCard({
     <div
       className={cn(
         'flex flex-col rounded-[12px] border p-5',
-        current ? 'border-[var(--color-primary)] bg-blue-50/40 ring-1 ring-[var(--color-primary)]' : 'border-[var(--color-border)]',
+        current ? 'border-[var(--color-primary)] bg-[var(--color-signal)]/10 ring-1 ring-[var(--color-primary)]' : 'border-[var(--color-border)]',
       )}
     >
       <div className="flex items-center justify-between">
@@ -242,7 +242,7 @@ function BuyCreditsModal({
               onClick={() => setAmount(pack)}
               className={cn(
                 'rounded-[12px] border p-4 text-center transition-colors',
-                amount === pack ? 'border-[var(--color-primary)] bg-blue-500/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
+                amount === pack ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-border)]',
               )}
             >
               <p className="text-[18px] font-bold tabular-nums text-[var(--color-text)]">{formatNumber(pack)}</p>

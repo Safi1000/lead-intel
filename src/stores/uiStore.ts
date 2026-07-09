@@ -18,7 +18,7 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed: false,
       collapsedSections: [],
       compactTables: false,
-      theme: 'light',
+      theme: 'dark',
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleSection: (section) =>
         set((s) => ({
@@ -34,6 +34,11 @@ export const useUIStore = create<UIState>()(
           return { theme }
         }),
     }),
-    { name: 'leadintel-ui' },
+    {
+      name: 'leadintel-ui',
+      version: 1,
+      // Rebrand: dark is the default brand now. Flip anyone still carrying the old light default once.
+      migrate: (persisted): UIState => ({ ...(persisted as UIState), theme: 'dark' }),
+    },
   ),
 )

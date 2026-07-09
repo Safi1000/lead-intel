@@ -86,7 +86,7 @@ export function TemplatesPage() {
                     key={c.id}
                     className={cn(
                       'rounded-full px-2 py-0.5 font-mono text-[11px]',
-                      c.required ? 'bg-blue-500/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]',
+                      c.required ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)]',
                     )}
                     title={c.required ? 'Required' : 'Optional'}
                   >

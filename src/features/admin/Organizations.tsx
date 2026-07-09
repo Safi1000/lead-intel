@@ -55,7 +55,7 @@ export function OrganizationsPage() {
           {orgs.map((o) => (
             <Card key={o.id} className="flex flex-col p-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-blue-500/10 text-[var(--color-primary)]"><Building2 className="h-5 w-5" /></span>
+                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"><Building2 className="h-5 w-5" /></span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-[15px] font-semibold">{o.name}</h3>
                   <p className="text-[12px] text-[var(--color-text-muted)]">{o.user_count ?? 0} user{o.user_count === 1 ? '' : 's'} · {o.manager_count ?? 0} manager{o.manager_count === 1 ? '' : 's'}</p>
