@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Check, Search } from 'lucide-react'
-import { locationsApi, sourcingApi, verticalsApi } from '../../api/endpoints'
+import { sourcingApi, verticalsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Select, Checkbox } from '../../components/ui/controls'
@@ -14,7 +14,6 @@ import { cn } from '../../lib/utils'
 export function SourcingConfig() {
   const qc = useQueryClient()
   const { data: verticals } = useQuery({ queryKey: ['verticals'], queryFn: () => verticalsApi.list() })
-  const { data: locations } = useQuery({ queryKey: ['sourcing-locations'], queryFn: () => locationsApi.list() })
   const { data: profile, isLoading } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
 
   const [verticalKey, setVerticalKey] = useState('')
@@ -23,28 +22,57 @@ export function SourcingConfig() {
   const [fetchEmail, setFetchEmail] = useState(true)
   const [fetchHours, setFetchHours] = useState(true)
   const [dailyLimit, setDailyLimit] = useState('')
-  const [active, setActive] = useState(true)
   const [search, setSearch] = useState('')
+
+  // Worldwide city list (~148k), lazy-loaded so it doesn't bloat the initial bundle.
+  const citiesRef = useRef<{ list: { name: string; countryCode: string }[]; countries: Map<string, string> } | null>(null)
+  const [citiesReady, setCitiesReady] = useState(false)
+  useEffect(() => {
+    let alive = true
+    import('country-state-city').then(({ City, Country }) => {
+      if (!alive) return
+      citiesRef.current = { list: City.getAllCities(), countries: new Map(Country.getAllCountries().map((c) => [c.isoCode, c.name])) }
+      setCitiesReady(true)
+    })
+    return () => { alive = false }
+  }, [])
 
   useEffect(() => {
     if (profile) {
       setVerticalKey(profile.vertical_key ?? '')
       setMetros(profile.metros ?? [])
       setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
-      setDailyLimit(profile.daily_limit ? String(profile.daily_limit) : ''); setActive(profile.active)
+      setDailyLimit(profile.daily_limit ? String(profile.daily_limit) : '')
     }
   }, [profile])
 
   const save = useMutation({
-    mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: Number(dailyLimit) || 1000, active }),
+    mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: Number(dailyLimit) || 1000, active: true }),
     onSuccess: () => { toast.success('Sourcing profile saved'); qc.invalidateQueries({ queryKey: ['sourcing-profile'] }) },
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    return (locations ?? []).filter((l) => !q || l.location.toLowerCase().includes(q)).slice(0, 200)
-  }, [locations, search])
+    const data = citiesRef.current
+    const q = search.trim().toLowerCase()
+    if (!data || q.length < 2) return []
+    const seen = new Set<string>()
+    const prefix: string[] = []
+    const sub: string[] = []
+    for (const c of data.list) {
+      const idx = c.name.toLowerCase().indexOf(q)
+      if (idx === -1) continue
+      const label = `${c.name}, ${data.countries.get(c.countryCode) ?? c.countryCode}`
+      if (seen.has(label)) continue
+      seen.add(label)
+      ;(idx === 0 ? prefix : sub).push(label)
+      if (prefix.length + sub.length >= 400) break // scan cap
+    }
+    // Prefix (name starts with query) first, shortest first so "Paris, France" beats "Paris-Plage".
+    prefix.sort((a, b) => a.length - b.length)
+    return [...prefix, ...sub].slice(0, 100)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, citiesReady])
   const toggleMetro = (loc: string) => setMetros((m) => (m.includes(loc) ? m.filter((x) => x !== loc) : [...m, loc]))
 
   if (isLoading) return <LoadingState />
@@ -75,9 +103,9 @@ export function SourcingConfig() {
           <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">Website + reviews are always fetched (they drive the score). Turning the others off lowers your cost per lead.</p>
         </div>
 
-        <div className="grid max-w-sm grid-cols-2 gap-3">
-          <div><Label>Daily lead limit</Label><Input type="number" min={1} placeholder="e.g. 1000" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} /></div>
-          <label htmlFor="f-active" className="flex cursor-pointer items-center gap-2 pb-2 text-sm"><Checkbox id="f-active" checked={active} onCheckedChange={setActive} aria-label="Sourcing active" /> Sourcing active</label>
+        <div className="max-w-[200px]">
+          <Label>Daily lead limit</Label>
+          <Input type="number" min={1} placeholder="e.g. 1000" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} />
         </div>
       </Card>
 
@@ -97,11 +125,15 @@ export function SourcingConfig() {
           </div>
         )}
         <div className="max-h-64 overflow-y-auto rounded-[10px] border border-[var(--color-border)]">
-          {filtered.map((l) => {
-            const sel = metros.includes(l.location)
+          {search.trim().length < 2 ? (
+            <p className="px-3 py-6 text-center text-[13px] text-[var(--color-text-muted)]">{citiesReady ? 'Type at least 2 letters to search cities worldwide.' : 'Loading world cities…'}</p>
+          ) : filtered.length === 0 ? (
+            <p className="px-3 py-6 text-center text-[13px] text-[var(--color-text-muted)]">No cities match “{search}”.</p>
+          ) : filtered.map((loc) => {
+            const sel = metros.includes(loc)
             return (
-              <button key={l.location} onClick={() => toggleMetro(l.location)} className={cn('flex w-full items-center justify-between border-b border-[var(--color-border)] px-3 py-2 text-left text-[13px] last:border-0 hover:bg-[var(--color-surface-2)]', sel && 'bg-[var(--color-primary)]/5')}>
-                <span>{l.location}</span>
+              <button key={loc} onClick={() => toggleMetro(loc)} className={cn('flex w-full items-center justify-between border-b border-[var(--color-border)] px-3 py-2 text-left text-[13px] last:border-0 hover:bg-[var(--color-surface-2)]', sel && 'bg-[var(--color-primary)]/5')}>
+                <span>{loc}</span>
                 {sel && <Check className="h-4 w-4 text-[var(--color-primary)]" />}
               </button>
             )
