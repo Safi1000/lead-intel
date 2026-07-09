@@ -139,6 +139,7 @@ const OUTPUT_SCHEMA = {
     properties: {
       is_correct_niche: {
         type: 'boolean',
+        // Niche-injected per call by outputSchema(); this default is the med-spa wording.
         description: 'True only for med spas, medical spas, aesthetic/botox/skin clinics. False for everything else.',
       },
       website_status: {
@@ -181,7 +182,34 @@ const OUTPUT_SCHEMA = {
   },
 }
 
-function buildUserPrompt(place: PlaceForScoring, qualityThreshold: number): string {
+// The Structured-Outputs schema is the highest-salience niche signal the model sees (it's bound to
+// the field it must emit). Left med-spa-hardcoded, gpt-4o-mini marks genuine non-med-spa businesses
+// (e.g. real dentists with good sites) is_correct_niche=false — a false-negative that would drop
+// weak-site leads for any new niche. Inject the tenant's niche into the description so it matches the
+// system-prompt override. Med spa / no niche → the EXACT original wording (byte-for-byte unchanged).
+function outputSchema(niche?: { label: string; prompt: string | null }) {
+  if (!niche || niche.label === 'Med Spa') return OUTPUT_SCHEMA
+  return {
+    ...OUTPUT_SCHEMA,
+    schema: {
+      ...OUTPUT_SCHEMA.schema,
+      properties: {
+        ...OUTPUT_SCHEMA.schema.properties,
+        is_correct_niche: {
+          type: 'boolean',
+          description: `True only if the business genuinely is a ${niche.label} (per the niche defined in the system prompt). False for any other business type. NEVER false merely because the website is missing or the data is thin.`,
+        },
+      },
+    },
+  }
+}
+
+function buildUserPrompt(place: PlaceForScoring, qualityThreshold: number, niche?: { label: string; prompt: string | null }): string {
+  // Niche-aware wording for rule 1; med spa keeps its exact original phrasing.
+  const nicheIsOther = !!niche && niche.label !== 'Med Spa'
+  const rule1Niche = nicheIsOther
+    ? `true only if the business genuinely is a ${niche.label}, false for other business types`
+    : 'true for med spas / aesthetic / botox / skin clinics, false for other business types'
   const reviewCount = place.reviews.length
   const reviewText = place.reviews.map((r) => `[${r.rating}★] ${r.text}`).join('\n')
   const totalChars = reviewText.length
@@ -229,7 +257,7 @@ ${websiteSection}
 ${reviewSection}
 
 SCORING RULES — follow exactly:
-1. is_correct_niche: judge ONLY the business type (name, Google business type, reviews): true for med spas / aesthetic / botox / skin clinics, false for other business types. NEVER false because the website is missing ('none' is a sellable first-website lead) or because data is thin.
+1. is_correct_niche: judge ONLY the business type (name, Google business type, reviews): ${rule1Niche}. NEVER false because the website is missing ('none' is a sellable first-website lead) or because data is thin.
 2. website_status: use the technical signals above. 'weak' = has a CORROBORATED problem (mobile/slow/dated). 'good' = modern + has booking. 'none' = no website. 'unknown' = could not fetch. Missing-booking alone is NOT enough to call 'weak' — the scanner misses JS booking widgets. Do not penalize quality_score for 'unknown'/unreachable.
 3. status_reason: ONE short factual line explaining the website_status you chose — required for EVERY status (good/weak/unknown/none), per the STATUS REASON rules.
 4. site_issue_note: our main sales hook — ONE sentence naming the corroborated problem AND its business consequence, if website_status is 'weak'. Otherwise "N/A".
@@ -239,18 +267,54 @@ SCORING RULES — follow exactly:
 8. personalization_notes: 1-2 hooks, real data only, no fabrication.`
 }
 
+// The three lines of SYSTEM_PROMPT that hard-code the med-spa niche. For any other vertical these
+// actively CONTRADICT the niche override — e.g. the NOT-our-niche line literally lists "dental
+// offices", and the Google-type line says `dentist` supports is_correct_niche=FALSE. gpt-4o-mini
+// (and even the escalation model) obey these in-body exclusions over a prepended override, so a real
+// dentist scores is_correct_niche=false and its weak-site lead is silently dropped. We swap these
+// three lines per niche; everything else (the whole quality/scoring rubric) is niche-agnostic.
+const MEDSPA_NICHE_LINE = 'NICHE: Medical spas, aesthetic clinics, botox clinics, skin clinics in the United States and Canada.'
+const MEDSPA_NOTNICHE_LINE = 'NOT our niche: gyms, yoga studios, dental offices, hair salons, nail salons, regular dermatologists, plastic surgeons (they typically have great websites already), chiropractors, tanning salons, massage parlours, spas without an aesthetic/medical focus.'
+const MEDSPA_TYPE_LINE = 'types like medical_spa / skin_care_clinic / aesthetics strongly support true; hair_salon / dentist / gym strongly support false. Ambiguous types (spa, beauty_salon, doctor) — judge from the name, reviews and website instead.'
+
+// Per-niche replacements for those three lines. Add an entry when a vertical is calibrated; unknown
+// verticals fall back to generic label-based text.
+const NICHE_TUNING: Record<string, { nicheLine: string; notNicheLine: string; typeLine: string }> = {
+  'Dental Clinic': {
+    nicheLine: 'NICHE: Dental practices — general, cosmetic, family, pediatric, and orthodontic dental offices — in the United States and Canada.',
+    notNicheLine: 'NOT our niche: any business that is not a dental/orthodontic practice — e.g. med spas, gyms, hair/nail salons, pharmacies, veterinary clinics, chiropractors, physical therapists. A dental or orthodontic practice IS our niche.',
+    typeLine: 'types like dentist / dental_clinic strongly support true; med_spa / hair_salon / nail_salon / gym / pharmacy / veterinary_care strongly support false. Ambiguous types (doctor, medical_clinic) — judge from the name, reviews and website instead.',
+  },
+}
+function nicheTuning(label: string): { nicheLine: string; notNicheLine: string; typeLine: string } {
+  return NICHE_TUNING[label] ?? {
+    nicheLine: `NICHE: ${label} businesses in the United States and Canada.`,
+    notNicheLine: `NOT our niche: any business that is not a ${label}. Judge is_correct_niche purely on whether the business genuinely is a ${label}.`,
+    typeLine: `the Google business type that matches a ${label} strongly supports true; clearly unrelated business types strongly support false. Ambiguous types — judge from the name, reviews and website instead.`,
+  }
+}
+
+// Build the system prompt for a niche. Med spa / no niche → the exact original SYSTEM_PROMPT
+// (byte-for-byte unchanged). Any other niche → the three med-spa lines swapped for the niche's, plus
+// a short override preamble that re-points the (still med-spa-worded) worked examples.
+function systemPrompt(niche?: { label: string; prompt: string | null }): string {
+  if (!niche || niche.label === 'Med Spa') return SYSTEM_PROMPT
+  const t = nicheTuning(niche.label)
+  const body = SYSTEM_PROMPT
+    .replace(MEDSPA_NICHE_LINE, t.nicheLine)
+    .replace(MEDSPA_NOTNICHE_LINE, t.notNicheLine)
+    .replace(MEDSPA_TYPE_LINE, t.typeLine)
+  const preamble = `NICHE OVERRIDE — READ FIRST: You are qualifying leads for "${niche.label}" businesses, NOT med spas. ${niche.prompt ?? ''} Apply the SAME website-quality and lead-scoring logic to "${niche.label}" businesses. is_correct_niche = true means the business genuinely IS a ${niche.label}; any other business type is the wrong niche. The worked examples below use med-spa businesses only to illustrate the SCORING pattern — the niche is "${niche.label}".`
+  return `${preamble}\n\n${body}`
+}
+
 async function callScoringModel(
   useModel: string,
   userPrompt: string,
   apiKey: string,
   niche?: { label: string; prompt: string | null },
 ): Promise<{ score: AiScore; data: unknown }> {
-  // Niche-agnostic rubric: for any vertical other than the default med spa, prepend an override that
-  // re-points "correct niche" + the running examples to the tenant's niche, keeping the same
-  // website-quality/lead-scoring logic. No niche (or med spa) → the exact original prompt.
-  const systemContent = niche && niche.label !== 'Med Spa'
-    ? `NICHE OVERRIDE — READ FIRST: You are qualifying leads for "${niche.label}" businesses, NOT med spas. ${niche.prompt ?? ''} Everywhere the rules below reference "med spa / aesthetic clinic", apply the SAME website-quality and lead-scoring logic to "${niche.label}" businesses instead. is_correct_niche = true means the business genuinely IS a ${niche.label}; any other business type is the wrong niche. The worked examples below illustrate the SCORING pattern, not the niche.\n\n${SYSTEM_PROMPT}`
-    : SYSTEM_PROMPT
+  const systemContent = systemPrompt(niche)
   const res = await fetch(`${OPENAI_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -260,7 +324,7 @@ async function callScoringModel(
         { role: 'system', content: systemContent },
         { role: 'user', content: userPrompt },
       ],
-      response_format: { type: 'json_schema', json_schema: OUTPUT_SCHEMA },
+      response_format: { type: 'json_schema', json_schema: outputSchema(niche) },
       max_tokens: 600,
       temperature: 0.2,
     }),
@@ -278,7 +342,7 @@ export async function scorePlace(
   apiKey: string,
   niche?: { label: string; prompt: string | null },
 ): Promise<{ score: AiScore; raw: unknown }> {
-  const userPrompt = buildUserPrompt(place, qualityThreshold)
+  const userPrompt = buildUserPrompt(place, qualityThreshold, niche)
 
   let { score, data } = await callScoringModel(model, userPrompt, apiKey, niche)
 
