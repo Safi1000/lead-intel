@@ -6,7 +6,6 @@ import { cadencesApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { LEAD_STAGES } from '../../api/types'
 import type { Cadence, CadenceAction, CadenceStep } from '../../api/types'
 
@@ -32,7 +31,6 @@ export function CadencesPage() {
 
   return (
     <div className="reveal max-w-3xl space-y-5">
-      <PageHeader title="Sequences" subtitle="Timed, multi-step follow-up cadences. Enroll a lead and each step fires on schedule." />
       {editing ? (
         <CadenceEditor cadence={editing} onClose={() => { setEditing(null); qc.invalidateQueries({ queryKey: ['cadences'] }) }} />
       ) : (

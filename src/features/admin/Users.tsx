@@ -11,7 +11,6 @@ import { Button, Card, Input, Label, Textarea } from '../../components/ui/primit
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import { DropdownMenu, DropdownTrigger, DropdownContent, DropdownItem } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
 import type { ManagedUser, PermissionOverrides, Role } from '../../api/types'
 
@@ -96,11 +95,9 @@ export function UsersPage() {
 
   return (
     <div className="reveal">
-      <PageHeader
-        title="Users"
-        subtitle="Create and manage the users in this organization."
-        actions={<Button onClick={() => { setEditing(null); setFormOpen(true) }}><UserPlus className="h-4 w-4" /> Add user</Button>}
-      />
+      <div className="mb-4 flex justify-end">
+        <Button onClick={() => { setEditing(null); setFormOpen(true) }}><UserPlus className="h-4 w-4" /> Add user</Button>
+      </div>
 
       <Card>
         {usersQ.isLoading ? (

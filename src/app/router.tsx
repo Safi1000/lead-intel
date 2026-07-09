@@ -69,6 +69,9 @@ const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
 const PerformanceHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PerformanceHub })))
+const ActivityHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.ActivityHub })))
+const PlaybookHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PlaybookHub })))
+const PeopleHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PeopleHub })))
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const PipelinePage = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.PipelinePage })))
@@ -148,10 +151,37 @@ export const router = createBrowserRouter([
                   {
                     element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [
-                      { path: 'activity', element: L(<ActivityPage />) },
                       { path: 'console', element: L(<ConsolePage />) },
-                      { path: 'audit-log', element: L(<AuditLogPage />) },
-                      { path: 'cadences', element: L(<CadencesPage />) },
+                      // Activity hub — live feed + audit log
+                      {
+                        path: 'activity',
+                        element: L(<ActivityHub />),
+                        children: [
+                          { index: true, element: L(<ActivityPage />) },
+                          { path: 'audit', element: L(<AuditLogPage />) },
+                        ],
+                      },
+                    ],
+                  },
+                  // Playbook hub — Scripts (all) · Sequences (overseers)
+                  {
+                    path: 'playbook',
+                    element: L(<PlaybookHub />),
+                    children: [
+                      { index: true, element: L(<ScriptsPage />) },
+                      {
+                        element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                        children: [{ path: 'sequences', element: L(<CadencesPage />) }],
+                      },
+                    ],
+                  },
+                  // People hub — Users (managers) · Teams (owner)
+                  {
+                    path: 'people',
+                    element: L(<PeopleHub />),
+                    children: [
+                      { element: <RequirePermission resource="users" action="manage" />, children: [{ index: true, element: L(<UsersPage />) }] },
+                      { element: <RequireRole roles={['superadmin', 'owner']} />, children: [{ path: 'teams', element: L(<TeamsPage />) }] },
                     ],
                   },
                   // Performance hub — Team funnel (overseers) · Progress · Targets (overseers)
@@ -169,8 +199,12 @@ export const router = createBrowserRouter([
                   },
                   { path: 'deals', element: L(<DealsPage />) },
                   { path: 'search', element: L(<SearchPage />) },
-                  { path: 'scripts', element: L(<ScriptsPage />) },
-                  // Legacy paths → Performance hub / Settings
+                  // Legacy paths → hubs
+                  { path: 'scripts', element: <Navigate to="/playbook" replace /> },
+                  { path: 'cadences', element: <Navigate to="/playbook/sequences" replace /> },
+                  { path: 'audit-log', element: <Navigate to="/activity/audit" replace /> },
+                  { path: 'users', element: <Navigate to="/people" replace /> },
+                  { path: 'teams', element: <Navigate to="/people/teams" replace /> },
                   { path: 'progress', element: <Navigate to="/performance/progress" replace /> },
                   { path: 'targets', element: <Navigate to="/performance/targets" replace /> },
                   { path: 'holidays', element: <Navigate to="/settings/holidays" replace /> },
@@ -186,15 +220,10 @@ export const router = createBrowserRouter([
                     children: [{ path: 'upload', element: L(<UploadPage />) }],
                   },
                   {
-                    element: <RequirePermission resource="users" action="manage" />,
-                    children: [{ path: 'users', element: L(<UsersPage />) }],
-                  },
-                  {
                     // §2 matrix: scrape/global pool + "see all managers/teams" = Owner only.
                     element: <RequireRole roles={['superadmin', 'owner']} />,
                     children: [
                       { path: 'cockpit', element: L(<CockpitPage />) },
-                      { path: 'teams', element: L(<TeamsPage />) },
                       { path: 'pipeline', element: L(<PipelinePage />) },
                       { path: 'discovery', element: L(<DiscoveryPage />) },
                       { path: 'credits', element: L(<CreditsPage />) },

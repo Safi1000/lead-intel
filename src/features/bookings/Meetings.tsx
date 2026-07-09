@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, RefreshCw, ExternalLink, StickyNote, Building2, Clock } from 'lucide-react'
+import { CalendarClock, CalendarPlus, RefreshCw, ExternalLink, StickyNote, Building2, Clock } from 'lucide-react'
 import { useAuth, useBookingsSync } from '../../hooks'
+import { useCan } from '../../components/rbac/Can'
 import { normalizeError } from '../../api/client'
 import { bookingsApi } from '../../api/bookings'
 import { Button, Card } from '../../components/ui/primitives'
@@ -171,6 +172,7 @@ export function MeetingsPage() {
   // A manager / super admin oversees: they pick which AE's meetings to view.
   const isCloser = role === 'closer'
   const isOverseer = role === 'manager' || role === 'superadmin' || role === 'admin'
+  const canBook = useCan('create', 'bookings')
 
   const { data: aeConfigs } = useQuery({
     queryKey: ['bookings', 'ae-configs'],
@@ -219,9 +221,16 @@ export function MeetingsPage() {
           </span>
         }
         actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()} loading={isFetching}>
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()} loading={isFetching}>
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
+            {canBook && (
+              <Link to="/bookings/new">
+                <Button size="sm"><CalendarPlus className="h-4 w-4" /> Book a meeting</Button>
+              </Link>
+            )}
+          </div>
         }
       />
 

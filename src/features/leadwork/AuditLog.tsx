@@ -4,7 +4,6 @@ import { FileClock } from 'lucide-react'
 import { auditApi, usersApi, type AuditRow } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 
 const ACTION_LABEL: Record<string, string> = { disposition: 'Disposition', deal: 'Deal', reassign: 'Reassign' }
 
@@ -27,7 +26,6 @@ export function AuditLogPage() {
 
   return (
     <div className="reveal max-w-3xl">
-      <PageHeader title="Audit log" subtitle="Immutable record of dispositions, deals and reassignments." />
       {rows.length === 0 ? (
         <EmptyState icon={FileClock} title="No activity yet" message="Actions appear here as your team works leads." />
       ) : (

@@ -30,11 +30,9 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Leads', to: '/leads', icon: 'Users', section: 'Work', orgContext: true },
   { label: 'Due Today', to: '/today', icon: 'CalendarClock', section: 'Work', roles: WORKERS_NAV, orgContext: true },
   { label: 'Meetings', to: '/bookings', icon: 'CalendarCheck', section: 'Work', flag: 'bookings', perm: { resource: 'bookings', action: 'view' }, orgContext: true },
-  { label: 'Book a meeting', to: '/bookings/new', icon: 'CalendarPlus', section: 'Work', flag: 'bookings', perm: { resource: 'bookings', action: 'create' }, orgContext: true },
   // Sales
   { label: 'Performance', to: '/performance', icon: 'BarChart3', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'setter', 'owner'], orgContext: true },
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
-  { label: 'Teams', to: '/teams', icon: 'Users2', section: 'Sales', roles: OWNER, orgContext: true },
   // Sourcing
   { label: 'Pipeline', to: '/pipeline', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
   { label: 'Sourcing profile', to: '/sourcing', icon: 'Target', section: 'Sourcing', roles: OWNER, orgContext: true },
@@ -43,12 +41,10 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Templates', to: '/templates', icon: 'FileSpreadsheet', section: 'Sourcing', perm: { resource: 'templates', action: 'view' }, orgContext: true },
   { label: 'Upload', to: '/upload', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true },
   // Operations
+  { label: 'Playbook', to: '/playbook', icon: 'FileText', section: 'Operations', roles: WORKERS_NAV, orgContext: true },
   { label: 'Activity', to: '/activity', icon: 'Activity', section: 'Operations', roles: OVERSEERS, orgContext: true },
-  { label: 'Audit Log', to: '/audit-log', icon: 'FileClock', section: 'Operations', roles: OVERSEERS, orgContext: true },
-  { label: 'Scripts', to: '/scripts', icon: 'FileText', section: 'Operations', roles: WORKERS_NAV, orgContext: true },
-  { label: 'Sequences', to: '/cadences', icon: 'GitBranch', section: 'Operations', roles: OVERSEERS, orgContext: true },
   // Admin
-  { label: 'Users', to: '/users', icon: 'UserCog', section: 'Admin', perm: { resource: 'users', action: 'manage' }, orgContext: true },
+  { label: 'People', to: '/people', icon: 'UserCog', section: 'Admin', perm: { resource: 'users', action: 'manage' }, orgContext: true },
   { label: 'Organizations', to: '/organizations', icon: 'Building2', section: 'Admin', roles: ['superadmin', 'admin'] },
   { label: 'Provider', to: '/provider', icon: 'Globe', section: 'Admin', roles: ['superadmin'] },
   // Client portal (external — clients see only this)

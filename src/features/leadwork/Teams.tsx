@@ -7,7 +7,6 @@ import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import type { Team } from '../../api/types'
 
 export function TeamsPage() {
@@ -38,7 +37,6 @@ export function TeamsPage() {
 
   return (
     <div className="reveal max-w-4xl space-y-5">
-      <PageHeader title="Teams" subtitle="Organise reps into teams. Managers see their teams' leads; assignment and targets cascade down." />
 
       <Card className="p-5">
         <Label htmlFor="team-name">New team</Label>

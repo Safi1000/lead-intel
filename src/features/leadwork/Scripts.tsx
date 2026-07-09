@@ -8,7 +8,6 @@ import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 import type { Script } from '../../api/types'
 
 const BLANK = { kind: 'call' as 'call' | 'email', name: '', body: '' }
@@ -37,8 +36,7 @@ export function ScriptsPage() {
 
   return (
     <div className="reveal max-w-3xl space-y-5">
-      <PageHeader title="Scripts & templates" subtitle="Call scripts and email templates the floor can reference." />
-      {canEdit && !editing && <Button onClick={() => setEditing({ ...BLANK })}><Plus className="h-4 w-4" /> New template</Button>}
+      {canEdit && !editing && <div className="flex justify-end"><Button onClick={() => setEditing({ ...BLANK })}><Plus className="h-4 w-4" /> New template</Button></div>}
 
       {editing && (
         <Card className="space-y-3 p-5">

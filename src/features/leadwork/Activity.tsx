@@ -6,7 +6,6 @@ import { activityFeedApi, usersApi, type ActivityFeedItem } from '../../api/endp
 import { Card } from '../../components/ui/primitives'
 import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
-import { PageHeader } from '../shared/bits'
 
 type Period = '1d' | '1w' | '1m'
 const PERIODS: Array<{ key: Period; label: string; days: number }> = [
@@ -119,11 +118,6 @@ export function ActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Activity"
-        subtitle="Everything your setters and closers did — status changes, calls, notes, verdicts."
-      />
-
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex overflow-hidden rounded-[10px] border border-[var(--color-border)]">

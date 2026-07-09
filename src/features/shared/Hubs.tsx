@@ -5,6 +5,8 @@ import { PageHeader } from './bits'
 import type { Role } from '../../api/types'
 
 const OVERSEERS: Role[] = ['superadmin', 'manager', 'owner']
+const OWNER: Role[] = ['superadmin', 'owner']
+const USER_MGRS: Role[] = ['superadmin', 'admin', 'manager', 'owner']
 
 export interface HubTab { to: string; label: string; roles?: Role[]; end?: boolean }
 
@@ -37,6 +39,48 @@ export function HubLayout({ title, subtitle, tabs }: { title: string; subtitle?:
       )}
       <Outlet />
     </div>
+  )
+}
+
+/** Activity hub: live team feed + the immutable audit log. */
+export function ActivityHub() {
+  return (
+    <HubLayout
+      title="Activity"
+      subtitle="What the floor did — live feed and the audit trail."
+      tabs={[
+        { to: '/activity', label: 'Activity', end: true },
+        { to: '/activity/audit', label: 'Audit log' },
+      ]}
+    />
+  )
+}
+
+/** Playbook hub: call/email scripts (everyone) + follow-up sequences (overseers). */
+export function PlaybookHub() {
+  return (
+    <HubLayout
+      title="Playbook"
+      subtitle="Call scripts, email templates and follow-up sequences."
+      tabs={[
+        { to: '/playbook', label: 'Scripts', end: true },
+        { to: '/playbook/sequences', label: 'Sequences', roles: OVERSEERS },
+      ]}
+    />
+  )
+}
+
+/** People hub: org users + teams. */
+export function PeopleHub() {
+  return (
+    <HubLayout
+      title="People"
+      subtitle="Manage the users and teams in this organization."
+      tabs={[
+        { to: '/people', label: 'Users', end: true, roles: USER_MGRS },
+        { to: '/people/teams', label: 'Teams', roles: OWNER },
+      ]}
+    />
   )
 }
 
