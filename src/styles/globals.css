@@ -11,19 +11,32 @@
  * so white-label theming [P3] can override at runtime (§I-5).
  */
 :root {
-  /* Brand & neutrals — light mode (teal-forward, secondary accent leads) */
-  --color-primary: #45a29e;
-  --color-primary-hover: #3b8b88;
+  /* ======================================================================
+   *  BRAND PALETTE — the ONLY five colours you ever change.
+   *  Every token below (light AND dark) is derived from these via color-mix().
+   *  Change these five and the whole product recolours.
+   * ====================================================================== */
+  --brand-bg:       #0B0C10; /* 1 · primary background (deepest canvas)  */
+  --brand-surface:  #1F2833; /* 2 · secondary surface (panels & cards)   */
+  --brand-neutral:  #C5C6C7; /* 3 · neutral text                         */
+  --brand-accent:   #66FCF1; /* 4 · primary accent                       */
+  --brand-accent-2: #45A29E; /* 5 · secondary accent                     */
+  /* ==================================================================== */
+
+  /* Light theme — derived: accents carry through, surfaces resolve light,
+     text uses the deep brand-bg colour. */
+  --color-primary: var(--brand-accent-2);
+  --color-primary-hover: color-mix(in oklab, var(--brand-accent-2), black 10%);
   --color-primary-fg: #ffffff; /* text on primary buttons */
-  --color-signal: #66fcf1; /* cyan highlight / live */
-  --color-signal-glow: rgba(102, 252, 241, 0.45);
-  --color-bg: #f8fafc;
+  --color-signal: var(--brand-accent);
+  --color-signal-glow: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+  --color-bg: color-mix(in oklab, var(--brand-neutral) 9%, white);
   --color-surface: #ffffff;
-  --color-surface-2: #f1f5f9;
-  --color-border: #dbe4ec;
-  --color-text: #0b0c10;
-  --color-text-secondary: #1f2833;
-  --color-text-muted: rgba(31, 40, 51, 0.62);
+  --color-surface-2: color-mix(in oklab, var(--brand-neutral) 15%, white);
+  --color-border: color-mix(in oklab, var(--brand-surface) 15%, white);
+  --color-text: var(--brand-bg);
+  --color-text-secondary: var(--brand-surface);
+  --color-text-muted: color-mix(in oklab, var(--brand-surface) 55%, white);
 
   /* Confidence system (semantic — do not theme) */
   --c-verified: #16a34a;
@@ -44,7 +57,7 @@
   --score-warm: #f59e0b;
   --score-cold: #64748b;
 
-  --color-admin: #45a29e;
+  --color-admin: var(--brand-accent-2);
 
   /* Fonts */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -56,20 +69,20 @@
 }
 
 .dark {
-  /* Dark mode = default brand: near-black canvas, bright-teal accent */
-  --color-primary: #66fcf1;
-  --color-primary-hover: #7ffdf5;
-  --color-primary-fg: #0b0c10; /* dark text on the bright-teal button */
-  --color-signal: #66fcf1;
-  --color-signal-glow: rgba(102, 252, 241, 0.55);
-  --color-admin: #66fcf1;
-  --color-bg: #0b0c10;
-  --color-surface: #1f2833;
-  --color-surface-2: #26313d; /* elevated: slightly lighter than surface */
-  --color-border: rgba(197, 198, 199, 0.14); /* low-opacity neutral */
-  --color-text: #ffffff;
-  --color-text-secondary: #c5c6c7;
-  --color-text-muted: rgba(197, 198, 199, 0.7);
+  /* Dark theme = default brand — every value derived from the five brand colours. */
+  --color-primary: var(--brand-accent);
+  --color-primary-hover: color-mix(in oklab, var(--brand-accent), white 18%);
+  --color-primary-fg: var(--brand-bg); /* deep-canvas text on the bright accent */
+  --color-signal: var(--brand-accent);
+  --color-signal-glow: color-mix(in srgb, var(--brand-accent) 55%, transparent);
+  --color-admin: var(--brand-accent);
+  --color-bg: var(--brand-bg);
+  --color-surface: var(--brand-surface);
+  --color-surface-2: color-mix(in oklab, var(--brand-surface), white 8%); /* elevated */
+  --color-border: color-mix(in oklab, var(--brand-neutral) 14%, transparent);
+  --color-text: color-mix(in oklab, var(--brand-neutral), white 65%);
+  --color-text-secondary: var(--brand-neutral);
+  --color-text-muted: color-mix(in oklab, var(--brand-neutral) 70%, transparent);
 }
 
 @theme inline {
@@ -197,16 +210,16 @@
 /* ---- Backgrounds: atmospheric depth ---- */
 .grid-bg {
   background-image:
-    linear-gradient(rgba(102, 252, 241, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(102, 252, 241, 0.05) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--brand-accent) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--brand-accent) 5%, transparent) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 .mesh-bg {
   background:
-    radial-gradient(at 12% 18%, rgba(102, 252, 241, 0.24) 0, transparent 45%),
-    radial-gradient(at 88% 12%, rgba(69, 162, 158, 0.24) 0, transparent 42%),
-    radial-gradient(at 75% 88%, rgba(102, 252, 241, 0.14) 0, transparent 45%),
-    #0b0c10;
+    radial-gradient(at 12% 18%, color-mix(in srgb, var(--brand-accent) 24%, transparent) 0, transparent 45%),
+    radial-gradient(at 88% 12%, color-mix(in srgb, var(--brand-accent-2) 24%, transparent) 0, transparent 42%),
+    radial-gradient(at 75% 88%, color-mix(in srgb, var(--brand-accent) 14%, transparent) 0, transparent 45%),
+    var(--brand-bg);
 }
 .noise::before {
   content: '';
