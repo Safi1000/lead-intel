@@ -9,6 +9,8 @@ import { normalizeError } from '../../api/client'
 import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Checkbox } from '../../components/ui/controls'
+import { ConfirmDialog } from '../../components/ui/Dialog'
+import { sourcingApi } from '../../api/endpoints'
 import { PageHeader } from '../shared/bits'
 import { SourcingConfig } from './SourcingProfile'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
@@ -154,6 +156,13 @@ function RunTrigger({ orgId }: { orgId: string }) {
   const estScanned = Math.round(targetN / QUAL_RATE)
   const estCredits = targetN // 1 Lead Credit per qualified lead
 
+  // Daily lead limit (set per org). A request over it is warned + confirmed before running.
+  const { data: sourcingProfile } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
+  const dailyLimit = sourcingProfile?.daily_limit ?? 0
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const overLimit = dailyLimit > 0 && targetN > dailyLimit
+  const startRun = () => { if (overLimit) setConfirmOpen(true); else trigger.mutate() }
+
   useEffect(() => {
     if (!activeRunId || !orgId) return
     const poll = async () => {
@@ -234,7 +243,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
           </p>
         </div>
         <div className="pb-5 flex gap-2">
-          <Button onClick={() => trigger.mutate()} loading={trigger.isPending} disabled={isRunning}>
+          <Button onClick={startRun} loading={trigger.isPending} disabled={isRunning}>
             <Play className="h-4 w-4 mr-1.5" />
             {isRunning ? 'Running…' : 'Start run'}
           </Button>
@@ -304,6 +313,16 @@ function RunTrigger({ orgId }: { orgId: string }) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Over your daily lead limit"
+        message={`Your daily lead limit is ${dailyLimit.toLocaleString()}. This run asks for ${targetN.toLocaleString()}, so only ${dailyLimit.toLocaleString()} leads will be generated today. Proceed anyway?`}
+        confirmLabel="Start run"
+        loading={trigger.isPending}
+        onConfirm={() => { setConfirmOpen(false); trigger.mutate() }}
+      />
     </Card>
   )
 }
