@@ -84,21 +84,6 @@ export function PeopleHub() {
   )
 }
 
-/** Sourcing hub: run the pipeline, tune the profile, estimate discovery cost. */
-export function SourcingHub() {
-  return (
-    <HubLayout
-      title="Sourcing"
-      subtitle="Run the pipeline, tune your profile, and estimate costs."
-      tabs={[
-        { to: '/sourcing', label: 'Pipeline', end: true },
-        { to: '/sourcing/profile', label: 'Profile' },
-        { to: '/sourcing/discovery', label: 'Discovery' },
-      ]}
-    />
-  )
-}
-
 /** Import hub: upload sheets + manage the templates they must match. */
 export function ImportHub() {
   return (

@@ -53,7 +53,6 @@ const ManualLeadDetailPage = lazyPage(() => import('../features/leadwork/ManualL
 const AuditReportPage = lazyPage(() => import('../features/leadwork/AuditReport').then((m) => ({ default: m.AuditReportPage })))
 const TeamsPage = lazyPage(() => import('../features/leadwork/Teams').then((m) => ({ default: m.TeamsPage })))
 const DealsPage = lazyPage(() => import('../features/sales/Deals').then((m) => ({ default: m.DealsPage })))
-const DiscoveryPage = lazyPage(() => import('../features/pipeline/Discovery').then((m) => ({ default: m.DiscoveryPage })))
 const ConsolePage = lazyPage(() => import('../features/leadwork/Console').then((m) => ({ default: m.ConsolePage })))
 const ScriptsPage = lazyPage(() => import('../features/leadwork/Scripts').then((m) => ({ default: m.ScriptsPage })))
 const ProviderPage = lazyPage(() => import('../features/provider/Provider').then((m) => ({ default: m.ProviderPage })))
@@ -64,7 +63,6 @@ const HolidaysPage = lazyPage(() => import('../features/sales/Holidays').then((m
 const SearchPage = lazyPage(() => import('../features/leadwork/Search').then((m) => ({ default: m.SearchPage })))
 const CreditsPage = lazyPage(() => import('../features/sales/Credits').then((m) => ({ default: m.CreditsPage })))
 const CadencesPage = lazyPage(() => import('../features/leadwork/Cadences').then((m) => ({ default: m.CadencesPage })))
-const SourcingProfilePage = lazyPage(() => import('../features/pipeline/SourcingProfile').then((m) => ({ default: m.SourcingProfilePage })))
 const MeetingsPage = lazyPage(() => import('../features/bookings/Meetings').then((m) => ({ default: m.MeetingsPage })))
 const NewBookingPage = lazyPage(() => import('../features/bookings/NewBooking').then((m) => ({ default: m.NewBookingPage })))
 const ProgressPage = lazyPage(() => import('../features/progress/Progress').then((m) => ({ default: m.ProgressPage })))
@@ -72,11 +70,10 @@ const PerformanceHub = lazyPage(() => import('../features/shared/Hubs').then((m)
 const ActivityHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.ActivityHub })))
 const PlaybookHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PlaybookHub })))
 const PeopleHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.PeopleHub })))
-const SourcingHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.SourcingHub })))
 const ImportHub = lazyPage(() => import('../features/shared/Hubs').then((m) => ({ default: m.ImportHub })))
 const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').then((m) => ({ default: m.GoalsSettingsPage })))
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
-const PipelinePage = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.PipelinePage })))
+const SourcingWorkspace = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.SourcingWorkspace })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
 const UsagePage = lazyPage(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
@@ -218,7 +215,9 @@ export const router = createBrowserRouter([
                   { path: 'targets', element: <Navigate to="/performance/targets" replace /> },
                   { path: 'holidays', element: <Navigate to="/settings/holidays" replace /> },
                   { path: 'pipeline', element: <Navigate to="/sourcing" replace /> },
-                  { path: 'discovery', element: <Navigate to="/sourcing/discovery" replace /> },
+                  { path: 'discovery', element: <Navigate to="/sourcing" replace /> },
+                  { path: 'sourcing/profile', element: <Navigate to="/sourcing" replace /> },
+                  { path: 'sourcing/discovery', element: <Navigate to="/sourcing" replace /> },
                   { path: 'templates', element: <Navigate to="/import/templates" replace /> },
                   { path: 'upload', element: <Navigate to="/import" replace /> },
                   { path: 'credits', element: <Navigate to="/settings/credits" replace /> },
@@ -240,16 +239,8 @@ export const router = createBrowserRouter([
                     // §2 matrix: scrape/global pool + "see all managers/teams" = Owner only.
                     element: <RequireRole roles={['superadmin', 'owner']} />,
                     children: [
-                      // Sourcing hub — Pipeline · Profile · Discovery
-                      {
-                        path: 'sourcing',
-                        element: L(<SourcingHub />),
-                        children: [
-                          { index: true, element: L(<PipelinePage />) },
-                          { path: 'profile', element: L(<SourcingProfilePage />) },
-                          { path: 'discovery', element: L(<DiscoveryPage />) },
-                        ],
-                      },
+                      // Unified Sourcing workspace (config + live cost + run + persistent progress)
+                      { path: 'sourcing', element: L(<SourcingWorkspace />) },
                     ],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.

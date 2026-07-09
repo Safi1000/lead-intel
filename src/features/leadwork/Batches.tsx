@@ -67,8 +67,6 @@ export function BatchesPage() {
     batches: batches.length,
     leads: batches.reduce((s, b) => s + b.lead_count, 0),
     booked: batches.reduce((s, b) => s + b.booked_count, 0),
-    won: batches.reduce((s, b) => s + b.won_count, 0),
-    lost: batches.reduce((s, b) => s + b.lost_count, 0),
   }), [batches])
 
   const filtered = useMemo(() => {
@@ -85,12 +83,10 @@ export function BatchesPage() {
       />
 
       {!isLoading && !isError && batches.length > 0 && (
-        <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <StatCard label="Batches" value={totals.batches} />
           <StatCard label="Total leads" value={totals.leads} />
           <StatCard label="Booked" value={totals.booked} />
-          <StatCard label="Won" value={totals.won} />
-          <StatCard label="Lost" value={totals.lost} />
         </div>
       )}
 

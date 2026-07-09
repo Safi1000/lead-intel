@@ -8,6 +8,9 @@ import type { PipelineConfig, PipelineRun } from '../../api/pipeline'
 import { normalizeError } from '../../api/client'
 import { useAuth } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Checkbox } from '../../components/ui/controls'
+import { PageHeader } from '../shared/bits'
+import { SourcingConfig } from './SourcingProfile'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 
@@ -119,6 +122,11 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
   )
 }
 
+// Pre-run cost model (folds in the old Discovery page): metros saturate so the qualify
+// rate drifts — a guide, recomputed live as the target changes.
+const QUAL_RATE = 0.15
+const COST_PER_QUALIFIED = 0.02
+
 function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
   const [dryRun, setDryRun] = useState(false)
@@ -129,6 +137,23 @@ function RunTrigger({ orgId }: { orgId: string }) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
+
+  // Persist live progress across reloads / navigation / logout: on mount, adopt the org's
+  // currently-running run from the server so the progress card + metrics reappear.
+  const { data: recentRuns } = useQuery({
+    queryKey: ['pipeline-runs', orgId],
+    queryFn: () => pipelineApi.listRuns(orgId),
+    refetchInterval: 10_000,
+  })
+  useEffect(() => {
+    if (activeRunId) return
+    const running = recentRuns?.find((r) => r.status === 'running')
+    if (running) { setActiveRunId(running.id); setLiveRun(running) }
+  }, [recentRuns, activeRunId])
+
+  const targetN = Math.max(0, Number(qualifiedTarget) || 0)
+  const estScanned = Math.round(targetN / QUAL_RATE)
+  const estCost = targetN * COST_PER_QUALIFIED
 
   useEffect(() => {
     if (!activeRunId || !orgId) return
@@ -211,13 +236,8 @@ function RunTrigger({ orgId }: { orgId: string }) {
             Runs until this many importable leads are found (website + no-website batches).
           </p>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer pb-5">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
-            checked={dryRun}
-            onChange={(e) => setDryRun(e.target.checked)}
-          />
+        <label htmlFor="dry-run" className="flex cursor-pointer items-center gap-2 pb-5">
+          <Checkbox id="dry-run" checked={dryRun} onCheckedChange={setDryRun} aria-label="Dry run" />
           <span className="text-sm text-[var(--color-text)]">Dry run</span>
           <span className="text-[11px] text-[var(--color-text-muted)]">(score and filter, but do not import)</span>
         </label>
@@ -239,6 +259,15 @@ function RunTrigger({ orgId }: { orgId: string }) {
           )}
         </div>
       </div>
+
+      {targetN > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5 text-[13px]">
+          <span className="font-medium text-[var(--color-text)]">Estimate · {targetN.toLocaleString()} qualified</span>
+          <span className="text-[var(--color-text-secondary)]">Scan ~<strong className="tabular-nums text-[var(--color-text)]">{estScanned.toLocaleString()}</strong> businesses</span>
+          <span className="text-[var(--color-text-secondary)]">Cost ~<strong className="tabular-nums text-[var(--color-primary)]">${estCost.toFixed(2)}</strong></span>
+          <span className="text-[12px] text-[var(--color-text-muted)]">updates live · actuals vary with saturation</span>
+        </div>
+      )}
 
       {liveRun && (
         <div className={cn(
@@ -409,13 +438,15 @@ function RunRow({ run, orgId }: { run: PipelineRun; orgId: string }) {
 // Page
 // ---------------------------------------------------------------------------
 
-export function PipelinePage() {
+/** Unified Sourcing workspace: niche/area/checks config → live cost → run + persistent progress. */
+export function SourcingWorkspace() {
   const orgId = pipelineOrgId()
   const { role } = useAuth()
 
   if (!orgId) {
     return (
       <div className="reveal">
+        <PageHeader title="Sourcing" subtitle="Set your niche and area, preview the cost, then run the pipeline." />
         <Card className="p-8 text-center text-[var(--color-text-secondary)]">
           No organisation selected. Enter an org from the Organizations page first.
         </Card>
@@ -425,6 +456,8 @@ export function PipelinePage() {
 
   return (
     <div className="reveal flex flex-col gap-6">
+      <PageHeader title="Sourcing" subtitle="Set your niche and area, preview the cost, then run the pipeline." />
+      <SourcingConfig />
       {role === 'superadmin' && <DailyRunPanel orgId={orgId} />}
       <RunTrigger orgId={orgId} />
       <RunHistory orgId={orgId} />

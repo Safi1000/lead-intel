@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
-import { Plus, X } from 'lucide-react'
+import { Outlet } from 'react-router-dom'
+import { X } from 'lucide-react'
 import * as RD from '@radix-ui/react-dialog'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
-/** Client AppShell (§4.2): sidebar + topbar + mobile drawer + FAB. */
+/** Client AppShell (§4.2): sidebar + topbar + mobile drawer. */
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
   return (
@@ -38,15 +38,6 @@ export function AppShell() {
           </div>
         </main>
       </div>
-
-      {/* Mobile New Run FAB */}
-      <Link
-        to="/runs/new"
-        className="fixed bottom-5 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-lg lg:hidden"
-        aria-label="New run"
-      >
-        <Plus className="h-6 w-6" />
-      </Link>
     </div>
   )
 }

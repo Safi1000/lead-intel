@@ -9,8 +9,9 @@ import { Select, Checkbox } from '../../components/ui/controls'
 import { LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 
-/** Per-tenant sourcing profile — niche + target cities + safe field toggles. Drives the engine. */
-export function SourcingProfilePage() {
+/** Per-tenant sourcing profile — niche + target cities + safe field toggles. Drives the engine.
+ * Rendered inside the unified Sourcing workspace (config → cost → run). */
+export function SourcingConfig() {
   const qc = useQueryClient()
   const { data: verticals } = useQuery({ queryKey: ['verticals'], queryFn: () => verticalsApi.list() })
   const { data: locations } = useQuery({ queryKey: ['sourcing-locations'], queryFn: () => locationsApi.list() })
@@ -49,7 +50,7 @@ export function SourcingProfilePage() {
   if (isLoading) return <LoadingState />
 
   return (
-    <div className="reveal max-w-3xl space-y-5">
+    <div className="space-y-5">
 
       <Card className="space-y-4 p-5">
         <div>
