@@ -16,11 +16,11 @@
    *  Every token below (light AND dark) is derived from these via color-mix().
    *  Change these five and the whole product recolours.
    * ====================================================================== */
-  --brand-bg:       #0B0C10; /* 1 · primary background (deepest canvas)  */
-  --brand-surface:  #1F2833; /* 2 · secondary surface (panels & cards)   */
-  --brand-neutral:  #C5C6C7; /* 3 · neutral text                         */
-  --brand-accent:   #66FCF1; /* 4 · primary accent                       */
-  --brand-accent-2: #45A29E; /* 5 · secondary accent                     */
+  --brand-bg:       #5D001E; /* 1 · primary background (deepest canvas)  */
+  --brand-surface:  #9A1750; /* 2 · secondary surface (panels & cards)   */
+  --brand-neutral:  #E3E2DF; /* 3 · neutral text                         */
+  --brand-accent:   #EE4C7C; /* 4 · primary accent                       */
+  --brand-accent-2: #E3AFBC; /* 5 · secondary accent                     */
   /* ==================================================================== */
 
   /* Light theme — derived: accents carry through, surfaces resolve light,
