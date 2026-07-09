@@ -31,6 +31,7 @@ export interface WebsiteResult {
   siteBroken: boolean // the reachable page is a parked/for-sale/suspended/server-default placeholder (no real site)
   brokenReason: string | null // human-readable reason when siteBroken (for the pitch)
   hasChat: boolean // a live-chat / chatbot widget was detected (absence = a chatbot upsell angle)
+  templatedVendor: string | null // a niche templated-website vendor (e.g. "ProSites") → redesign/brand pitch
 }
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,8 @@ interface NicheWebConfig {
   // spas (patients pick a clinic off an active IG). False for dental/trades — those patients come
   // from Google, insurance directories and referrals, so no social link is NOT a weakness.
   expectsSocial: boolean
+  // Niche-specific templated-website vendors (cookie-cutter sites) → a redesign/brand pitch angle.
+  templateVendors: Array<{ name: string; pattern: string }>
 }
 // Dental patient-scheduling / PMS-portal / reputation platforms whose booking widgets embed on the
 // practice site. Without these, a dentist on Zocdoc/NexHealth/Weave reads as "no online contact".
@@ -137,18 +140,45 @@ const DENTAL_BOOKING: Array<{ name: string; pattern: string }> = [
   { name: 'Curve Dental', pattern: 'curvedental.com' },
   { name: 'Dentrix', pattern: 'dentrix' },        // dentrix.com + dentrixascend patient portals
   { name: 'Open Dental', pattern: 'opendental' },
+  { name: 'Birdeye', pattern: 'birdeye' },
+  { name: 'Swell', pattern: 'swellcx' },
+  { name: 'tab32', pattern: 'tab32' },
+  { name: 'Legwork', pattern: 'legwork' },
+  { name: 'PracticeMojo', pattern: 'practicemojo' },
+  { name: 'DoctorLogic', pattern: 'doctorlogic' },
+  { name: 'PatientPop', pattern: 'patientpop' },
+  { name: 'Great Dental Websites', pattern: 'greatdentalwebsites' },
+  { name: 'Rev.dental', pattern: 'rev.dental' },
+]
+// Templated dental-website VENDORS — cookie-cutter sites built for practices by dental-marketing
+// firms. A working but generic template (shared by hundreds of practices) is a real redesign/brand
+// pitch even when the site is otherwise 'good' — "you look like every other dentist". Dental-only
+// host strings, so they never false-fire on other niches.
+const DENTAL_TEMPLATE_VENDORS: Array<{ name: string; pattern: string }> = [
+  { name: 'ProSites', pattern: 'prosites' },
+  { name: 'Officite', pattern: 'officite' },
+  { name: 'Officite (O360)', pattern: 'o360.com' },
+  { name: 'PBHS', pattern: 'pbhs.com' },
+  { name: 'DentalQore', pattern: 'dentalqore' },
+  { name: 'Smile Marketing', pattern: 'smilemarketing' },
+  { name: 'TNT Dental', pattern: 'tntdental' },
+  { name: 'Solution21', pattern: 'solution21' },
+  { name: 'Roadside Dental Marketing', pattern: 'roadsidedental' },
+  { name: 'Dentainment', pattern: 'dentainment' },
+  { name: 'Dear Doctor', pattern: 'deardoctor' },
+  { name: 'ProSites', pattern: 'sesamewebdesign' }, // legacy Sesame web-design templates
 ]
 const NICHE_WEB_CONFIG: Record<string, NicheWebConfig> = {
-  med_spa:  { extraBookingPlatforms: [], expectsSocial: true },
-  dental:   { extraBookingPlatforms: DENTAL_BOOKING, expectsSocial: false },
-  hvac:     { extraBookingPlatforms: [], expectsSocial: false },
-  law_firm: { extraBookingPlatforms: [], expectsSocial: false },
+  med_spa:  { extraBookingPlatforms: [], expectsSocial: true, templateVendors: [] },
+  dental:   { extraBookingPlatforms: DENTAL_BOOKING, expectsSocial: false, templateVendors: DENTAL_TEMPLATE_VENDORS },
+  hvac:     { extraBookingPlatforms: [], expectsSocial: false, templateVendors: [] },
+  law_firm: { extraBookingPlatforms: [], expectsSocial: false, templateVendors: [] },
 }
 // No vertical (TXS / no profile) → the historic med-spa behavior. Known vertical → its config.
 // Unknown vertical → a neutral config (no med-spa social check, no extra platforms).
 function nicheWebConfig(vertical?: string): NicheWebConfig {
   if (!vertical) return NICHE_WEB_CONFIG.med_spa
-  return NICHE_WEB_CONFIG[vertical] ?? { extraBookingPlatforms: [], expectsSocial: false }
+  return NICHE_WEB_CONFIG[vertical] ?? { extraBookingPlatforms: [], expectsSocial: false, templateVendors: [] }
 }
 
 // Custom / self-hosted booking is common (GoHighLevel /widget/form, PatientNow, in-house
@@ -571,7 +601,7 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
     hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null,
     copyrightYear: null, detectedIssues: [], chainSignals: [], visibleTextExcerpt: null,
     seoScore: null, techStack: null, emailMxOk: null,
-    siteBroken: false, brokenReason: null, hasChat: false,
+    siteBroken: false, brokenReason: null, hasChat: false, templatedVendor: null,
   }
 
   if (!websiteUri) return noResult
@@ -767,6 +797,13 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
   if (siteBroken) {
     qualitySignals.detectedIssues.push('CONFIRMED broken site: the website is a parked/placeholder page, not a real site — anyone who looks the business up online finds nothing')
   }
+  // Templated niche-vendor site (e.g. ProSites/Officite for dental) — a working but cookie-cutter
+  // template shared by many practices → a redesign/brand pitch even on an otherwise-good site.
+  const htmlLower2 = homepageHtml ? homepageHtml.toLowerCase() : ''
+  const templatedVendor = homepageHtml ? (cfg.templateVendors.find((v) => htmlLower2.includes(v.pattern))?.name ?? null) : null
+  if (templatedVendor) {
+    qualitySignals.detectedIssues.push(`Built on ${templatedVendor}, a templated ${vertical ?? ''}-website vendor — a generic layout shared by many practices; a custom site would stand out (pitch angle, not a fault)`)
+  }
 
   return {
     email,
@@ -782,5 +819,6 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
     siteBroken,
     brokenReason,
     hasChat,
+    templatedVendor,
   }
 }

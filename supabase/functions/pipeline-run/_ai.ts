@@ -370,6 +370,7 @@ export async function scorePlace(
   const noOnsiteCapture = verifiable && !ws!.hasBookingWidget // no form / booking / CTA / contact link on a readable page
   const leadCaptureGap = noOnsiteCapture && !place.email       // phone-only: nothing to capture a lead online
   const bookingGap = noOnsiteCapture && !!place.email          // has email but no scheduling/form
+  const templated = !!ws?.templatedVendor                     // cookie-cutter niche-vendor template → redesign/brand pitch
   const peerMed = peerMedianReviews ?? null
   const reputationGap = place.reviewCount != null && peerMed != null && peerMed >= 25 && place.reviewCount < Math.round(0.35 * peerMed)
   const chatGap = verifiable && !ws!.hasChat                   // secondary upsell tag only, never a primary qualifier
@@ -379,6 +380,7 @@ export async function scorePlace(
     leadCaptureGap ? 'NO online lead capture — phone-only, no form/booking/email (lead-capture pitch)' : '',
     seoGap ? `WEAK SEO — site-health ${ws?.seoScore}/100 / missing SEO basics (search-visibility pitch)` : '',
     bookingGap ? 'NO online booking on a readable site (booking-setup pitch)' : '',
+    templated ? `TEMPLATED vendor site (${ws?.templatedVendor}) — generic cookie-cutter template (redesign/brand pitch)` : '',
     reputationGap ? `THIN reputation — ${place.reviewCount} reviews vs local median ~${peerMed} (review-generation pitch)` : '',
   ].filter(Boolean).join('; ')
 
@@ -423,6 +425,7 @@ export async function scorePlace(
     : leadCaptureGap ? 'lead_capture'
     : seoGap ? 'seo'
     : bookingGap ? 'booking'
+    : templated ? 'redesign'                         // cookie-cutter vendor template → custom-redesign / brand pitch
     : reputationGap ? 'reputation'
     : score.website_status === 'weak' ? 'redesign'   // model saw a weakness we couldn't classify (e.g. via the render fallback)
     : 'none'
@@ -469,7 +472,11 @@ export async function scorePlace(
       score.site_issue_note = `There's no way to book online on your site, so every appointment ties up your front desk and you lose after-hours ${who} who won't call.`
     } else { // redesign
       const probs = (ws?.detectedIssues ?? []).filter((i) => /mobile|slow|copyright|table-based|No SSL|free[, ]/i.test(i)).slice(0, 2)
-      score.site_issue_note = probs.length ? probs.join('; ') : `Your website's build is dated and holding you back with prospective ${who}.`
+      score.site_issue_note = probs.length
+        ? probs.join('; ')
+        : ws?.templatedVendor
+          ? `Your site is a stock ${ws.templatedVendor} template used by hundreds of other practices — it looks like everyone else's, so nothing sets you apart; a custom design would stand out and convert more ${who}.`
+          : `Your website's build is dated and holding you back with prospective ${who}.`
     }
     if (score.website_status === 'good') score.status_reason = `Site looks modern but has a sellable "${angle}" gap.`
   }
