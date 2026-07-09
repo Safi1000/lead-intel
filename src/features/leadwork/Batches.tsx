@@ -10,6 +10,7 @@ import { exportLeadsToXlsx } from './exportBatch'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader, StatCard } from '../shared/bits'
@@ -215,11 +216,9 @@ function BatchRow({ batch: b, onOpen, canArchive, canDelete, canExport, exportin
         <span className="text-[12px] text-[var(--color-text-muted)]"> / {b.lead_count}</span>
         {allocateManagers && (
           <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-            <select value={b.allocated_manager_id ?? ''} onChange={(e) => onAllocate(e.target.value || null)}
-              className="h-7 rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[12px]" title="Allocate batch to a manager">
-              <option value="">Unallocated</option>
-              {allocateManagers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
+            <Select value={b.allocated_manager_id ?? ''} onValueChange={(v) => onAllocate(v || null)}
+              aria-label="Allocate batch to a manager" className="h-7 text-[12px]"
+              options={[{ value: '', label: 'Unallocated' }, ...allocateManagers.map((m) => ({ value: m.id, label: m.name }))]} />
           </div>
         )}
       </td>

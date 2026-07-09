@@ -5,6 +5,7 @@ import { GitBranch, Plus, Trash2, X } from 'lucide-react'
 import { cadencesApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { LEAD_STAGES } from '../../api/types'
 import type { Cadence, CadenceAction, CadenceStep } from '../../api/types'
@@ -86,17 +87,14 @@ function CadenceEditor({ cadence, onClose }: { cadence: Cadence; onClose: () => 
           </div>
           <div>
             <Label className="text-[12px]">Action</Label>
-            <select value={s.action} onChange={(e) => update(i, { action: e.target.value as CadenceAction })} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-              {ACTIONS.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
-            </select>
+            <Select value={s.action} onValueChange={(v) => update(i, { action: v as CadenceAction })}
+              options={ACTIONS.map((x) => ({ value: x.value, label: x.label }))} />
           </div>
           {s.action === 'move' ? (
             <div>
               <Label className="text-[12px]">Move to</Label>
-              <select value={s.target_state ?? ''} onChange={(e) => update(i, { target_state: e.target.value })} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-                <option value="">Select…</option>
-                {MOVE_STATES.map((x) => <option key={x} value={x}>{x}</option>)}
-              </select>
+              <Select value={s.target_state ?? ''} onValueChange={(v) => update(i, { target_state: v })} placeholder="Select…"
+                options={MOVE_STATES.map((x) => ({ value: x, label: x }))} />
             </div>
           ) : (
             <div className="min-w-[160px] flex-1">

@@ -8,6 +8,7 @@ import { templatesApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useCan } from '../../components/rbac/Can'
 import { Button, Card, Label } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { EmptyState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 import type { ImportResult, LeadTemplate } from '../../api/types'
@@ -97,20 +98,14 @@ export function UploadPage() {
           {/* Step 1 — template */}
           <Card className="p-5">
             <Label htmlFor="tpl">1. Choose a template</Label>
-            <select
+            <Select
               id="tpl"
               value={templateId}
-              onChange={(e) => {
-                setTemplateId(e.target.value)
-                setResult(null)
-              }}
-              className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm"
-            >
-              <option value="">Select a template…</option>
-              {templates!.map((t) => (
-                <option key={t.id} value={t.id}>{t.name} ({t.columns.length} columns)</option>
-              ))}
-            </select>
+              onValueChange={(v) => { setTemplateId(v); setResult(null) }}
+              placeholder="Select a template…"
+              className="w-full"
+              options={templates!.map((t) => ({ value: t.id, label: `${t.name} (${t.columns.length} columns)` }))}
+            />
             {template && (
               <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">
                 Expected columns:{' '}

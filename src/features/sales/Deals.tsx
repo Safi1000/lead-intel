@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { dealsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Card } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { DEAL_STAGES, type DealStage } from '../../api/types'
@@ -52,10 +53,9 @@ export function DealsPage() {
                   <p className="mb-1 truncate text-[13px] font-medium">{d.lead_name}</p>
                   <p className="mb-1 text-[15px] font-semibold tabular-nums text-[var(--color-primary)]">{d.value != null ? `$${Math.round(d.value).toLocaleString()}` : '—'}</p>
                   <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">{nameFor(d.closer_id)}</p>
-                  <select value={d.stage} onChange={(e) => move.mutate({ id: d.id, stage: e.target.value as DealStage })}
-                    className="h-8 w-full rounded-[6px] border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 text-[12px] capitalize">
-                    {DEAL_STAGES.map((x) => <option key={x} value={x}>{STAGE_LABEL[x]}</option>)}
-                  </select>
+                  <Select value={d.stage} onValueChange={(v) => move.mutate({ id: d.id, stage: v as DealStage })}
+                    aria-label="Deal stage" className="h-8 w-full"
+                    options={DEAL_STAGES.map((x) => ({ value: x, label: STAGE_LABEL[x] }))} />
                 </Card>
               ))}
               {byStage(s).length === 0 && <p className="px-1 text-[12px] text-[var(--color-text-muted)]">—</p>}

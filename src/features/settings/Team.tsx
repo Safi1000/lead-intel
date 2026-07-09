@@ -6,6 +6,7 @@ import { teamApi } from '../../api/endpoints'
 import { ROLE_CAPABILITIES, ROLE_LABELS } from '../../config/permissions'
 import { Can } from '../../components/rbac/Can'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
 import {
   DropdownMenu,
@@ -145,9 +146,8 @@ export function TeamSettingsPage() {
           </div>
           <div>
             <Label htmlFor="invite-role">Role</Label>
-            <select id="invite-role" value={role} onChange={(e) => setRole(e.target.value as Role)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] px-2 text-sm">
-              {ASSIGNABLE.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-            </select>
+            <Select id="invite-role" value={role} onValueChange={(v) => setRole(v as Role)} className="w-full"
+              options={ASSIGNABLE.map((r) => ({ value: r, label: ROLE_LABELS[r] }))} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>

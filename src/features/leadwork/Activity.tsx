@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Activity as ActivityIcon, FileText, Flame, Snowflake } from 'lucide-react'
 import { activityFeedApi, usersApi, type ActivityFeedItem } from '../../api/endpoints'
 import { Card } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 
@@ -131,16 +132,12 @@ export function ActivityPage() {
             </button>
           ))}
         </div>
-        <select
+        <Select
           value={who}
-          onChange={(e) => setWho(e.target.value)}
-          className="h-9 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm focus:border-[var(--color-primary)] focus-visible:outline-none"
-        >
-          <option value="all">Everyone</option>
-          {team.map((u) => (
-            <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
-          ))}
-        </select>
+          onValueChange={setWho}
+          aria-label="Filter by person"
+          options={[{ value: 'all', label: 'Everyone' }, ...team.map((u) => ({ value: u.name, label: `${u.name} (${u.role})` }))]}
+        />
       </div>
 
       {/* Per-person rollup */}

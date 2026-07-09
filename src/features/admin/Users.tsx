@@ -9,7 +9,7 @@ import { useAuth } from '../../hooks'
 import { ROLE_LABELS, PERMISSION_CATALOG, permKey, roleGrants } from '../../config/permissions'
 import { Button, Card, Input, Label, Textarea } from '../../components/ui/primitives'
 import { Dialog, ConfirmDialog } from '../../components/ui/Dialog'
-import { DropdownMenu, DropdownTrigger, DropdownContent, DropdownItem } from '../../components/ui/controls'
+import { DropdownMenu, DropdownTrigger, DropdownContent, DropdownItem, Select, Checkbox } from '../../components/ui/controls'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 import type { ManagedUser, PermissionOverrides, Role } from '../../api/types'
@@ -250,9 +250,8 @@ function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; 
         )}
         <div>
           <Label htmlFor="u-role">Role</Label>
-          <select id="u-role" value={role} onChange={(e) => setRole(e.target.value as Role)} className="h-9 w-full rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            {assignableRoles.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-          </select>
+          <Select id="u-role" value={role} onValueChange={(v) => setRole(v as Role)} className="w-full"
+            options={assignableRoles.map((r) => ({ value: r, label: ROLE_LABELS[r] }))} />
         </div>
         <div>
           <Label className="mb-1.5">Permissions</Label>
@@ -263,7 +262,7 @@ function UserFormDialog({ user, onClose, onSaved }: { user: ManagedUser | null; 
               return (
                 <label key={key} className="flex items-center justify-between gap-3 text-sm">
                   <span>{p.label}</span>
-                  <input type="checkbox" className="h-4 w-4 rounded border-[var(--color-border)]" checked={!!perms[key]} onChange={(e) => setPerms((s) => ({ ...s, [key]: e.target.checked }))} />
+                  <Checkbox checked={!!perms[key]} onCheckedChange={(v) => setPerms((s) => ({ ...s, [key]: v }))} aria-label={p.label} />
                 </label>
               )
             })}

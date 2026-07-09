@@ -5,6 +5,7 @@ import { Plus, Trash2, UserMinus, Users, X } from 'lucide-react'
 import { manualLeadsApi, teamsApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
+import { Select } from '../../components/ui/controls'
 import { ConfirmDialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import type { Team } from '../../api/types'
@@ -88,11 +89,9 @@ function TeamCard({ team, managers, assignable, members, allUsers, onChanged, on
       </div>
       <div className="mb-4 flex items-center gap-2">
         <Label className="text-[13px]">Manager</Label>
-        <select value={team.manager_id ?? ''} onChange={(e) => setMgr.mutate(e.target.value || null)}
-          className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-          <option value="">— none —</option>
-          {managers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
+        <Select value={team.manager_id ?? ''} onValueChange={(v) => setMgr.mutate(v || null)}
+          aria-label="Team manager"
+          options={[{ value: '', label: '— none —' }, ...managers.map((m) => ({ value: m.id, label: m.name }))]} />
       </div>
       <div>
         <p className="mb-1.5 text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">Members ({members.length})</p>
@@ -107,10 +106,8 @@ function TeamCard({ team, managers, assignable, members, allUsers, onChanged, on
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <select value={addId} onChange={(e) => setAddId(e.target.value)} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">Add member…</option>
-            {canAdd.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
-          </select>
+          <Select value={addId} onValueChange={setAddId} placeholder="Add member…" className="min-w-[180px]"
+            options={canAdd.map((u) => ({ value: u.id, label: `${u.name} (${u.role})` }))} />
           <Button size="sm" variant="outline" disabled={!addId} loading={addM.isPending}
             onClick={() => { const u = canAdd.find((x) => x.id === addId); if (u) addM.mutate({ uid: u.id, role: (u.role === 'closer' ? 'closer' : u.role === 'manager' ? 'manager' : 'setter') }); setAddId('') }}>Add</Button>
         </div>
@@ -136,17 +133,13 @@ function OffboardCard({ reps, onDone }: { reps: Array<{ id: string; name: string
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <Label htmlFor="off-from">From</Label>
-          <select id="off-from" value={fromId} onChange={(e) => setFromId(e.target.value)} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">Select rep…</option>
-            {reps.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+          <Select id="off-from" value={fromId} onValueChange={setFromId} placeholder="Select rep…"
+            options={reps.map((u) => ({ value: u.id, label: u.name }))} />
         </div>
         <div>
           <Label htmlFor="off-to">To</Label>
-          <select id="off-to" value={toId} onChange={(e) => setToId(e.target.value)} className="h-9 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm">
-            <option value="">— back to pool —</option>
-            {reps.filter((u) => u.id !== fromId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+          <Select id="off-to" value={toId} onValueChange={setToId} aria-label="Reassign to"
+            options={[{ value: '', label: '— back to pool —' }, ...reps.filter((u) => u.id !== fromId).map((u) => ({ value: u.id, label: u.name }))]} />
         </div>
         <Button variant="danger" disabled={!fromId} loading={run.isPending} onClick={() => run.mutate()}>Reassign</Button>
       </div>
