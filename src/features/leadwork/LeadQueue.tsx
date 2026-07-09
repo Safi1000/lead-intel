@@ -7,8 +7,9 @@ import { toast } from 'sonner'
 import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
-import { Button, Card, Input } from '../../components/ui/primitives'
+import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Select, Checkbox } from '../../components/ui/controls'
+import { Dialog } from '../../components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { PageHeader } from '../shared/bits'
 import { cn } from '../../lib/utils'
@@ -168,6 +169,7 @@ export function LeadQueuePage() {
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const [hideDnc, setHideDnc] = useState(false)
+  const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [stageFilter, setStageFilter] = useState('all')
   const [setterFilter, setSetterFilter] = useState('all')
 
@@ -214,7 +216,10 @@ export function LeadQueuePage() {
         title={batch ? batch.file_name : 'Leads'}
         subtitle={batch ? `${batch.template_name} · ${batch.lead_count} lead${batch.lead_count === 1 ? '' : 's'}` : 'Leads assigned to you.'}
         actions={isManager && batchId ? (
-          <Button variant="outline" loading={roundRobin.isPending} onClick={() => roundRobin.mutate()}><Shuffle className="h-4 w-4" /> Round-robin</Button>
+          <>
+            <Button variant="outline" loading={roundRobin.isPending} onClick={() => roundRobin.mutate()}><Shuffle className="h-4 w-4" /> Round-robin</Button>
+            <Button onClick={() => setAssignSetterOpen(true)}><UserPlus className="h-4 w-4" /> Assign to setter</Button>
+          </>
         ) : undefined}
       />
 
@@ -322,6 +327,15 @@ export function LeadQueuePage() {
           </div>
         )}
       </Card>
+
+      {assignSetterOpen && batchId && batch && (
+        <AssignToSetterDialog
+          batchId={batchId}
+          unassigned={batch.unassigned_count}
+          onClose={() => setAssignSetterOpen(false)}
+          onDone={() => { setAssignSetterOpen(false); qc.invalidateQueries() }}
+        />
+      )}
     </div>
   )
 }
@@ -360,6 +374,60 @@ function LeadRow({ lead: l, role, isManager, canEdit, slaMs, onOpen, selectable,
       {isManager && <td className="px-3 py-3 text-[13px] text-[var(--color-text-secondary)]">{l.closer ?? '—'}</td>}
       <td className="px-3 py-3 text-[13px] text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}</td>
     </tr>
+  )
+}
+
+/** Manager tool: randomly assign N unassigned leads from this batch to one setter, WIP-capped.
+ * The picker shows each setter's live active load (load/cap), and the count is capped at the room left. */
+function AssignToSetterDialog({ batchId, unassigned, onClose, onDone }: { batchId: string; unassigned: number; onClose: () => void; onDone: () => void }) {
+  const setters = useOrgMembers('setter')
+  const [setterId, setSetterId] = useState('')
+  const [count, setCount] = useState(Math.min(50, unassigned))
+  const { data: floor } = useQuery({ queryKey: ['floor-config'], queryFn: floorConfigApi.get })
+  const { data: loads } = useQuery({ queryKey: ['setter-loads'], queryFn: floorConfigApi.setterLoads })
+
+  // WIP cap: a setter can only receive up to (cap − their current active load) more leads.
+  const cap = floor?.wip_cap ?? 40
+  const currentLoad = setterId ? (loads?.[setterId] ?? 0) : 0
+  const room = Math.max(0, cap - currentLoad)
+  const maxAssign = Math.min(unassigned, room)
+  const clamped = Math.max(0, Math.min(count, maxAssign))
+
+  const assign = useMutation({
+    mutationFn: () => assignmentApi.assignLeadsToSetter(batchId, setterId, clamped),
+    onSuccess: (n) => { toast.success(`Assigned ${n} lead${n === 1 ? '' : 's'} at random`); onDone() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title="Assign leads to a setter" description="A random selection of currently-unassigned leads from this batch will be given to the setter.">
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="as-setter">Setter</Label>
+          <Select
+            value={setterId}
+            onValueChange={(v) => { setSetterId(v); setCount(Math.min(50, unassigned)) }}
+            placeholder="Select a setter…"
+            className="w-full"
+            options={setters.map((u) => ({ value: u.id, label: `${u.name} — ${loads?.[u.id] ?? 0}/${cap} active` }))}
+          />
+          {setters.length === 0 && <p className="mt-1 text-[12px] text-[var(--color-text-muted)]">No setters in this organization yet — add one in People.</p>}
+        </div>
+        {setterId && (
+          <p className={cn('text-[12px]', room === 0 ? 'font-medium text-red-600 dark:text-red-400' : 'text-[var(--color-text-muted)]')}>
+            {room === 0 ? `At WIP cap (${currentLoad}/${cap}) — dispose active leads before assigning more.` : `Holding ${currentLoad}/${cap} active — room for ${room} more.`}
+          </p>
+        )}
+        <div>
+          <Label htmlFor="as-count">Number of leads (max {maxAssign})</Label>
+          <Input id="as-count" type="number" min={1} max={maxAssign} value={clamped} onChange={(e) => setCount(Math.max(1, Math.min(maxAssign, Number(e.target.value) || 0)))} disabled={maxAssign === 0} />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button loading={assign.isPending} disabled={!setterId || clamped < 1 || maxAssign === 0} onClick={() => assign.mutate()}>Assign {clamped} randomly</Button>
+        </div>
+      </div>
+    </Dialog>
   )
 }
 
