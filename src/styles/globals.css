@@ -203,7 +203,7 @@
   background: conic-gradient(
     from var(--run-angle),
     transparent 0deg,
-    color-mix(in srgb, var(--color-signal) 90%, transparent) 30deg,
+    color-mix(in srgb, var(--color-primary) 90%, transparent) 30deg,
     transparent 80deg,
     transparent 360deg
   );

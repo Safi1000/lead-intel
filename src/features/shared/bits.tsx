@@ -109,7 +109,7 @@ export function SectionCard({
   className?: string
 }) {
   return (
-    <div className={cn('card-run overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm', className)}>
+    <div className={cn('overflow-hidden rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm', className)}>
       <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3.5">
         <h2 className="text-[16px] font-semibold text-[var(--color-text)]">{title}</h2>
         {action}
