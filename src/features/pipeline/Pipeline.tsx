@@ -125,11 +125,10 @@ function DailyRunPanel({ orgId }: { orgId: string }) {
 // Pre-run cost model (folds in the old Discovery page): metros saturate so the qualify
 // rate drifts — a guide, recomputed live as the target changes.
 const QUAL_RATE = 0.15
-const COST_PER_QUALIFIED = 0.02
+const CREDIT_USD = 0.5 // 1 Lead Credit = 1 qualified lead = $0.50 to the customer
 
 function RunTrigger({ orgId }: { orgId: string }) {
   const qc = useQueryClient()
-  const [dryRun, setDryRun] = useState(false)
   const [batchName, setBatchName] = useState('')
   const [qualifiedTarget, setQualifiedTarget] = useState('')
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
@@ -153,7 +152,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
 
   const targetN = Math.max(0, Number(qualifiedTarget) || 0)
   const estScanned = Math.round(targetN / QUAL_RATE)
-  const estCost = targetN * COST_PER_QUALIFIED
+  const estCredits = targetN // 1 Lead Credit per qualified lead
 
   useEffect(() => {
     if (!activeRunId || !orgId) return
@@ -165,9 +164,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
           clearPoll()
           qc.invalidateQueries({ queryKey: ['pipeline-runs', orgId] })
           if (status.status === 'completed') {
-            toast.success(dryRun
-              ? `Dry run done — ${status.total_imported} would have been imported.`
-              : `Done! ${status.total_imported} leads imported.`)
+            toast.success(`Done! ${status.total_imported} leads imported.`)
           } else {
             toast.error(`Run failed: ${status.error ?? 'unknown error'}`)
           }
@@ -183,14 +180,14 @@ function RunTrigger({ orgId }: { orgId: string }) {
   const trigger = useMutation({
     mutationFn: () => pipelineApi.triggerRun({
       org_id: orgId,
-      dry_run: dryRun,
+      dry_run: false,
       ...(qualifiedTarget ? { qualified_target: Number(qualifiedTarget) } : {}),
       ...(batchName.trim() ? { batch_name: batchName.trim() } : {}),
     }),
     onSuccess: (data) => {
       setActiveRunId(data.run_id)
       setLiveRun(null)
-      toast.info(dryRun ? 'Dry run started…' : 'Pipeline started…')
+      toast.info('Pipeline started…')
     },
     onError: (e) => toast.error(normalizeError(e).message),
   })
@@ -236,11 +233,6 @@ function RunTrigger({ orgId }: { orgId: string }) {
             Runs until this many importable leads are found (website + no-website batches).
           </p>
         </div>
-        <label htmlFor="dry-run" className="flex cursor-pointer items-center gap-2 pb-5">
-          <Checkbox id="dry-run" checked={dryRun} onCheckedChange={setDryRun} aria-label="Dry run" />
-          <span className="text-sm text-[var(--color-text)]">Dry run</span>
-          <span className="text-[11px] text-[var(--color-text-muted)]">(score and filter, but do not import)</span>
-        </label>
         <div className="pb-5 flex gap-2">
           <Button onClick={() => trigger.mutate()} loading={trigger.isPending} disabled={isRunning}>
             <Play className="h-4 w-4 mr-1.5" />
@@ -264,7 +256,7 @@ function RunTrigger({ orgId }: { orgId: string }) {
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5 text-[13px]">
           <span className="font-medium text-[var(--color-text)]">Estimate · {targetN.toLocaleString()} qualified</span>
           <span className="text-[var(--color-text-secondary)]">Scan ~<strong className="tabular-nums text-[var(--color-text)]">{estScanned.toLocaleString()}</strong> businesses</span>
-          <span className="text-[var(--color-text-secondary)]">Cost ~<strong className="tabular-nums text-[var(--color-primary)]">${estCost.toFixed(2)}</strong></span>
+          <span className="text-[var(--color-text-secondary)]">Cost <strong className="tabular-nums text-[var(--color-primary)]">{estCredits.toLocaleString()} Lead Credits</strong> <span className="text-[var(--color-text-muted)]">≈ ${(estCredits * CREDIT_USD).toFixed(2)}</span></span>
           <span className="text-[12px] text-[var(--color-text-muted)]">updates live · actuals vary with saturation</span>
         </div>
       )}
@@ -458,7 +450,7 @@ export function SourcingWorkspace() {
     <div className="reveal flex flex-col gap-6">
       <PageHeader title="Sourcing" subtitle="Set your niche and area, preview the cost, then run the pipeline." />
       <SourcingConfig />
-      {role === 'superadmin' && <DailyRunPanel orgId={orgId} />}
+      {(role === 'superadmin' || role === 'owner') && <DailyRunPanel orgId={orgId} />}
       <RunTrigger orgId={orgId} />
       <RunHistory orgId={orgId} />
     </div>

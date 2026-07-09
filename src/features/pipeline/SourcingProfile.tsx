@@ -22,7 +22,7 @@ export function SourcingConfig() {
   const [fetchAds, setFetchAds] = useState(true)
   const [fetchEmail, setFetchEmail] = useState(true)
   const [fetchHours, setFetchHours] = useState(true)
-  const [dailyLimit, setDailyLimit] = useState('1000')
+  const [dailyLimit, setDailyLimit] = useState('')
   const [active, setActive] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -31,7 +31,7 @@ export function SourcingConfig() {
       setVerticalKey(profile.vertical_key ?? '')
       setMetros(profile.metros ?? [])
       setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
-      setDailyLimit(String(profile.daily_limit)); setActive(profile.active)
+      setDailyLimit(profile.daily_limit ? String(profile.daily_limit) : ''); setActive(profile.active)
     }
   }, [profile])
 
@@ -76,7 +76,7 @@ export function SourcingConfig() {
         </div>
 
         <div className="grid max-w-sm grid-cols-2 gap-3">
-          <div><Label>Daily lead limit</Label><Input type="number" min={1} value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} /></div>
+          <div><Label>Daily lead limit</Label><Input type="number" min={1} placeholder="e.g. 1000" value={dailyLimit} onChange={(e) => setDailyLimit(e.target.value)} /></div>
           <label htmlFor="f-active" className="flex cursor-pointer items-center gap-2 pb-2 text-sm"><Checkbox id="f-active" checked={active} onCheckedChange={setActive} aria-label="Sourcing active" /> Sourcing active</label>
         </div>
       </Card>
