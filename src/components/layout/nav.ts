@@ -22,10 +22,8 @@ const OVERSEERS: Role[] = ['superadmin', 'manager', 'owner']
 const OWNER: Role[] = ['superadmin', 'owner'] // §2: scrape + all-managers/teams views are owner-only
 
 export const CLIENT_NAV: NavItem[] = [
-  // Overview
-  { label: 'Home', to: '/home', icon: 'LayoutDashboard', section: 'Overview', orgContext: true },
-  { label: 'Cockpit', to: '/cockpit', icon: 'Gauge', section: 'Overview', roles: OWNER, orgContext: true },
-  { label: 'Console', to: '/console', icon: 'LayoutGrid', section: 'Overview', roles: OVERSEERS, orgContext: true },
+  // Overview — Home is role-aware (Cockpit for owners, Console for managers, IC dashboard otherwise)
+  { label: 'Home', to: '/home', icon: 'LayoutDashboard', orgContext: true },
   // Work
   { label: 'Leads', to: '/leads', icon: 'Users', section: 'Work', orgContext: true },
   { label: 'Due Today', to: '/today', icon: 'CalendarClock', section: 'Work', roles: WORKERS_NAV, orgContext: true },

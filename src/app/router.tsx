@@ -117,6 +117,14 @@ function PerfIndex() {
   return overseer ? L(<PerformancePage />) : <Navigate to="/performance/progress" replace />
 }
 
+/** Home is role-aware: owners get the Cockpit, managers the Console, everyone else the IC dashboard. */
+function HomeDispatch() {
+  const role = useAuthStore((s) => s.role)
+  if (role === 'owner' || role === 'superadmin') return L(<CockpitPage />)
+  if (role === 'manager' || role === 'admin') return L(<ConsolePage />)
+  return <WorkHomePage />
+}
+
 export const router = createBrowserRouter([
   // ---- Public / auth ----
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
@@ -148,12 +156,11 @@ export const router = createBrowserRouter([
               {
                 element: <RequireOrgContext />,
                 children: [
-                  { path: 'home', element: <WorkHomePage /> },
+                  { path: 'home', element: <HomeDispatch /> },
                   { path: 'today', element: L(<DueTodayPage />) },
                   {
                     element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
                     children: [
-                      { path: 'console', element: L(<ConsolePage />) },
                       // Activity hub — live feed + audit log
                       {
                         path: 'activity',
@@ -215,6 +222,8 @@ export const router = createBrowserRouter([
                   { path: 'templates', element: <Navigate to="/import/templates" replace /> },
                   { path: 'upload', element: <Navigate to="/import" replace /> },
                   { path: 'credits', element: <Navigate to="/settings/credits" replace /> },
+                  { path: 'cockpit', element: <Navigate to="/home" replace /> },
+                  { path: 'console', element: <Navigate to="/home" replace /> },
                   { path: 'leads', element: L(<BatchesPage />) },
                   { path: 'leads/batch/:batchId', element: L(<LeadQueuePage />) },
                   { path: 'leads/manual/:id', element: L(<ManualLeadDetailPage />) },
@@ -231,7 +240,6 @@ export const router = createBrowserRouter([
                     // §2 matrix: scrape/global pool + "see all managers/teams" = Owner only.
                     element: <RequireRole roles={['superadmin', 'owner']} />,
                     children: [
-                      { path: 'cockpit', element: L(<CockpitPage />) },
                       // Sourcing hub — Pipeline · Profile · Discovery
                       {
                         path: 'sourcing',
