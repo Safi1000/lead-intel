@@ -49,7 +49,7 @@ export function PerformancePage() {
         {RANGES.map((r) => (
           <button key={r.key} onClick={() => setRange(r.key)}
             className={cn('rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-              range === r.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}>
+              range === r.key ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]')}>
             {r.label}
           </button>
         ))}

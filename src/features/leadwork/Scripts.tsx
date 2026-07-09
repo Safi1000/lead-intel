@@ -45,7 +45,7 @@ export function ScriptsPage() {
           <div className="flex gap-2">
             {(['call', 'email'] as const).map((k) => (
               <button key={k} onClick={() => setEditing({ ...editing, kind: k })}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium ${editing.kind === k ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)]'}`}>
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors ${editing.kind === k ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]'}`}>
                 {k === 'call' ? <Phone className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}{k === 'call' ? 'Call script' : 'Email'}
               </button>
             ))}

@@ -131,7 +131,7 @@ export function ActivityPage() {
             <button
               key={p.key}
               onClick={() => setPeriod(p.key)}
-              className={`px-4 py-1.5 text-sm font-medium transition-colors ${period === p.key ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]'}`}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${period === p.key ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)]' : 'bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]'}`}
             >
               {p.label}
             </button>

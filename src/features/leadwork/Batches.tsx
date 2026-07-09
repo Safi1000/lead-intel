@@ -103,7 +103,7 @@ export function BatchesPage() {
           <button
             onClick={() => setShowArchived((v) => !v)}
             className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors',
-              showArchived ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)]')}
+              showArchived ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]')}
           >
             <Archive className="h-3.5 w-3.5" /> Archived <span className="tabular-nums opacity-70">{archivedCount}</span>
           </button>
