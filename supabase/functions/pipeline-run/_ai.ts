@@ -21,6 +21,8 @@ export interface AiScore {
   // The strongest sellable gap → the setter's opener. Set deterministically in scorePlace from the
   // website signals (not the model): 'none' means nothing to sell (a well-served business we skip).
   primary_angle?: 'first_website' | 'broken_site' | 'redesign' | 'lead_capture' | 'seo' | 'booking' | 'reputation' | 'none'
+  // For reputation leads: the concrete higher-reviewed rivals near them (setter ammo). Set in code.
+  rivals?: Array<{ name: string; count: number }>
 }
 
 export interface PlaceForScoring {
@@ -357,6 +359,7 @@ export async function scorePlace(
   apiKey: string,
   niche?: { label: string; prompt: string | null },
   peerMedianReviews?: number,
+  rivals?: Array<{ name: string; count: number }>,
 ): Promise<{ score: AiScore; raw: unknown }> {
   // ---- Sellable-gap detection (deterministic, from the website signals — the authoritative gate) ----
   // Computed BEFORE scoring so the model writes site_issue_note for the real gap; finalized AFTER
@@ -430,6 +433,7 @@ export async function scorePlace(
     : score.website_status === 'weak' ? 'redesign'   // model saw a weakness we couldn't classify (e.g. via the render fallback)
     : 'none'
   score.primary_angle = angle
+  if (angle === 'reputation' && rivals && rivals.length) score.rivals = rivals
 
   // Lead-fit is driven by the presence of a sellable gap, not the old weak-website-only rubric.
   // No gap → capped to 3 (nothing to sell). A real gap → floored so the model's stale weak-only
@@ -462,7 +466,12 @@ export async function scorePlace(
     } else if (angle === 'lead_capture') {
       score.site_issue_note = `There's no way to reach you online — no contact form, booking, or email on the site — so every prospective ${oneWho} has to phone you, and the ones who won't just go elsewhere.`
     } else if (angle === 'reputation') {
-      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while the top ${niche?.label ?? 'businesses'} near you average ~${peerMed ?? 'many more'} — and because review count is one of the biggest Google Maps ranking factors, you're showing up below them in local search, so the new ${who} searching right now are booking with them instead of you.`
+      // Name a concrete rival if we have one — far more visceral than an abstract median.
+      const topRival = rivals && rivals.length ? rivals[0] : null
+      const rivalClause = topRival
+        ? `a practice near you like ${topRival.name} has ${topRival.count}`
+        : `the top ${niche?.label ?? 'businesses'} near you average ~${peerMed ?? 'many more'}`
+      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while ${rivalClause} — and because review count is one of the biggest Google Maps ranking factors, you're showing up below them in local search, so the new ${who} searching right now are booking with them instead of you.`
     } else if (angle === 'seo') {
       const bits: string[] = []
       if (ws?.detectedIssues.some((i) => /Missing SEO basics/i.test(i))) bits.push('missing key SEO basics')

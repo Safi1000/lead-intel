@@ -823,19 +823,37 @@ Deno.serve(async (req: Request) => {
     // local competitor set we just pulled for each location. Uses userRatingCount already in the
     // search results (zero extra cost). Needs a handful of peers to be trustworthy.
     const peerMedianByLocation = new Map<string, number>()
+    // Top competitors per metro (name + review count + place_id) — the SAME sourced set the median
+    // comes from, so naming them in the reputation pitch costs nothing extra. Used to name a concrete
+    // rival ("practices near you like X have 295 reviews"); the lead itself is filtered out at use.
+    const topCompetitorsByLocation = new Map<string, Array<{ name: string; count: number; place_id: string }>>()
     {
       const byLoc = new Map<string, number[]>()
+      const compByLoc = new Map<string, Array<{ name: string; count: number; place_id: string }>>()
       for (const r of allResults) {
         if (r.userRatingCount == null) continue
         const arr = byLoc.get(r._location) ?? []
         arr.push(r.userRatingCount)
         byLoc.set(r._location, arr)
+        const name = r.displayName?.text ?? r._name ?? ''
+        if (name) {
+          const cl = compByLoc.get(r._location) ?? []
+          cl.push({ name, count: r.userRatingCount, place_id: r.id })
+          compByLoc.set(r._location, cl)
+        }
       }
       for (const [loc, counts] of byLoc) {
         if (counts.length < 6) continue // too few peers to trust a median
         counts.sort((a, b) => a - b)
         const mid = Math.floor(counts.length / 2)
         peerMedianByLocation.set(loc, counts.length % 2 ? counts[mid] : Math.round((counts[mid - 1] + counts[mid]) / 2))
+      }
+      for (const [loc, comps] of compByLoc) {
+        // Dedup by place_id, keep the 5 highest-reviewed — the credible "top practices near you".
+        const seen = new Set<string>()
+        const top = comps.filter((c) => !seen.has(c.place_id) && seen.add(c.place_id))
+          .sort((a, b) => b.count - a.count).slice(0, 5)
+        topCompetitorsByLocation.set(loc, top)
       }
     }
 
@@ -1104,7 +1122,14 @@ Deno.serve(async (req: Request) => {
             email: emailResult.email,
             websiteSignals: websiteResult,
           }
-          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY, { label: profile.nicheLabel, prompt: profile.nichePrompt }, peerMedianByLocation.get(result._location))
+          // Concrete rivals to name in the reputation pitch: top-reviewed practices in the same
+          // metro, excluding this lead, only those genuinely AHEAD of it (higher review count).
+          const leadCount = result.userRatingCount ?? 0
+          const rivals = (topCompetitorsByLocation.get(result._location) ?? [])
+            .filter((c) => c.place_id !== placeId && c.count > leadCount)
+            .slice(0, 3)
+            .map((c) => ({ name: c.name, count: c.count }))
+          const { score, raw } = await scorePlace(placeForAi, qualityThreshold, model, OPENAI_KEY, { label: profile.nicheLabel, prompt: profile.nichePrompt }, peerMedianByLocation.get(result._location), rivals)
           aiScore = score
           aiRaw = raw
           // Pin website_status to reality regardless of the model's guess: no real website → 'none';
@@ -1247,6 +1272,7 @@ Deno.serve(async (req: Request) => {
               'Best Time to Call (PKT)': profile.fetchHours && details.hoursPeriods?.length ? formatPktCallWindow(details.hoursPeriods, details.utcOffsetMinutes) : '',
               'Website Status': aiScore?.website_status ?? '',
               'Primary Angle': aiScore?.primary_angle ?? '',
+              'Top Competitors': aiScore?.rivals?.length ? aiScore.rivals.map((r) => `${r.name} (${r.count})`).join(', ') : '',
               'Why This Status': aiScore?.status_reason ?? '',
               'Site Issue Note': aiScore?.site_issue_note ?? '',
               'Pain Points': aiScore?.pain_points ?? '',
