@@ -199,6 +199,10 @@ const FORM_PLATFORM_RE = /(calendly|hs-form|hsforms|hubspot|jotform|typeform|gra
 const CONTACT_LINK_RE = /(?:href|action)\s*=\s*["'][^"']*(?:\/contact|contact-us|\/appointments?|\/book|\/booking|\/schedul|\/consult|get-started)[^"']*["']/i
 // Visible-text CTAs a real page shows for booking/contact (matched against stripped text, not scripts).
 const CONTACT_KEYWORD_RE = /\b(?:book\s*(?:now|online|an?\s*appointment|a?\s*consultation)?|schedule\s*(?:an?\s*)?(?:appointment|consultation|call|visit|now|online)?|request\s*(?:an?\s*)?(?:appointment|consultation|callback)|make\s*an?\s*appointment|online\s*booking|reserve\s*(?:your|a)?\s*(?:spot|appointment|table)?|free\s*consultation|contact\s*us|get\s*started)\b/i
+// A real contact/booking FORM on a page (a message box or named contact fields) — NOT a newsletter
+// email-only signup. Lets us catch a contact form that lives on /contact rather than the homepage,
+// so we don't wrongly conclude "phone only" from a homepage-only scan.
+const CONTACT_FORM_STRICT_RE = /<form\b[^>]*>[\s\S]{0,8000}?(?:<textarea|name=["'][^"']*(?:message|comment|enquir|inquir|your[-_]?name|full[-_]?name|fname|lname|phone|subject|reason)[^"']*["'])/i
 
 // Broken / dead / parked site — an UNAMBIGUOUS placeholder where a real site should be (domain
 // parked or for sale, host suspended, un-configured server default page). A business whose "website"
@@ -671,6 +675,7 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
   let homepageFinalUrl = base
   let reachable = false
   let pagesChecked = 0
+  let contactFound = false // a contact form / booking embed seen on ANY fetched page (esp. /contact)
 
   for (const pageUrl of pagesToTry) {
     if (pagesChecked >= MAX_PAGES) break
@@ -690,6 +695,10 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
       homepageHtml = html
       homepageLoadMs = loadTimeMs
     }
+    // A contact form or booking embed on this page counts as an online contact method. On a /contact
+    // URL any <form> qualifies; elsewhere require a strict contact form (message box / named fields).
+    const onContactPage = /\/contact/i.test(pageUrl)
+    if (!contactFound && ((onContactPage && CONTACT_FORM_RE.test(html)) || CONTACT_FORM_STRICT_RE.test(html) || FORM_PLATFORM_RE.test(html))) contactFound = true
 
     if (!email) {
       // Prefer mailto: links (high confidence) — trusted regardless of domain (fromMailto)
@@ -742,6 +751,14 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
     : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], hasTitle: false, hasMetaDescription: false, hasH1: false, jsShell: false, visibleTextExcerpt: null as string | null }
   const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
 
+  // A contact form / booking embed on ANY fetched page (usually /contact) is a real online-contact
+  // method — a homepage-only scan must not conclude "phone only" and mislabel the lead.
+  if (contactFound && !qualitySignals.hasBookingWidget) {
+    qualitySignals.hasBookingWidget = true
+    qualitySignals.bookingPlatform = qualitySignals.bookingPlatform ?? 'Contact form / contact page'
+    qualitySignals.detectedIssues = qualitySignals.detectedIssues.filter((i) => !i.startsWith('CONFIRMED no online contact'))
+  }
+
   // ---------------------------------------------------------------------------
   // Headless-render fallback: for JS-shell pages (content invisible in raw HTML) and unreachable/
   // bot-blocked sites, fetch the RENDERED page text and recover the signals we couldn't see.
@@ -792,8 +809,10 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
       renderFallbackUsed = true
       qualitySignals.detectedIssues = qualitySignals.detectedIssues.filter((i) => !i.startsWith('Site content is JavaScript-rendered'))
       qualitySignals.detectedIssues.push('Assessed via headless-render fallback — booking/contact were read from the RENDERED page; layout, load speed, SSL, mobile and email presence could not be fully verified (treat those as UNKNOWN)')
-      if (!qualitySignals.hasBookingWidget) {
-        qualitySignals.detectedIssues.push('CONFIRMED no online contact: even the fully rendered page shows no booking or contact option — patients can only phone')
+      // We only render the HOMEPAGE — a contact form often lives on /contact, which we don't render.
+      // So NEVER confirm "phone only" here; note it as UNVERIFIED so the model can't overstate it.
+      if (!qualitySignals.hasBookingWidget && !contactFound) {
+        qualitySignals.detectedIssues.push('Could not find an online booking/contact option on the rendered homepage — UNVERIFIED (the site is JavaScript-rendered and a contact form may exist on another page)')
       }
     }
   }

@@ -54,6 +54,7 @@ Which angles to include (in priority order):
 - If the WEBSITE FINDINGS say the business is RUNNING GOOGLE ADS, that is a top point: they are paying Google to send clicks to a weak site that cannot convert them (wasted ad spend) — pair it with a concrete site defect.
 - Review friction that CORROBORATES a detected website defect (reviewers can't get through to book AND the site has no booking flow; nobody replies AND no email published). Connect them explicitly. Never invent website defects not in the findings.
 - Other review friction we can fix with a better website — hard to book, phone never answered, no online booking, slow replies, scheduling chaos. Say roughly how many reviewers mention it. Distinguish website-fixable friction from service complaints (bad injections, rude staff) — service complaints are context, NOT our pitch.
+- NEVER state the business has "no online booking", "no contact form", or "no way to book online" unless the WEBSITE FINDINGS explicitly CONFIRM it. If the findings show a booking widget or contact form, or mark contact as UNVERIFIED, do NOT claim it is missing — you may still mention reviewers' scheduling frustration, but as their experience, not as a missing website feature you asserted.
 - Use dates: recent friction is hot; if ALL reviews are years old, note the business looks dormant.
 - If there is genuinely no friction anywhere, give the dominant praise theme from recent reviews (name the provider/treatment) — as a single point, no numbering.
 
