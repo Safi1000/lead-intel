@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
-import { activitiesApi, cadencesApi, gmailApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, emailApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -441,25 +441,12 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
   const [body, setBody] = useState(initial.body)
   const [copied, setCopied] = useState(false)
 
-  // Is this user's Gmail connected? Drives one-click Send vs. the Connect / manual-handoff path.
-  const { data: gmail, refetch: refetchStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ['gmail-status'], queryFn: () => gmailApi.status(), staleTime: 60_000,
+  // Is direct sending switched on for this user (SMTP configured + authorised mailbox owner)?
+  const { data: mail, isLoading: statusLoading } = useQuery({
+    queryKey: ['send-email-status'], queryFn: () => emailApi.status(), staleTime: 60_000,
   })
-  // The OAuth popup posts back "gmail-connected" when it finishes — re-check status then.
-  useEffect(() => {
-    const onMsg = (e: MessageEvent) => { if (e.data === 'gmail-connected') refetchStatus() }
-    window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
-  }, [refetchStatus])
-
-  const connect = async () => {
-    try {
-      const { url } = await gmailApi.startUrl()
-      window.open(url, 'gmail-oauth', 'width=520,height=680')
-    } catch (e) { toast.error(normalizeError(e).message) }
-  }
   const send = useMutation({
-    mutationFn: () => gmailApi.send({ to: to.trim(), subject: subject.trim(), body, leadId: lead.id }),
+    mutationFn: () => emailApi.send({ to: to.trim(), subject: subject.trim(), body, leadId: lead.id }),
     onSuccess: async () => {
       toast.success('Email sent')
       try { await activitiesApi.add(lead.id, { type: 'Emailed', note: `Sent email: ${subject.trim()}` }) } catch { /* non-fatal */ }
@@ -469,21 +456,16 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
-  const openGmail = () => {
-    const url =
-      'https://mail.google.com/mail/?view=cm&fs=1' +
-      `&to=${encodeURIComponent(to)}` +
-      `&su=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}` +
-      `&authuser=${encodeURIComponent(EMAIL_OUTREACH.fromAddress)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+  // Fallback when direct sending isn't on: open the user's default mail app with the draft pre-filled.
+  const openMailApp = () => {
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
   const copyBody = async () => {
     try { await navigator.clipboard.writeText(body); setCopied(true); setTimeout(() => setCopied(false), 1200) }
     catch { toast.error('Could not copy') }
   }
 
-  const connected = !!gmail?.connected
+  const connected = !!mail?.connected
   const canSend = connected && !!to.trim() && !!subject.trim() && !!body.trim()
 
   return (
@@ -492,8 +474,8 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
       onOpenChange={(o) => !o && onClose()}
       title="Send Email"
       description={connected
-        ? `Sends from ${gmail?.email ?? EMAIL_OUTREACH.fromAddress}. Review the draft, then click Send.`
-        : `Connect your Gmail once to send from ${EMAIL_OUTREACH.fromAddress} in one click.`}
+        ? `Sends from ${mail?.email ?? EMAIL_OUTREACH.fromAddress}. Review the draft, then click Send.`
+        : `Review the draft below. Sending from ${EMAIL_OUTREACH.fromAddress} turns on once setup is finished.`}
       className="max-w-2xl"
     >
       <div className="space-y-3">
@@ -517,24 +499,17 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
 
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-3">
           <span className="mr-auto inline-flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
-            {statusLoading ? 'Checking Gmail…'
-              : connected ? <><CheckCircle2 className="h-3.5 w-3.5 text-[var(--c-verified)]" /> Connected as {gmail?.email}</>
-              : 'Gmail not connected'}
+            {statusLoading ? 'Checking…'
+              : connected ? <><CheckCircle2 className="h-3.5 w-3.5 text-[var(--c-verified)]" /> Sending from {mail?.email}</>
+              : 'Direct sending not set up yet'}
           </span>
           <Button variant="ghost" size="sm" onClick={copyBody}>
             {copied ? <Check className="h-4 w-4 text-[var(--c-verified)]" /> : <Copy className="h-4 w-4" />} Copy
           </Button>
-          {connected ? (
-            <>
-              <Button variant="outline" size="sm" onClick={openGmail} title="Open a pre-filled Gmail compose window instead">Open in Gmail</Button>
-              <Button size="sm" loading={send.isPending} disabled={!canSend} onClick={() => send.mutate()}><Send className="h-4 w-4" /> Send</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" onClick={openGmail}>Open in Gmail</Button>
-              <Button size="sm" onClick={connect}><Mail className="h-4 w-4" /> Connect Gmail to send</Button>
-            </>
-          )}
+          <Button variant="outline" size="sm" onClick={openMailApp}>Open in email app</Button>
+          <Button size="sm" loading={send.isPending} disabled={!canSend} onClick={() => send.mutate()} title={connected ? '' : 'Sending is not set up yet'}>
+            <Send className="h-4 w-4" /> Send
+          </Button>
         </div>
       </div>
     </Dialog>
