@@ -45,7 +45,8 @@ async function sendMail(to: string, subject: string, body: string) {
     connection: { hostname: SMTP_HOST, port: SMTP_PORT, tls: SMTP_PORT === 465, auth: { username: SMTP_USER, password: SMTP_PASS } },
   })
   try {
-    await client.send({ from: `${SENDER_NAME} <${SMTP_USER}>`, to, subject, content: body })
+    // BCC the sender so a copy lands in her own inbox (SMTP submission doesn't append to the Sent folder).
+    await client.send({ from: `${SENDER_NAME} <${SMTP_USER}>`, to, bcc: SMTP_USER, subject, content: body })
   } finally {
     await client.close()
   }
