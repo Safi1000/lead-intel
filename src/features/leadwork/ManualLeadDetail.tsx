@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send, Target } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
 import { activitiesApi, cadencesApi, emailApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
@@ -43,12 +43,6 @@ const prettyUrl = (s: string): string => {
     return v.length > 40 ? v.slice(0, 39) + '…' : v
   }
 }
-/** Find a lead data value whose column name matches a pattern (Feature 4 call card). */
-const findField = (data: Record<string, string>, re: RegExp) => {
-  const hit = Object.entries(data).find(([k, v]) => re.test(k) && v?.trim())
-  return hit?.[1]?.trim() ?? null
-}
-
 function CopyButton({ text, className }: { text: string; className?: string }) {
   const [done, setDone] = useState(false)
   return (
@@ -113,6 +107,8 @@ export function ManualLeadDetailPage() {
   const [emailOpen, setEmailOpen] = useState(false)
   // Direct-email follow-up — scoped to one manager (Hamna) who works warm leads from her own inbox.
   const canEmail = user?.id === EMAIL_OUTREACH.userId
+  // Managers/owners see internal sourcing + scoring fields; setters/closers must not (secrecy rule).
+  const isInternal = role === 'manager' || role === 'owner' || role === 'superadmin' || role === 'admin'
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['manual-lead', id] })
@@ -212,43 +208,12 @@ export function ManualLeadDetailPage() {
         </div>
       </div>
 
-      {lead.stage === 'Booked' && <CallCard lead={lead} />}
-
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           {canWork && <CadenceCard leadId={lead.id} />}
-          {/* Lead data */}
-          <Card className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold">Lead details</h2>
-              <button type="button" onClick={async () => { const all = Object.entries(lead.data).map(([k, v]) => `${k}: ${v}`).join('\n'); try { await navigator.clipboard.writeText(all); toast.success('All fields copied') } catch { toast.error('Could not copy') } }}
-                className="inline-flex items-center gap-1 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><Copy className="h-3.5 w-3.5" /> Copy all</button>
-            </div>
-            <dl className="divide-y divide-[var(--color-border)]">
-              <div className="group flex items-start justify-between gap-4 py-2.5">
-                <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">Lead ID</dt>
-                <dd className="flex max-w-[68%] items-start gap-1.5 text-right text-sm">
-                  <span className="break-all text-left font-mono text-[13px]">{lead.id}</span>
-                  <CopyButton text={lead.id} />
-                </dd>
-              </div>
-              {Object.entries(lead.data).map(([key, value]) => (
-                <div key={key} className="group flex items-start justify-between gap-4 py-2.5">
-                  <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">{key}</dt>
-                  <dd className="flex max-w-[68%] items-start gap-1.5 text-right text-sm">
-                    <span className="text-left"><LeadValue value={value} /></span>
-                    {value && looksPhone(value) && (
-                      <>
-                        <a href={`tel:${digits(value)}`} title="Call" className="shrink-0 rounded p-1 text-[var(--color-primary)] hover:bg-[var(--color-surface-2)]"><Phone className="h-4 w-4" /></a>
-                        <a href={`https://wa.me/${digits(value)}`} target="_blank" rel="noreferrer" title="WhatsApp" className="shrink-0 rounded p-1 text-green-600 dark:text-green-400 hover:bg-[var(--color-surface-2)]"><MessageCircle className="h-4 w-4" /></a>
-                      </>
-                    )}
-                    {value && <CopyButton text={value} />}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </Card>
+          <TalkingPointsCard data={lead.data} />
+          <DetailsCard lead={lead} />
+          {isInternal && <InternalCard lead={lead} />}
 
           {/* Activity log */}
           <Card className="p-5">
@@ -563,36 +528,156 @@ function CadenceCard({ leadId }: { leadId: string }) {
 }
 
 
-/** Feature 4 — clean call card surfaced when a lead is Booked. */
-function CallCard({ lead }: { lead: ManualLead }) {
-  const website = findField(lead.data, /website|url|site|web/i)
-  const owner = findField(lead.data, /owner|manager|contact|name/i)
-  const issue = findField(lead.data, /issue|problem|pain|reason|note/i)
-  const phone = findField(lead.data, /phone|mobile|cell|tel/i)
+// --- Lead-detail cards: call-ready grouping + role-aware visibility -----------------------------
+// Internal/sourcing fields quietly reveal automated scraping + scoring, so they're kept out of the
+// setter/closer view (hard rule: setters never learn lead-gen is automated). Managers/owners see them.
+const PITCH_KEYS = ['Site Issue Note', 'Pain Points', 'Top Competitors', 'Personalization Notes']
+const CONTACT_KEYS = ['Phone', 'Email', 'Website', 'Address']
+const BUSINESS_KEYS = ['Rating', 'Business Hours', 'Best Time to Call (PKT)']
+const INTERNAL_KEYS = ['Quality Score', 'Primary Angle', 'Website Status', 'Why This Status', 'SEO Score', 'Tech Stack', 'Running Google Ads', 'Email Verified', 'Source', 'Search Query', 'Search Location']
+const ANGLE_LABELS: Record<string, string> = {
+  first_website: 'No website yet',
+  broken_site: 'Broken / dead website',
+  redesign: 'Website needs a rebuild',
+  lead_capture: 'No way to capture leads online',
+  seo: 'Hard to find on Google',
+  booking: 'No online booking',
+  reputation: 'Behind local rivals on reviews',
+}
+
+function RatingStars({ value }: { value: string }) {
+  const n = parseFloat(value)
+  if (isNaN(n)) return <LeadValue value={value} />
+  const full = Math.min(5, Math.round(n))
   return (
-    <Card className="mb-5 border-amber-200 bg-amber-500/10 p-5">
+    <span className="inline-flex items-center gap-1.5">
+      <span className="tracking-tight text-amber-500" aria-hidden>{'★'.repeat(full)}{'☆'.repeat(5 - full)}</span>
+      <span className="tabular-nums font-medium">{n.toFixed(1)}</span>
+    </span>
+  )
+}
+
+function DeliverBadge({ verified }: { verified: string }) {
+  if (verified.startsWith('Yes')) return <span className="shrink-0 rounded-full bg-[var(--c-verified-bg)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--c-verified-text)]">deliverable</span>
+  if (verified.startsWith('No')) return <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">may bounce</span>
+  return null
+}
+
+/** One label/value row, reused across the grouped cards. */
+function DataRow({ k, v, verified }: { k: string; v: string; verified?: string }) {
+  if (!v?.trim()) return null
+  return (
+    <div className="group flex items-start justify-between gap-4 py-2.5">
+      <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">{k}</dt>
+      <dd className="flex max-w-[68%] items-start gap-1.5 text-right text-sm">
+        {k === 'Rating' ? <RatingStars value={v} /> : <span className="text-left"><LeadValue value={v} /></span>}
+        {k === 'Email' && verified && <DeliverBadge verified={verified} />}
+        {looksPhone(v) && (
+          <>
+            <a href={`tel:${digits(v)}`} title="Call" className="shrink-0 rounded p-1 text-[var(--color-primary)] hover:bg-[var(--color-surface-2)]"><Phone className="h-4 w-4" /></a>
+            <a href={`https://wa.me/${digits(v)}`} target="_blank" rel="noreferrer" title="WhatsApp" className="shrink-0 rounded p-1 text-green-600 dark:text-green-400 hover:bg-[var(--color-surface-2)]"><MessageCircle className="h-4 w-4" /></a>
+          </>
+        )}
+        <CopyButton text={v} />
+      </dd>
+    </div>
+  )
+}
+
+function Subsection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-4 first:mt-0">
+      <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+function PitchPoint({ label, text, muted }: { label: string; text: string; muted?: boolean }) {
+  return (
+    <div>
+      <p className="text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
+      <p className={cn('mt-0.5 whitespace-pre-line', muted && 'text-[var(--color-text-secondary)]')}>{text}</p>
+    </div>
+  )
+}
+
+/** The pitch — pinned at the top so it's the first thing to hand on a call. Visible to everyone. */
+function TalkingPointsCard({ data }: { data: Record<string, string> }) {
+  const angle = ANGLE_LABELS[(data['Primary Angle'] || '').trim()] ?? ''
+  const hook = striptrail(data['Site Issue Note'] || '')
+  const pains = (data['Pain Points'] || '').trim()
+  const painUsable = !!pains && !/not analyzed|insufficient/i.test(pains)
+  const rivals = striptrail(data['Top Competitors'] || '')
+  const praise = striptrail(data['Personalization Notes'] || '')
+  if (!hook && !painUsable && !rivals && !praise) return null
+  const copyText = [
+    hook && `Hook: ${hook}`,
+    painUsable && `Why they need us:\n${pains}`,
+    rivals && `Ahead of them locally: ${rivals}`,
+    praise && `Open with a compliment: ${praise}`,
+  ].filter(Boolean).join('\n\n')
+  return (
+    <Card className="border-[var(--color-primary)]/30 bg-[var(--color-primary)]/[0.04] p-5">
       <div className="mb-3 flex items-center gap-2">
-        <PhoneCall className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <h2 className="text-[15px] font-semibold">Call card</h2>
-        {lead.call_at && <span className="ml-auto text-[13px] font-medium text-amber-700 dark:text-amber-400">{format(new Date(lead.call_at), 'PPp')}</span>}
+        <Target className="h-4 w-4 text-[var(--color-primary)]" />
+        <h2 className="text-[15px] font-semibold">Talking points</h2>
+        {angle && <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--color-primary)]">{angle}</span>}
+        <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(copyText); toast.success('Talking points copied') } catch { toast.error('Could not copy') } }}
+          className="ml-auto inline-flex items-center gap-1 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><Copy className="h-3.5 w-3.5" /> Copy</button>
       </div>
-      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-        <Field label="Business">{lead.display_name}</Field>
-        <Field label="Owner / Manager">{owner ?? '—'}</Field>
-        <Field label="Website">{website ? <a href={hrefFor(website)} target="_blank" rel="noreferrer" title={website} className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{prettyUrl(website)}<ExternalLink className="h-3 w-3 shrink-0" /></a> : '—'}</Field>
-        <Field label="Phone">{phone ? <a href={`tel:${digits(phone)}`} className="text-[var(--color-primary)] hover:underline">{phone}</a> : '—'}</Field>
-        <div className="sm:col-span-2"><Field label="Site issue note">{issue ?? '—'}</Field></div>
-      </dl>
+      <div className="space-y-3 text-sm">
+        {hook && <PitchPoint label="The hook" text={hook} />}
+        {painUsable && <PitchPoint label="Why they need us" text={pains} muted />}
+        {rivals && <PitchPoint label="Ahead of them locally" text={rivals} />}
+        {praise && <PitchPoint label="Open with a compliment" text={praise} muted />}
+      </div>
     </Card>
   )
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+/** Contact + business snapshot + any custom columns. Visible to everyone. */
+function DetailsCard({ lead }: { lead: ManualLead }) {
+  const data = lead.data as Record<string, string>
+  const has = (k: string) => !!(data[k] ?? '').trim()
+  const contact = CONTACT_KEYS.filter(has)
+  const business = BUSINESS_KEYS.filter(has)
+  const known = new Set([...PITCH_KEYS, ...CONTACT_KEYS, ...BUSINESS_KEYS, ...INTERNAL_KEYS, 'Business Name'])
+  const other = Object.keys(data).filter((k) => !known.has(k) && has(k))
+  if (!contact.length && !business.length && !other.length) return null
+  const copyAll = [...contact, ...business, ...other].map((k) => `${k}: ${data[k]}`).join('\n')
   return (
-    <div>
-      <dt className="text-[12px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium">{children}</dd>
-    </div>
+    <Card className="p-5">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold">Lead details</h2>
+        <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(copyAll); toast.success('Details copied') } catch { toast.error('Could not copy') } }}
+          className="inline-flex items-center gap-1 text-[12px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"><Copy className="h-3.5 w-3.5" /> Copy</button>
+      </div>
+      {contact.length > 0 && <Subsection title="Contact"><dl className="divide-y divide-[var(--color-border)]">{contact.map((k) => <DataRow key={k} k={k} v={data[k]} verified={data['Email Verified']} />)}</dl></Subsection>}
+      {business.length > 0 && <Subsection title="Business"><dl className="divide-y divide-[var(--color-border)]">{business.map((k) => <DataRow key={k} k={k} v={data[k]} />)}</dl></Subsection>}
+      {other.length > 0 && <Subsection title="Other"><dl className="divide-y divide-[var(--color-border)]">{other.map((k) => <DataRow key={k} k={k} v={data[k]} />)}</dl></Subsection>}
+    </Card>
+  )
+}
+
+/** Internal sourcing + scoring — managers/owners only (hidden from setters per the secrecy rule). */
+function InternalCard({ lead }: { lead: ManualLead }) {
+  const data = lead.data as Record<string, string>
+  const rows = INTERNAL_KEYS.filter((k) => (data[k] ?? '').trim())
+  return (
+    <Card className="p-5">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h2 className="text-[15px] font-semibold">Sourcing &amp; scoring</h2>
+        <span className="text-[11px] text-[var(--color-text-muted)]">Internal — hidden from setters</span>
+      </div>
+      <dl className="divide-y divide-[var(--color-border)]">
+        {rows.map((k) => <DataRow key={k} k={k} v={data[k]} />)}
+        <div className="group flex items-start justify-between gap-4 py-2.5">
+          <dt className="pt-0.5 font-mono text-[12px] uppercase tracking-wide text-[var(--color-text-muted)]">Lead ID</dt>
+          <dd className="flex max-w-[68%] items-start gap-1.5 text-right text-sm"><span className="break-all text-left font-mono text-[13px]">{lead.id}</span><CopyButton text={lead.id} /></dd>
+        </div>
+      </dl>
+    </Card>
   )
 }
 
