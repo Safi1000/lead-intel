@@ -28,6 +28,21 @@ const looksUrl = (s: string) => {
   return /^(https?:\/\/|www\.)/i.test(v) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(v)
 }
 const hrefFor = (s: string) => (/^https?:\/\//i.test(s.trim()) ? s.trim() : `https://${s.trim().replace(/^\/+/, '')}`)
+/** A readable label for a link — booking-widget URLs (Vagaro, Fresha…) are often 500+ chars of
+ *  opaque query blob. Show the domain (plus a short path if it stays tidy); the full URL is still
+ *  the href and lives in the tooltip. */
+const prettyUrl = (s: string): string => {
+  const v = s.trim()
+  try {
+    const u = new URL(hrefFor(v))
+    const host = u.hostname.replace(/^www\./, '')
+    const path = u.pathname === '/' ? '' : u.pathname
+    const label = host + path
+    return label.length > 40 ? host : label
+  } catch {
+    return v.length > 40 ? v.slice(0, 39) + '…' : v
+  }
+}
 /** Find a lead data value whose column name matches a pattern (Feature 4 call card). */
 const findField = (data: Record<string, string>, re: RegExp) => {
   const hit = Object.entries(data).find(([k, v]) => re.test(k) && v?.trim())
@@ -49,7 +64,7 @@ function LeadValue({ value }: { value: string }) {
   const v = value.trim()
   if (!v) return <span className="text-[var(--color-text-muted)]">—</span>
   if (looksEmail(v)) return <a href={`mailto:${v}`} className="break-all text-[var(--color-primary)] hover:underline">{value}</a>
-  if (looksUrl(v)) return <a href={hrefFor(v)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{value}<ExternalLink className="h-3 w-3 shrink-0" /></a>
+  if (looksUrl(v)) return <a href={hrefFor(v)} target="_blank" rel="noreferrer" title={value} className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{prettyUrl(value)}<ExternalLink className="h-3 w-3 shrink-0" /></a>
   // whitespace-pre-line preserves the newlines in multi-point fields (numbered Pain Points).
   return <span className="whitespace-pre-line break-words">{value}</span>
 }
@@ -538,7 +553,7 @@ function CallCard({ lead }: { lead: ManualLead }) {
       <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
         <Field label="Business">{lead.display_name}</Field>
         <Field label="Owner / Manager">{owner ?? '—'}</Field>
-        <Field label="Website">{website ? <a href={hrefFor(website)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{website}<ExternalLink className="h-3 w-3 shrink-0" /></a> : '—'}</Field>
+        <Field label="Website">{website ? <a href={hrefFor(website)} target="_blank" rel="noreferrer" title={website} className="inline-flex items-center gap-1 break-all text-[var(--color-primary)] hover:underline">{prettyUrl(website)}<ExternalLink className="h-3 w-3 shrink-0" /></a> : '—'}</Field>
         <Field label="Phone">{phone ? <a href={`tel:${digits(phone)}`} className="text-[var(--color-primary)] hover:underline">{phone}</a> : '—'}</Field>
         <div className="sm:col-span-2"><Field label="Site issue note">{issue ?? '—'}</Field></div>
       </dl>
