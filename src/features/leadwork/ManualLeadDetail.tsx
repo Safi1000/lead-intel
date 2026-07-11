@@ -403,7 +403,11 @@ function buildDraft(lead: ManualLead): { to: string; subject: string; body: stri
   const niche = nicheFromLead(data)
   const rating = (data['Rating'] || '').trim()
   const praise = striptrail(data['Personalization Notes'] || '')
-  const gap = striptrail(data['Site Issue Note'] || '') || striptrail(data['Pain Points'] || '')
+  // List every pain point (a numbered, multi-line field) — not just the single headline issue.
+  // Fall back to the one-line Site Issue Note when there's no usable list.
+  const painPoints = (data['Pain Points'] || '').trim()
+  const painUsable = !!painPoints && !/not analyzed|insufficient/i.test(painPoints)
+  const issueNote = striptrail(data['Site Issue Note'] || '')
 
   let intro = `I came across ${business} while looking through ${niche} ${city ? `in ${city}` : 'in your area'}, and the reviews genuinely stand out.`
   if (praise) intro += ' ' + praise
@@ -416,7 +420,8 @@ function buildDraft(lead: ManualLead): { to: string; subject: string; body: stri
     '',
     intro,
   ]
-  if (gap) parts.push('', gap)
+  if (painUsable) parts.push('', "Here's what's holding you back, and it's costing you real bookings:", '', painPoints)
+  else if (issueNote) parts.push('', issueNote)
   parts.push(
     '',
     "Let's grab a quick meeting and I'll show you exactly what we'd do.",
