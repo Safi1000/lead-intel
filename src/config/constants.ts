@@ -7,6 +7,21 @@ export const BOOKINGS_SYNC_INTERVAL_MS = 120_000 // 2 min
 export const SEARCH_DEBOUNCE_MS = 300
 export const LEAD_PAGE_SIZE = 100 // keep page size <= 100 (§10)
 
+/**
+ * Direct-email outreach. Scoped to a single TXS manager (Hamna) who personally follows up
+ * warm leads. There is no server-side mail sender yet — the "Send Email" action builds an
+ * editable draft and hands it to her own Gmail (best deliverability, truly from her mailbox).
+ */
+export const EMAIL_OUTREACH = {
+  /** Only this user sees the "Send Email" action on a lead. */
+  userId: '0e94a8ed-f960-468e-9e2e-ec782f9797ae', // Hamna Noor (login hamna@txs.com)
+  /** Mailbox the draft is composed from — the Gmail deep-link hints this Workspace account. */
+  fromAddress: 'hamna@techxserve.com',
+  senderName: 'Hamna',
+  /** Booking link dropped into every draft. */
+  meetingLink: 'cal.com/hamnanoor/15-min-meeting',
+} as const
+
 export interface TradeDef {
   id: string
   label: string

@@ -2,7 +2,8 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
+import { EMAIL_OUTREACH } from '../../config/constants'
 import { activitiesApi, cadencesApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
@@ -94,6 +95,9 @@ export function ManualLeadDetailPage() {
 
   const [remark, setRemark] = useState('')
   const [logType, setLogType] = useState<ActivityType | null>(null)
+  const [emailOpen, setEmailOpen] = useState(false)
+  // Direct-email follow-up — scoped to one manager (Hamna) who works warm leads from her own inbox.
+  const canEmail = user?.id === EMAIL_OUTREACH.userId
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['manual-lead', id] })
@@ -173,6 +177,11 @@ export function ManualLeadDetailPage() {
               title={lead.done_at ? 'Click to reopen' : 'Mark this lead as processed'}
             >
               <CheckCircle2 className={cn('h-4 w-4', lead.done_at && 'text-[var(--c-verified)]')} /> {lead.done_at ? 'Done' : 'Mark as done'}
+            </Button>
+          )}
+          {canEmail && (
+            <Button variant="outline" size="sm" onClick={() => setEmailOpen(true)} title="Draft a follow-up email to this lead">
+              <Mail className="h-4 w-4" /> Send Email
             </Button>
           )}
           {canBook && (
@@ -341,7 +350,133 @@ export function ManualLeadDetailPage() {
           currentCallAt={lead.call_at}
         />
       )}
+
+      {emailOpen && <SendEmailDialog lead={lead} onClose={() => setEmailOpen(false)} />}
     </div>
+  )
+}
+
+
+// ---- Direct-email follow-up (Hamna only) -------------------------------------------------
+// No server-side mailer exists yet, so we build an editable draft from the lead's own scoring
+// fields and hand it to Hamna's Gmail (from hamna@techxserve.com). She reviews, then sends.
+
+const striptrail = (s: string) => s.replace(/\s+/g, ' ').trim()
+
+function cityFromLead(data: Record<string, string>): string {
+  const loc = data['Search Location'] || data['City'] || ''
+  return striptrail(loc.split(',')[0])
+}
+
+function nicheFromLead(data: Record<string, string>): string {
+  let n = (data['Search Query'] || '').trim()
+  const city = cityFromLead(data)
+  if (city) n = n.split(city).join(' ')
+  n = n
+    .replace(/,?\s*\b[A-Z]{2}\b/g, ' ') // drop state codes like "TX"
+    .replace(/\bin\b/gi, ' ')
+    .replace(/[,]/g, ' ')
+  n = striptrail(n).toLowerCase()
+  if (!n) return 'local businesses'
+  return /s$/.test(n) ? n : n + 's'
+}
+
+function buildDraft(lead: ManualLead): { to: string; subject: string; body: string } {
+  const data = lead.data as Record<string, string>
+  const business = lead.display_name
+  const city = cityFromLead(data)
+  const niche = nicheFromLead(data)
+  const rating = (data['Rating'] || '').trim()
+  const praise = striptrail(data['Personalization Notes'] || '')
+  const gap = striptrail(data['Site Issue Note'] || '') || striptrail(data['Pain Points'] || '')
+
+  let intro = `I came across ${business} while looking through ${niche} ${city ? `in ${city}` : 'in your area'}, and the reviews genuinely stand out.`
+  if (praise) intro += ' ' + praise
+  if (rating) intro += ` A ${rating}★ average says you're doing the hard part right.`
+
+  const parts: string[] = [
+    'Hi there,',
+    '',
+    'Thanks to your team for taking my call earlier and passing along this email. Following up as promised.',
+    '',
+    intro,
+  ]
+  if (gap) parts.push('', gap)
+  parts.push(
+    '',
+    "Let's grab a quick meeting and I'll show you exactly what we'd do.",
+    `Pick whatever time works here: ${EMAIL_OUTREACH.meetingLink}`,
+    '',
+    'Talk soon,',
+    EMAIL_OUTREACH.senderName,
+  )
+
+  return {
+    to: (data['Email'] || '').trim(),
+    subject: `Following up on our call — ${business}`,
+    body: parts.join('\n'),
+  }
+}
+
+function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => void }) {
+  const initial = useMemo(() => buildDraft(lead), [lead])
+  const [to, setTo] = useState(initial.to)
+  const [subject, setSubject] = useState(initial.subject)
+  const [body, setBody] = useState(initial.body)
+  const [copied, setCopied] = useState(false)
+
+  const openGmail = () => {
+    const url =
+      'https://mail.google.com/mail/?view=cm&fs=1' +
+      `&to=${encodeURIComponent(to)}` +
+      `&su=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}` +
+      `&authuser=${encodeURIComponent(EMAIL_OUTREACH.fromAddress)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+  const openMailApp = () => {
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+  const copyBody = async () => {
+    try { await navigator.clipboard.writeText(body); setCopied(true); setTimeout(() => setCopied(false), 1200) }
+    catch { toast.error('Could not copy') }
+  }
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      title="Send Email"
+      description={`Sends from ${EMAIL_OUTREACH.fromAddress} via your Gmail. Review the draft, then open it to send.`}
+      className="max-w-2xl"
+    >
+      <div className="space-y-3">
+        {!to && (
+          <div className="rounded-[10px] bg-amber-500/10 px-3 py-2 text-[13px] text-amber-700 dark:text-amber-400">
+            No email was found for this lead — add the client's address in the “To” box before sending.
+          </div>
+        )}
+        <div>
+          <Label htmlFor="em-to">To</Label>
+          <Input id="em-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="client@example.com" />
+        </div>
+        <div>
+          <Label htmlFor="em-subject">Subject</Label>
+          <Input id="em-subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="em-body">Message</Label>
+          <Textarea id="em-body" value={body} onChange={(e) => setBody(e.target.value)} rows={16} className="font-normal leading-relaxed" />
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={copyBody}>
+            {copied ? <Check className="h-4 w-4 text-[var(--c-verified)]" /> : <Copy className="h-4 w-4" />} Copy
+          </Button>
+          <Button variant="outline" size="sm" onClick={openMailApp}>Open in email app</Button>
+          <Button size="sm" onClick={openGmail}><Mail className="h-4 w-4" /> Open in Gmail</Button>
+        </div>
+      </div>
+    </Dialog>
   )
 }
 
