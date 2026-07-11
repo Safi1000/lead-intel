@@ -149,6 +149,40 @@ export const emailApi = {
     invokeSendEmail<{ ok: boolean }>({ action: 'send', ...b }),
 }
 
+// ---- Cold leads (scanned but not imported — the raw pool) ----
+export interface ColdLeadRow {
+  place_id: string; name: string; address: string; phone: string; website: string
+  rating: number | null; email: string; email_confidence: string; location: string
+  niche_key: string; niche_label: string; website_status: string
+}
+export interface ColdLeadFacets {
+  total: number; withEmail: number; withPhone: number
+  locations: Array<{ value: string; count: number }>
+  niches: Array<{ key: string; label: string; count: number }>
+}
+export interface ColdLeadFilters {
+  location?: string; niche?: string; hasEmail?: boolean; hasPhone?: boolean; q?: string
+  limit?: number; offset?: number; orgId?: string | null
+}
+
+async function invokeColdLeads<T = unknown>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('cold-leads', { body })
+  if (error) {
+    let msg = error.message
+    const ctx = (error as { context?: Response }).context
+    if (ctx && typeof ctx.json === 'function') { try { const j = await ctx.json(); if (j?.error) msg = j.error } catch { /* ignore */ } }
+    throw new Error(msg)
+  }
+  if (data && typeof data === 'object' && 'error' in data) throw new Error((data as { error: string }).error)
+  return data as T
+}
+
+export const coldLeadsApi = {
+  facets: (orgId?: string | null) => invokeColdLeads<ColdLeadFacets>({ action: 'facets', orgId }),
+  list: (f: ColdLeadFilters) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'list', ...f }),
+  export: (f: ColdLeadFilters) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'export', ...f }),
+}
+
 // ---- Auth ----
 export const authApi = {
   login: async (body: { email: string; password: string }): Promise<AuthResponse> => {

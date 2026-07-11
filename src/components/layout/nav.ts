@@ -33,6 +33,7 @@ export const CLIENT_NAV: NavItem[] = [
   { label: 'Deals', to: '/deals', icon: 'CircleDollarSign', section: 'Sales', roles: ['superadmin', 'admin', 'manager', 'closer', 'owner'], orgContext: true },
   // Sourcing
   { label: 'Sourcing', to: '/sourcing', icon: 'Zap', section: 'Sourcing', roles: OWNER, orgContext: true },
+  { label: 'Cold Leads', to: '/cold-leads', icon: 'Snowflake', section: 'Sourcing', roles: OVERSEERS, orgContext: true },
   { label: 'Import', to: '/import', icon: 'FileUp', section: 'Sourcing', perm: { resource: 'upload', action: 'create' }, orgContext: true },
   // Operations
   { label: 'Playbook', to: '/playbook', icon: 'FileText', section: 'Operations', roles: WORKERS_NAV, orgContext: true },

@@ -75,6 +75,7 @@ const GoalsSettingsPage = lazyPage(() => import('../features/settings/Goals').th
 const OrganizationsPage = lazyPage(() => import('../features/admin/Organizations').then((m) => ({ default: m.OrganizationsPage })))
 const SourcingWorkspace = lazyPage(() => import('../features/pipeline/Pipeline').then((m) => ({ default: m.SourcingWorkspace })))
 const SourcingLimitSettings = lazyPage(() => import('../features/pipeline/SourcingProfile').then((m) => ({ default: m.SourcingSettingsPage })))
+const ColdLeadsPage = lazyPage(() => import('../features/leads/ColdLeads').then((m) => ({ default: m.ColdLeadsPage })))
 const UsersPage = lazyPage(() => import('../features/admin/Users').then((m) => ({ default: m.UsersPage })))
 // Lazy-loaded P2/P3 + admin route bundles (code-split, §F-9)
 const UsagePage = lazyPage(() => import('../features/runs/Usage').then((m) => ({ default: m.UsagePage })))
@@ -243,6 +244,11 @@ export const router = createBrowserRouter([
                       // Unified Sourcing workspace (config + live cost + run + persistent progress)
                       { path: 'sourcing', element: L(<SourcingWorkspace />) },
                     ],
+                  },
+                  {
+                    // Cold leads pool — the raw scanned-but-not-qualified businesses (overseers).
+                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                    children: [{ path: 'cold-leads', element: L(<ColdLeadsPage />) }],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.
                   {
