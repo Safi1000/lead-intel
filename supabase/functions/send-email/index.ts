@@ -15,7 +15,6 @@
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
-const PIPELINE_SECRET = Deno.env.get('PIPELINE_SECRET') ?? ''
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 const FROM_EMAIL = Deno.env.get('EMAIL_FROM') ?? 'hamna@techxserve.com'
 const SENDER_NAME = Deno.env.get('EMAIL_SENDER_NAME') ?? 'Hamna'
@@ -65,15 +64,6 @@ Deno.serve(async (req: Request) => {
   const action = body.action
 
   try {
-    // TEMP admin test-send (removed after verification).
-    if (action === 'test-send') {
-      if (!PIPELINE_SECRET || body.secret !== PIPELINE_SECRET) return json({ error: 'forbidden' }, 403)
-      if (!RESEND_API_KEY) return json({ error: 'RESEND_API_KEY not set' }, 400)
-      const to = (body.to ?? FROM_EMAIL).trim()
-      const id = await sendMail(to, body.subject ?? 'LeadIntel test email', body.body ?? 'Test send from LeadIntel via Resend — if you got this, sending works.')
-      return json({ ok: true, id, sentTo: to })
-    }
-
     const user = await getUser(auth)
     if (!user) return json({ error: 'unauthorized' }, 401)
     const configured = !!RESEND_API_KEY
