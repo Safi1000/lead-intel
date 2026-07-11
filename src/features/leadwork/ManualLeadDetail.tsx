@@ -1,10 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
-import { activitiesApi, cadencesApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, gmailApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -434,11 +434,40 @@ function buildDraft(lead: ManualLead): { to: string; subject: string; body: stri
 }
 
 function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => void }) {
+  const qc = useQueryClient()
   const initial = useMemo(() => buildDraft(lead), [lead])
   const [to, setTo] = useState(initial.to)
   const [subject, setSubject] = useState(initial.subject)
   const [body, setBody] = useState(initial.body)
   const [copied, setCopied] = useState(false)
+
+  // Is this user's Gmail connected? Drives one-click Send vs. the Connect / manual-handoff path.
+  const { data: gmail, refetch: refetchStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['gmail-status'], queryFn: () => gmailApi.status(), staleTime: 60_000,
+  })
+  // The OAuth popup posts back "gmail-connected" when it finishes — re-check status then.
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => { if (e.data === 'gmail-connected') refetchStatus() }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [refetchStatus])
+
+  const connect = async () => {
+    try {
+      const { url } = await gmailApi.startUrl()
+      window.open(url, 'gmail-oauth', 'width=520,height=680')
+    } catch (e) { toast.error(normalizeError(e).message) }
+  }
+  const send = useMutation({
+    mutationFn: () => gmailApi.send({ to: to.trim(), subject: subject.trim(), body, leadId: lead.id }),
+    onSuccess: async () => {
+      toast.success('Email sent')
+      try { await activitiesApi.add(lead.id, { type: 'Emailed', note: `Sent email: ${subject.trim()}` }) } catch { /* non-fatal */ }
+      qc.invalidateQueries({ queryKey: ['activities', lead.id] })
+      onClose()
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
 
   const openGmail = () => {
     const url =
@@ -449,20 +478,22 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
       `&authuser=${encodeURIComponent(EMAIL_OUTREACH.fromAddress)}`
     window.open(url, '_blank', 'noopener,noreferrer')
   }
-  const openMailApp = () => {
-    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-  }
   const copyBody = async () => {
     try { await navigator.clipboard.writeText(body); setCopied(true); setTimeout(() => setCopied(false), 1200) }
     catch { toast.error('Could not copy') }
   }
+
+  const connected = !!gmail?.connected
+  const canSend = connected && !!to.trim() && !!subject.trim() && !!body.trim()
 
   return (
     <Dialog
       open
       onOpenChange={(o) => !o && onClose()}
       title="Send Email"
-      description={`Sends from ${EMAIL_OUTREACH.fromAddress} via your Gmail. Review the draft, then open it to send.`}
+      description={connected
+        ? `Sends from ${gmail?.email ?? EMAIL_OUTREACH.fromAddress}. Review the draft, then click Send.`
+        : `Connect your Gmail once to send from ${EMAIL_OUTREACH.fromAddress} in one click.`}
       className="max-w-2xl"
     >
       <div className="space-y-3">
@@ -483,12 +514,27 @@ function SendEmailDialog({ lead, onClose }: { lead: ManualLead; onClose: () => v
           <Label htmlFor="em-body">Message</Label>
           <Textarea id="em-body" value={body} onChange={(e) => setBody(e.target.value)} rows={16} className="font-normal leading-relaxed" />
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-3">
+          <span className="mr-auto inline-flex items-center gap-1.5 text-[12px] text-[var(--color-text-muted)]">
+            {statusLoading ? 'Checking Gmail…'
+              : connected ? <><CheckCircle2 className="h-3.5 w-3.5 text-[var(--c-verified)]" /> Connected as {gmail?.email}</>
+              : 'Gmail not connected'}
+          </span>
           <Button variant="ghost" size="sm" onClick={copyBody}>
             {copied ? <Check className="h-4 w-4 text-[var(--c-verified)]" /> : <Copy className="h-4 w-4" />} Copy
           </Button>
-          <Button variant="outline" size="sm" onClick={openMailApp}>Open in email app</Button>
-          <Button size="sm" onClick={openGmail}><Mail className="h-4 w-4" /> Open in Gmail</Button>
+          {connected ? (
+            <>
+              <Button variant="outline" size="sm" onClick={openGmail} title="Open a pre-filled Gmail compose window instead">Open in Gmail</Button>
+              <Button size="sm" loading={send.isPending} disabled={!canSend} onClick={() => send.mutate()}><Send className="h-4 w-4" /> Send</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={openGmail}>Open in Gmail</Button>
+              <Button size="sm" onClick={connect}><Mail className="h-4 w-4" /> Connect Gmail to send</Button>
+            </>
+          )}
         </div>
       </div>
     </Dialog>

@@ -128,6 +128,29 @@ async function invokeAdmin<T = unknown>(body: Record<string, unknown>): Promise<
   return data as T
 }
 
+/** Invoke the `gmail` edge function (Gmail connect + send-on-behalf); surface its error message. */
+async function invokeGmail<T = unknown>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('gmail', { body })
+  if (error) {
+    let msg = error.message
+    const ctx = (error as { context?: Response }).context
+    if (ctx && typeof ctx.json === 'function') { try { const j = await ctx.json(); if (j?.error) msg = j.error } catch { /* ignore */ } }
+    throw new Error(msg)
+  }
+  if (data && typeof data === 'object' && 'error' in data) throw new Error((data as { error: string }).error)
+  return data as T
+}
+
+export const gmailApi = {
+  /** Is this user's Gmail connected, and as which address? */
+  status: () => invokeGmail<{ connected: boolean; email: string | null }>({ action: 'status' }),
+  /** Google consent URL to open in a popup (one-time connect). */
+  startUrl: () => invokeGmail<{ url: string }>({ action: 'start' }),
+  /** Send an email from the user's own mailbox. */
+  send: (b: { to: string; subject: string; body: string; leadId?: string }) =>
+    invokeGmail<{ ok: boolean; id?: string }>({ action: 'send', ...b }),
+}
+
 // ---- Auth ----
 export const authApi = {
   login: async (body: { email: string; password: string }): Promise<AuthResponse> => {
