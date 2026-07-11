@@ -38,7 +38,10 @@ export interface WebsiteResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAX_PAGES = 3
+// Up to 6 pages searched for a contact email (homepage + the pages that most often carry one).
+// Only reached for leads with NO email found earlier — a high-confidence mailto on the homepage
+// stops the loop immediately, so this rarely fetches all 6.
+const MAX_PAGES = 6
 // Med spa sites are heavy (hero video, tracking, chat widgets) and routinely take
 // 5–17s to fully respond. A 4s cap produced false "unreachable" → 'unknown' → lost
 // leads. Ground-truth run (2026-07-02): 5/6 'unknown' leads were live at 5–17s.
@@ -289,6 +292,54 @@ function extractMailtoEmails(html: string): string[] {
 function extractRegexEmails(html: string): string[] {
   const text = html.replace(/<[^>]+>/g, ' ')
   return (text.match(EMAIL_REGEX) ?? []).map(cleanEmail).filter((e) => STRICT_EMAIL_RE.test(e))
+}
+
+// Cloudflare "email protection": <a data-cfemail="hex">[email&#160;protected]</a>. The hex is the
+// address XOR-encoded with its own first byte as the key. Owner-placed (it was a real mailto:), so
+// callers can trust it domain-wise like a mailto.
+function decodeCfEmails(html: string): string[] {
+  const out: string[] = []
+  for (const m of html.matchAll(/data-cfemail="([0-9a-fA-F]{6,})"/g)) {
+    const hex = m[1]
+    const bytes: number[] = []
+    for (let i = 0; i + 1 < hex.length; i += 2) bytes.push(parseInt(hex.slice(i, i + 2), 16))
+    if (bytes.length < 3) continue
+    const key = bytes[0]
+    let decoded = ''
+    for (let i = 1; i < bytes.length; i++) decoded += String.fromCharCode(bytes[i] ^ key)
+    const addr = cleanEmail(decoded)
+    if (STRICT_EMAIL_RE.test(addr)) out.push(addr)
+  }
+  return out
+}
+
+// Decode numeric/named HTML entities so entity-obfuscated addresses (info&#64;clinic&#46;com) and
+// &commat;/&period; tricks resolve to plain text before we scan for emails.
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => { try { return String.fromCodePoint(parseInt(h, 16)) } catch { return m } })
+    .replace(/&#(\d+);/g, (m, d) => { try { return String.fromCodePoint(parseInt(d, 10)) } catch { return m } })
+    .replace(/&commat;/gi, '@')
+    .replace(/&period;/gi, '.')
+    .replace(/&(?:nbsp|#160);/gi, ' ')
+}
+
+// "name [at] domain [dot] com" / "name (at) domain dot com" style obfuscation. The mandatory
+// dot-segment and strict validation + on-domain filter downstream keep prose false-positives out.
+const OBFUSCATED_EMAIL_RE =
+  /[a-z0-9._%+\-]+\s*(?:\(|\[|\{)?\s*(?:@|\bat\b)\s*(?:\)|\]|\})?\s*[a-z0-9\-]+(?:\s*(?:\(|\[|\{)?\s*(?:\.|\bdot\b)\s*(?:\)|\]|\})?\s*[a-z0-9\-]+)+/gi
+
+function deobfuscateTextEmails(html: string): string[] {
+  const text = decodeHtmlEntities(html.replace(/<[^>]+>/g, ' '))
+  const out: string[] = []
+  for (const m of text.matchAll(OBFUSCATED_EMAIL_RE)) {
+    const normalized = m[0]
+      .replace(/\s*(?:\(|\[|\{)?\s*(?:@|\bat\b)\s*(?:\)|\]|\})?\s*/i, '@')       // first separator → @
+      .replace(/\s*(?:\(|\[|\{)?\s*(?:\.|\bdot\b)\s*(?:\)|\]|\})?\s*/gi, '.')     // remaining → .
+    const addr = cleanEmail(normalized)
+    if (STRICT_EMAIL_RE.test(addr)) out.push(addr)
+  }
+  return out
 }
 
 // `fromMailto` = the address came from an explicit mailto: link the owner placed on the page, so
@@ -610,7 +661,7 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
   if (!siteDomain) return noResult
 
   const base = websiteUri.endsWith('/') ? websiteUri.slice(0, -1) : websiteUri
-  const pagesToTry = [base, `${base}/contact`, `${base}/contact-us`, `${base}/about`, `${base}/about-us`]
+  const pagesToTry = [base, `${base}/contact`, `${base}/contact-us`, `${base}/about`, `${base}/about-us`, `${base}/team`]
 
   let email: string | null = null
   let emailSource: 'mailto' | 'text_match' | 'none' = 'none'
@@ -666,6 +717,18 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
       } else {
         const t = filterEmails(truncatedEmails.text, siteDomain)
         if (t.length > 0) { email = rankEmails(t)[0]; emailSource = 'text_match'; emailConfidence = 'low' }
+      }
+    }
+
+    // Obfuscated addresses (only when the plain scans found nothing): Cloudflare cfemail (owner-placed,
+    // trusted like a mailto) first, then entity/"(at)(dot)"-encoded text (must pass the on-domain filter).
+    if (!email) {
+      const cf = filterEmails(decodeCfEmails(html), siteDomain, true)
+      if (cf.length > 0) {
+        email = rankEmails(cf)[0]; emailSource = 'text_match'; emailConfidence = 'low'
+      } else {
+        const ob = filterEmails(deobfuscateTextEmails(html), siteDomain)
+        if (ob.length > 0) { email = rankEmails(ob)[0]; emailSource = 'text_match'; emailConfidence = 'low' }
       }
     }
 
