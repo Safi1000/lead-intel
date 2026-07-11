@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
-import { coldLeadsApi, type ColdLeadRow, type ColdLeadFilters } from '../../api/endpoints'
-import { normalizeError } from '../../api/client'
+import { coldLeadsApi, type ColdLeadRow } from '../../api/endpoints'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
-import { Select } from '../../components/ui/controls'
-import { LoadingState } from '../../components/feedback'
+import { Select, Checkbox } from '../../components/ui/controls'
+import { LoadingState, ErrorState } from '../../components/feedback'
 import { toast } from 'sonner'
 
 const PAGE_SIZE = 50
@@ -31,53 +30,64 @@ export function ColdLeadsPage() {
   const [niche, setNiche] = useState('')
   const [hasEmail, setHasEmail] = useState(false)
   const [hasPhone, setHasPhone] = useState(false)
-  const [qInput, setQInput] = useState('')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(0)
-  const [exporting, setExporting] = useState(false)
 
-  // Debounce the name search so we don't refetch on every keystroke; reset to page 1 on change.
-  useEffect(() => { const t = setTimeout(() => { setQ(qInput.trim()); setPage(0) }, 300); return () => clearTimeout(t) }, [qInput])
-  // Filter changes go back to page 1 (handled in each control's onChange below).
-  const pick = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setPage(0) }
-
-  const filters: ColdLeadFilters = { location, niche, hasEmail, hasPhone, q, orgId }
-
-  const facets = useQuery({ queryKey: ['cold-facets', orgId], queryFn: () => coldLeadsApi.facets(orgId) })
-  const list = useQuery({
-    queryKey: ['cold-list', filters, page],
-    queryFn: () => coldLeadsApi.list({ ...filters, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
-    placeholderData: keepPreviousData,
+  // Load the whole cold pool once, then filter + paginate in the browser (instant, no round-trips).
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['cold-all', orgId],
+    queryFn: () => coldLeadsApi.all(orgId),
+    staleTime: 5 * 60 * 1000,
   })
+  const allRows = useMemo(() => data?.rows ?? [], [data])
 
-  const rows = list.data?.rows ?? []
-  const total = list.data?.total ?? 0
+  // Resetting to page 1 whenever a filter changes keeps the view sensible.
+  const set = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setPage(0) }
+
+  const locations = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const r of allRows) if (r.location) m.set(r.location, (m.get(r.location) ?? 0) + 1)
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [allRows])
+  const niches = useMemo(() => {
+    const m = new Map<string, { label: string; count: number }>()
+    for (const r of allRows) { const n = m.get(r.niche_key) ?? { label: r.niche_label, count: 0 }; n.count++; m.set(r.niche_key, n) }
+    return [...m.entries()].sort((a, b) => b[1].count - a[1].count)
+  }, [allRows])
+  const withEmail = useMemo(() => allRows.filter((r) => r.email).length, [allRows])
+  const withPhone = useMemo(() => allRows.filter((r) => r.phone).length, [allRows])
+
+  const filtered = useMemo(() => {
+    const ql = q.toLowerCase().trim()
+    return allRows.filter((r) =>
+      (!location || r.location === location) &&
+      (!niche || r.niche_key === niche) &&
+      (!hasEmail || !!r.email) &&
+      (!hasPhone || !!r.phone) &&
+      (!ql || r.name.toLowerCase().includes(ql)),
+    ).sort((a, b) => a.name.localeCompare(b.name))
+  }, [allRows, location, niche, hasEmail, hasPhone, q])
+
+  const total = filtered.length
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageSafe = Math.min(page, pageCount - 1)
+  const rows = filtered.slice(pageSafe * PAGE_SIZE, (pageSafe + 1) * PAGE_SIZE)
 
-  const locationOptions = useMemo(() => [
-    { value: '', label: 'All locations' },
-    ...(facets.data?.locations ?? []).map((l) => ({ value: l.value, label: `${l.value} (${l.count})` })),
-  ], [facets.data])
-  const nicheOptions = useMemo(() => [
-    { value: '', label: 'All niches' },
-    ...(facets.data?.niches ?? []).map((n) => ({ value: n.key, label: `${n.label} (${n.count})` })),
-  ], [facets.data])
+  const locationOptions = useMemo(() => [{ value: '', label: 'All locations' }, ...locations.map(([v, c]) => ({ value: v, label: `${v} (${c})` }))], [locations])
+  const nicheOptions = useMemo(() => [{ value: '', label: 'All niches' }, ...niches.map(([k, v]) => ({ value: k, label: `${v.label} (${v.count})` }))], [niches])
 
-  const doExport = async () => {
-    setExporting(true)
-    try {
-      const { rows: all } = await coldLeadsApi.export(filters)
-      const cols: Array<[string, keyof ColdLeadRow]> = [
-        ['Name', 'name'], ['Niche', 'niche_label'], ['Location', 'location'], ['Phone', 'phone'],
-        ['Email', 'email'], ['Website', 'website'], ['Rating', 'rating'], ['Website Status', 'website_status'],
-      ]
-      const header = cols.map((c) => c[0]).join(',')
-      const lines = all.map((r) => cols.map((c) => csvEscape(r[c[1]])).join(','))
-      download(`cold-leads-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...lines].join('\n'))
-      toast.success(`Exported ${all.length} leads`)
-    } catch (e) { toast.error(normalizeError(e).message) }
-    finally { setExporting(false) }
+  const doExport = () => {
+    const cols: Array<[string, keyof ColdLeadRow]> = [
+      ['Name', 'name'], ['Niche', 'niche_label'], ['Location', 'location'], ['Phone', 'phone'],
+      ['Email', 'email'], ['Website', 'website'], ['Rating', 'rating'], ['Website Status', 'website_status'],
+    ]
+    const header = cols.map((c) => c[0]).join(',')
+    const lines = filtered.map((r) => cols.map((c) => csvEscape(r[c[1]])).join(','))
+    download(`cold-leads-${new Date().toISOString().slice(0, 10)}.csv`, [header, ...lines].join('\n'))
+    toast.success(`Exported ${filtered.length} leads`)
   }
+
+  if (isError) return <ErrorState onRetry={() => refetch()} />
 
   return (
     <div className="reveal mx-auto max-w-6xl">
@@ -86,14 +96,14 @@ export function ColdLeadsPage() {
           <h1 className="flex items-center gap-2 text-[24px] font-bold tracking-tight"><Snowflake className="h-6 w-6 text-[var(--color-primary)]" /> Cold Leads</h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Businesses we scanned but didn't qualify — a raw pool to filter and export.</p>
         </div>
-        <Button onClick={doExport} loading={exporting} disabled={total === 0}><Download className="h-4 w-4" /> Export CSV</Button>
+        <Button onClick={doExport} disabled={total === 0}><Download className="h-4 w-4" /> Export CSV{total > 0 ? ` (${total.toLocaleString()})` : ''}</Button>
       </div>
 
       {/* Summary */}
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <Stat label="Total cold leads" value={facets.data?.total} />
-        <Stat label="With a phone" value={facets.data?.withPhone} />
-        <Stat label="With an email" value={facets.data?.withEmail} />
+        <Stat label="Total cold leads" value={isLoading ? undefined : allRows.length} />
+        <Stat label="With a phone" value={isLoading ? undefined : withPhone} />
+        <Stat label="With an email" value={isLoading ? undefined : withEmail} />
       </div>
 
       {/* Filters */}
@@ -101,26 +111,26 @@ export function ColdLeadsPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Label className="mb-1 text-[12px]">Location</Label>
-            <Select value={location} onValueChange={pick(setLocation)} options={locationOptions} className="w-full" />
+            <Select value={location} onValueChange={set(setLocation)} options={locationOptions} className="w-full" />
           </div>
           <div>
             <Label className="mb-1 text-[12px]">Niche</Label>
-            <Select value={niche} onValueChange={pick(setNiche)} options={nicheOptions} className="w-full" />
+            <Select value={niche} onValueChange={set(setNiche)} options={nicheOptions} className="w-full" />
           </div>
           <div>
             <Label htmlFor="cold-q" className="mb-1 text-[12px]">Search by name</Label>
-            <Input id="cold-q" value={qInput} onChange={(e) => setQInput(e.target.value)} placeholder="Business name…" />
+            <Input id="cold-q" value={q} onChange={(e) => { setQ(e.target.value); setPage(0) }} placeholder="Business name…" />
           </div>
           <div className="flex items-end gap-4 pb-1">
-            <label className="flex cursor-pointer items-center gap-1.5 text-sm"><input type="checkbox" checked={hasEmail} onChange={(e) => pick(setHasEmail)(e.target.checked)} className="accent-[var(--color-primary)]" /> Has email</label>
-            <label className="flex cursor-pointer items-center gap-1.5 text-sm"><input type="checkbox" checked={hasPhone} onChange={(e) => pick(setHasPhone)(e.target.checked)} className="accent-[var(--color-primary)]" /> Has phone</label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={hasEmail} onCheckedChange={set(setHasEmail)} aria-label="Has email" /> Has email</label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={hasPhone} onCheckedChange={set(setHasPhone)} aria-label="Has phone" /> Has phone</label>
           </div>
         </div>
       </Card>
 
       {/* Table */}
       <Card className="overflow-hidden p-0">
-        {list.isLoading ? <LoadingState /> : rows.length === 0 ? (
+        {isLoading ? <LoadingState /> : rows.length === 0 ? (
           <p className="p-8 text-center text-sm text-[var(--color-text-muted)]">No cold leads match these filters.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -157,11 +167,11 @@ export function ColdLeadsPage() {
       {/* Pagination */}
       {total > 0 && (
         <div className="mt-3 flex items-center justify-between text-[13px] text-[var(--color-text-muted)]">
-          <span className="tabular-nums">{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total.toLocaleString()}</span>
+          <span className="tabular-nums">{pageSafe * PAGE_SIZE + 1}–{Math.min((pageSafe + 1) * PAGE_SIZE, total)} of {total.toLocaleString()}</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Prev</Button>
-            <span className="tabular-nums">Page {page + 1} of {pageCount}</span>
-            <Button size="sm" variant="outline" disabled={page >= pageCount - 1} onClick={() => setPage((p) => p + 1)}>Next</Button>
+            <Button size="sm" variant="outline" disabled={pageSafe === 0} onClick={() => setPage(pageSafe - 1)}>Prev</Button>
+            <span className="tabular-nums">Page {pageSafe + 1} of {pageCount}</span>
+            <Button size="sm" variant="outline" disabled={pageSafe >= pageCount - 1} onClick={() => setPage(pageSafe + 1)}>Next</Button>
           </div>
         </div>
       )}

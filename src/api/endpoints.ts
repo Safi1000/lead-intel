@@ -155,16 +155,6 @@ export interface ColdLeadRow {
   rating: number | null; email: string; email_confidence: string; location: string
   niche_key: string; niche_label: string; website_status: string
 }
-export interface ColdLeadFacets {
-  total: number; withEmail: number; withPhone: number
-  locations: Array<{ value: string; count: number }>
-  niches: Array<{ key: string; label: string; count: number }>
-}
-export interface ColdLeadFilters {
-  location?: string; niche?: string; hasEmail?: boolean; hasPhone?: boolean; q?: string
-  limit?: number; offset?: number; orgId?: string | null
-}
-
 async function invokeColdLeads<T = unknown>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('cold-leads', { body })
   if (error) {
@@ -178,9 +168,8 @@ async function invokeColdLeads<T = unknown>(body: Record<string, unknown>): Prom
 }
 
 export const coldLeadsApi = {
-  facets: (orgId?: string | null) => invokeColdLeads<ColdLeadFacets>({ action: 'facets', orgId }),
-  list: (f: ColdLeadFilters) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'list', ...f }),
-  export: (f: ColdLeadFilters) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'export', ...f }),
+  /** Load the org's whole cold pool once; the page filters + paginates client-side. */
+  all: (orgId?: string | null) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'export', orgId }),
 }
 
 // ---- Auth ----
