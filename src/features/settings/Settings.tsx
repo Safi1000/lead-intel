@@ -21,6 +21,7 @@ const TABS: Tab[] = [
   { to: '/settings/holidays', label: 'Holidays', roles: ['superadmin', 'manager', 'owner'] },
   { to: '/settings/credits', label: 'Usage & credits', roles: ['superadmin', 'owner'] },
   { to: '/settings/sourcing', label: 'Sourcing', roles: ['superadmin', 'owner'] },
+  { to: '/settings/crm', label: 'CRM', roles: ['superadmin', 'admin', 'manager', 'owner'] },
   // User management lives in the dedicated Users page now. Hidden until later
   // phases: Notifications, API Keys, Webhooks, Billing, Integrations, AI, Branding.
 ]
