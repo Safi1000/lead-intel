@@ -2,9 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send, Target } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Cloud, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send, Target } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
-import { activitiesApi, cadencesApi, emailApi, manualLeadsApi, teamsApi } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, crmApi, emailApi, manualLeadsApi, teamsApi, type CrmProvider } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -51,6 +51,39 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
       className={cn('shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]', className)}>
       {done ? <Check className="h-3.5 w-3.5 text-[var(--c-verified)]" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
+  )
+}
+
+const CRM_LABEL: Record<CrmProvider, string> = { hubspot: 'HubSpot', gohighlevel: 'GoHighLevel' }
+
+/** Push one lead into whichever CRM(s) the org has connected. Managers/owners only. Hidden until a
+ *  CRM is connected (nothing to send to otherwise). */
+function SendToCrmButton({ leadId }: { leadId: string }) {
+  const { data: status } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(), staleTime: 60_000 })
+  const connected = useMemo<CrmProvider[]>(
+    () => (status ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => status[p]?.connected) : []),
+    [status],
+  )
+  const push = useMutation({
+    mutationFn: async () => {
+      const all = await Promise.all(connected.map((p) => crmApi.push({ provider: p, source: 'lead', ids: [leadId] })))
+      return all.flatMap((r) => r.results)
+    },
+    onSuccess: (results) => {
+      const failed = results.find((r) => r.status === 'failed')
+      if (failed) { toast.error(failed.error ?? 'Could not send to the CRM'); return }
+      if (results.some((r) => r.status === 'synced')) toast.success(`Sent to ${connected.map((p) => CRM_LABEL[p]).join(' & ')}`)
+      else if (results.some((r) => r.status === 'duplicate')) toast.success('This lead is already in your CRM')
+      else toast.info('Already sent to your CRM')
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  if (!connected.length) return null
+  return (
+    <Button variant="outline" size="sm" loading={push.isPending} onClick={() => push.mutate()}
+      title={`Send this lead to ${connected.map((p) => CRM_LABEL[p]).join(' & ')} as a contact`}>
+      <Cloud className="h-4 w-4" /> Send to CRM
+    </Button>
   )
 }
 
@@ -200,6 +233,7 @@ export function ManualLeadDetailPage() {
               <Button variant="outline" size="sm"><CalendarClock className="h-4 w-4" /> Book a meeting</Button>
             </Link>
           )}
+          {isInternal && <SendToCrmButton leadId={lead.id} />}
           {(role === 'manager' || role === 'owner' || role === 'superadmin' || role === 'admin') && (
             <Link to={`/leads/manual/${lead.id}/audit?print=1`} target="_blank" rel="noreferrer" title="Open a branded, client-ready audit PDF">
               <Button variant="outline" size="sm"><FileText className="h-4 w-4" /> Audit PDF</Button>

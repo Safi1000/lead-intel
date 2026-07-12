@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
-import { coldLeadsApi, type ColdLeadRow } from '../../api/endpoints'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { Cloud, Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
+import { coldLeadsApi, crmApi, type ColdLeadRow, type CrmProvider } from '../../api/endpoints'
+import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Select, Checkbox } from '../../components/ui/controls'
@@ -76,6 +77,31 @@ export function ColdLeadsPage() {
   const locationOptions = useMemo(() => [{ value: '', label: 'All locations' }, ...locations.map(([v, c]) => ({ value: v, label: `${v} (${c})` }))], [locations])
   const nicheOptions = useMemo(() => [{ value: '', label: 'All niches' }, ...niches.map(([k, v]) => ({ value: k, label: `${v.label} (${v.count})` }))], [niches])
 
+  // CRM: push the filtered cold pool into a connected CRM (backend caps a single push at 500).
+  const CRM_CAP = 500
+  const { data: crmStatus } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(orgId), staleTime: 60_000 })
+  const crmConnected = useMemo<CrmProvider[]>(
+    () => (crmStatus ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => crmStatus[p]?.connected) : []),
+    [crmStatus],
+  )
+  const sendCrm = useMutation({
+    mutationFn: async () => {
+      const ids = filtered.slice(0, CRM_CAP).map((r) => r.place_id)
+      const all = await Promise.all(crmConnected.map((p) => crmApi.push({ provider: p, source: 'cold', ids, orgId })))
+      return all.flatMap((r) => r.results)
+    },
+    onSuccess: (results) => {
+      const synced = results.filter((r) => r.status === 'synced').length
+      const dup = results.filter((r) => r.status === 'duplicate').length
+      const skipped = results.filter((r) => r.status === 'skipped').length
+      const failed = results.filter((r) => r.status === 'failed').length
+      const bits = [synced && `${synced} sent`, dup && `${dup} already there`, skipped && `${skipped} already sent`, failed && `${failed} failed`].filter(Boolean).join(', ')
+      if (failed) toast.error(`Sent to CRM — ${bits}`)
+      else toast.success(`Sent to CRM${bits ? ` — ${bits}` : ''}`)
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
   const doExport = () => {
     const cols: Array<[string, keyof ColdLeadRow]> = [
       ['Name', 'name'], ['Niche', 'niche_label'], ['Location', 'location'], ['Phone', 'phone'],
@@ -96,7 +122,15 @@ export function ColdLeadsPage() {
           <h1 className="flex items-center gap-2 text-[24px] font-bold tracking-tight"><Snowflake className="h-6 w-6 text-[var(--color-primary)]" /> Cold Leads</h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Businesses we scanned but didn't qualify — a raw pool to filter and export.</p>
         </div>
-        <Button onClick={doExport} disabled={total === 0}><Download className="h-4 w-4" /> Export CSV{total > 0 ? ` (${total.toLocaleString()})` : ''}</Button>
+        <div className="flex items-center gap-2">
+          {crmConnected.length > 0 && (
+            <Button variant="outline" loading={sendCrm.isPending} disabled={total === 0} onClick={() => sendCrm.mutate()}
+              title={total > CRM_CAP ? `Sends the first ${CRM_CAP} of ${total.toLocaleString()}` : `Send ${total.toLocaleString()} to your CRM`}>
+              <Cloud className="h-4 w-4" /> Send to CRM{total > CRM_CAP ? ` (${CRM_CAP})` : total > 0 ? ` (${total.toLocaleString()})` : ''}
+            </Button>
+          )}
+          <Button onClick={doExport} disabled={total === 0}><Download className="h-4 w-4" /> Export CSV{total > 0 ? ` (${total.toLocaleString()})` : ''}</Button>
+        </div>
       </div>
 
       {/* Summary */}

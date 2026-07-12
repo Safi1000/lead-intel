@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CheckCircle2, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Cloud, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { assignmentApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi } from '../../api/endpoints'
+import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi, type CrmProvider } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -168,6 +168,29 @@ export function LeadQueuePage() {
     },
     onError: (e) => toast.error(normalizeError(e).message),
   })
+  // CRM: managers can push selected leads into whatever CRM the org has connected.
+  const { data: crmStatus } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(), enabled: isManager, staleTime: 60_000 })
+  const crmConnected = useMemo<CrmProvider[]>(
+    () => (crmStatus ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => crmStatus[p]?.connected) : []),
+    [crmStatus],
+  )
+  const bulkCrm = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const all = await Promise.all(crmConnected.map((p) => crmApi.push({ provider: p, source: 'lead', ids })))
+      return all.flatMap((r) => r.results)
+    },
+    onSuccess: (results) => {
+      const synced = results.filter((r) => r.status === 'synced').length
+      const dup = results.filter((r) => r.status === 'duplicate').length
+      const skipped = results.filter((r) => r.status === 'skipped').length
+      const failed = results.filter((r) => r.status === 'failed').length
+      const bits = [synced && `${synced} sent`, dup && `${dup} already there`, skipped && `${skipped} already sent`, failed && `${failed} failed`].filter(Boolean).join(', ')
+      if (failed) toast.error(`Sent to CRM — ${bits}`)
+      else toast.success(`Sent to CRM${bits ? ` — ${bits}` : ''}`)
+      setSelected(new Set()); qc.invalidateQueries({ queryKey: ['manual-leads'] })
+    },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
   const [hideDnc, setHideDnc] = useState(false)
   const [assignSetterOpen, setAssignSetterOpen] = useState(false)
   const [stageFilter, setStageFilter] = useState('all')
@@ -290,6 +313,9 @@ export function LeadQueuePage() {
               </>
             ) : (
               <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
+            )}
+            {crmConnected.length > 0 && (
+              <Button size="sm" variant="outline" loading={bulkCrm.isPending} onClick={() => bulkCrm.mutate([...selected])}><Cloud className="h-3.5 w-3.5" /> Send to CRM</Button>
             )}
             <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]"><X className="h-4 w-4" /></button>
           </div>
