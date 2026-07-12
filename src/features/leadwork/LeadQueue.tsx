@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, CheckCircle2, Cloud, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi, type CrmProvider } from '../../api/endpoints'
+import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -171,7 +171,7 @@ export function LeadQueuePage() {
   // CRM: managers can push selected leads into whatever CRM the org has connected.
   const { data: crmStatus } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(), enabled: isManager, staleTime: 60_000 })
   const crmConnected = useMemo<CrmProvider[]>(
-    () => (crmStatus ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => crmStatus[p]?.connected) : []),
+    () => (crmStatus ? CRM_PROVIDERS.filter((p) => crmStatus[p]?.connected) : []),
     [crmStatus],
   )
   const bulkCrm = useMutation({

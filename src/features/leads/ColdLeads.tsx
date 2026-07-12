@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Cloud, Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
-import { coldLeadsApi, crmApi, type ColdLeadRow, type CrmProvider } from '../../api/endpoints'
+import { coldLeadsApi, crmApi, CRM_PROVIDERS, type ColdLeadRow, type CrmProvider } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -81,7 +81,7 @@ export function ColdLeadsPage() {
   const CRM_CAP = 500
   const { data: crmStatus } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(orgId), staleTime: 60_000 })
   const crmConnected = useMemo<CrmProvider[]>(
-    () => (crmStatus ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => crmStatus[p]?.connected) : []),
+    () => (crmStatus ? CRM_PROVIDERS.filter((p) => crmStatus[p]?.connected) : []),
     [crmStatus],
   )
   const sendCrm = useMutation({

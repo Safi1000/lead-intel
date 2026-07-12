@@ -1,17 +1,22 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Cloud, Database, Link2, Unlink } from 'lucide-react'
+import { Boxes, Building2, Cloud, Database, Link2, Unlink, Webhook, Workflow } from 'lucide-react'
 import { crmApi, type CrmProvider, type CrmConnection } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
-import { Button, Card } from '../../components/ui/primitives'
+import { Button, Card, Input } from '../../components/ui/primitives'
 import { Switch } from '../../components/ui/controls'
 import { LoadingState, ErrorState } from '../../components/feedback'
 
-const PROVIDERS: Array<{ key: CrmProvider; name: string; icon: React.ReactNode; blurb: string }> = [
-  { key: 'hubspot', name: 'HubSpot', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Push leads into HubSpot as contacts.' },
-  { key: 'gohighlevel', name: 'GoHighLevel', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Send leads into a GoHighLevel location.' },
+type ProviderDef = { key: CrmProvider; name: string; kind: 'oauth' | 'webhook'; icon: React.ReactNode; blurb: string }
+const PROVIDERS: ProviderDef[] = [
+  { key: 'hubspot', name: 'HubSpot', kind: 'oauth', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Push leads into HubSpot as contacts.' },
+  { key: 'gohighlevel', name: 'GoHighLevel', kind: 'oauth', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Send leads into a GoHighLevel location.' },
+  { key: 'pipedrive', name: 'Pipedrive', kind: 'oauth', icon: <Workflow className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Add leads as people in Pipedrive.' },
+  { key: 'zoho', name: 'Zoho CRM', kind: 'oauth', icon: <Boxes className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Create contacts in Zoho CRM.' },
+  { key: 'salesforce', name: 'Salesforce', kind: 'oauth', icon: <Building2 className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Create leads in Salesforce.' },
+  { key: 'webhook', name: 'Webhook / Zapier', kind: 'webhook', icon: <Webhook className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Send leads to any URL — Zapier, Make, or your own endpoint.' },
 ]
 
 export function CrmSettingsPage() {
@@ -49,19 +54,20 @@ export function CrmSettingsPage() {
 }
 
 function ProviderCard({ def, conn, configured, orgId, onChange }: {
-  def: { key: CrmProvider; name: string; icon: React.ReactNode; blurb: string }
+  def: ProviderDef
   conn: CrmConnection | null
   configured: boolean
   orgId: string | null
   onChange: () => void
 }) {
   const connected = !!conn?.connected
+  const [webhookUrl, setWebhookUrl] = useState('')
 
   const connect = async () => {
     try {
       const { url } = await crmApi.startUrl(def.key, orgId)
       const popup = window.open(url, 'crm-oauth', 'width=620,height=760')
-      // HubSpot's OAuth pages set COOP, which stops the popup from messaging back or closing itself.
+      // Some OAuth pages set COOP, which stops the popup from messaging back or closing itself.
       // So poll status from here; once connected, close the popup ourselves and refresh.
       const startedAt = Date.now()
       const timer = window.setInterval(async () => {
@@ -77,6 +83,11 @@ function ProviderCard({ def, conn, configured, orgId, onChange }: {
       }, 2500)
     } catch (e) { toast.error(normalizeError(e).message) }
   }
+  const saveWebhook = useMutation({
+    mutationFn: () => crmApi.connectWebhook(webhookUrl.trim(), orgId),
+    onSuccess: () => { toast.success('Webhook saved'); setWebhookUrl(''); onChange() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
   const disconnect = useMutation({
     mutationFn: () => crmApi.disconnect(def.key, orgId),
     onSuccess: () => { toast.success(`${def.name} disconnected`); onChange() },
@@ -105,15 +116,24 @@ function ProviderCard({ def, conn, configured, orgId, onChange }: {
         </div>
         {connected ? (
           <Button variant="outline" size="sm" loading={disconnect.isPending} onClick={() => disconnect.mutate()}><Unlink className="h-4 w-4" /> Disconnect</Button>
-        ) : (
+        ) : def.kind === 'oauth' ? (
           <Button size="sm" onClick={connect} disabled={!configured} title={configured ? '' : `${def.name} isn’t set up on the server yet`}><Link2 className="h-4 w-4" /> Connect</Button>
-        )}
+        ) : null}
       </div>
 
-      {!connected && !configured && (
+      {!connected && def.kind === 'oauth' && !configured && (
         <p className="mt-3 rounded-[8px] bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-400">
           {def.name} isn’t configured on the server yet — add its API credentials to enable connecting.
         </p>
+      )}
+
+      {!connected && def.kind === 'webhook' && (
+        <div className="mt-3 flex items-center gap-2">
+          <Input value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://hooks.zapier.com/…" className="flex-1" />
+          <Button size="sm" loading={saveWebhook.isPending} disabled={!/^https:\/\/.+/i.test(webhookUrl.trim())} onClick={() => saveWebhook.mutate()}>
+            <Webhook className="h-4 w-4" /> Save
+          </Button>
+        </div>
       )}
 
       {connected && (

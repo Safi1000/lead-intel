@@ -1,17 +1,20 @@
 /**
- * crm — connect an org's HubSpot / GoHighLevel account and push leads into it as contacts.
+ * crm — connect an org's CRM and push leads/cold places into it as contacts.
  *
- * OAuth connect (tokens stored in crm_connections, RLS: service role only), plus a push that maps a
- * qualified CRM lead OR a cold sourced_place to a CRM contact and logs it in crm_sync (dedup + status).
- * Deployed with --no-verify-jwt: the provider callback carries no Supabase JWT, so auth is manual.
+ * Providers: HubSpot, GoHighLevel, Pipedrive, Zoho CRM, Salesforce (all OAuth2 auth-code) and a
+ * generic Webhook (Zapier/Make/anything — the org pastes a URL instead of doing OAuth).
+ * Tokens/URLs live in crm_connections (RLS: service role only); every push is logged in crm_sync
+ * (dedup + status). Deployed with --no-verify-jwt: the provider callback carries no Supabase JWT.
  *
- * Actions:
- *   POST {action:'status'}                                   (JWT) -> per-provider {connected, account, autoQualified, autoCold}
- *   POST {action:'start', provider}                          (JWT) -> { url } consent URL for a popup
- *   GET  ?code=..&state=..                                   (provider redirect) -> stores tokens, self-closing page
- *   POST {action:'settings', provider, autoQualified, autoCold} (JWT) -> { ok }
- *   POST {action:'disconnect', provider}                     (JWT) -> { ok }
- *   POST {action:'push', provider, source:'lead'|'cold', ids:[]} (JWT) -> { results:[{id,status,error?}] }
+ * Actions (POST, user JWT unless noted):
+ *   {action:'status'}                                   -> per-provider {connected, account, autoQualified, autoCold} + configured map
+ *   {action:'start', provider}                          -> { url } OAuth consent URL for a popup
+ *   {action:'connectWebhook', url}                      -> stores a generic webhook target
+ *   {action:'settings', provider, autoQualified, autoCold} -> { ok }
+ *   {action:'disconnect', provider}                     -> { ok }
+ *   {action:'push', provider, source:'lead'|'cold', ids:[]} -> { results:[{id,status,error?}] }
+ *   {action:'sweep'}  (superadmin, or cron via PIPELINE_SECRET bearer) -> auto-sync opted-in orgs
+ *   GET ?code=..&state=..                               (provider redirect) -> stores tokens, plain-text page
  */
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -22,12 +25,20 @@ const STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET') ?? ''
 const PIPELINE_SECRET = Deno.env.get('PIPELINE_SECRET') ?? ''
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/crm`
 
-type Provider = 'hubspot' | 'gohighlevel'
-const PROVIDERS: Record<Provider, {
-  authUrl: string; tokenUrl: string; scope: string
-  clientId: () => string; clientSecret: () => string
-}> = {
+type Provider = 'hubspot' | 'gohighlevel' | 'pipedrive' | 'zoho' | 'salesforce' | 'webhook'
+interface ProviderCfg {
+  label: string
+  kind: 'oauth' | 'webhook'
+  authUrl?: string
+  tokenUrl?: string
+  scope?: string
+  authExtras?: Record<string, string>
+  clientId: () => string
+  clientSecret: () => string
+}
+const PROVIDERS: Record<Provider, ProviderCfg> = {
   hubspot: {
+    label: 'HubSpot', kind: 'oauth',
     authUrl: 'https://app.hubspot.com/oauth/authorize',
     tokenUrl: 'https://api.hubapi.com/oauth/v1/token',
     scope: 'oauth crm.objects.contacts.write crm.objects.contacts.read',
@@ -35,15 +46,56 @@ const PROVIDERS: Record<Provider, {
     clientSecret: () => Deno.env.get('HUBSPOT_CLIENT_SECRET') ?? '',
   },
   gohighlevel: {
+    label: 'GoHighLevel', kind: 'oauth',
     authUrl: 'https://marketplace.gohighlevel.com/oauth/chooselocation',
     tokenUrl: 'https://services.leadconnectorhq.com/oauth/token',
     scope: 'contacts.write contacts.readonly',
     clientId: () => Deno.env.get('GHL_CLIENT_ID') ?? '',
     clientSecret: () => Deno.env.get('GHL_CLIENT_SECRET') ?? '',
   },
+  pipedrive: {
+    label: 'Pipedrive', kind: 'oauth',
+    authUrl: 'https://oauth.pipedrive.com/oauth/authorize',
+    tokenUrl: 'https://oauth.pipedrive.com/oauth/token',
+    scope: 'contacts:full',
+    clientId: () => Deno.env.get('PIPEDRIVE_CLIENT_ID') ?? '',
+    clientSecret: () => Deno.env.get('PIPEDRIVE_CLIENT_SECRET') ?? '',
+  },
+  zoho: {
+    label: 'Zoho CRM', kind: 'oauth',
+    authUrl: 'https://accounts.zoho.com/oauth/v2/auth',
+    tokenUrl: 'https://accounts.zoho.com/oauth/v2/token',
+    scope: 'ZohoCRM.modules.contacts.CREATE,ZohoCRM.modules.contacts.READ',
+    authExtras: { access_type: 'offline', prompt: 'consent' },
+    clientId: () => Deno.env.get('ZOHO_CLIENT_ID') ?? '',
+    clientSecret: () => Deno.env.get('ZOHO_CLIENT_SECRET') ?? '',
+  },
+  salesforce: {
+    label: 'Salesforce', kind: 'oauth',
+    authUrl: 'https://login.salesforce.com/services/oauth2/authorize',
+    tokenUrl: 'https://login.salesforce.com/services/oauth2/token',
+    scope: 'api refresh_token',
+    clientId: () => Deno.env.get('SALESFORCE_CLIENT_ID') ?? '',
+    clientSecret: () => Deno.env.get('SALESFORCE_CLIENT_SECRET') ?? '',
+  },
+  webhook: {
+    label: 'Webhook / Zapier', kind: 'webhook',
+    clientId: () => '', clientSecret: () => '',
+  },
 }
-const isProvider = (p: unknown): p is Provider => p === 'hubspot' || p === 'gohighlevel'
-const providerLabel = (p: Provider) => (p === 'hubspot' ? 'HubSpot' : 'GoHighLevel')
+const ALL_PROVIDERS = Object.keys(PROVIDERS) as Provider[]
+const isProvider = (p: unknown): p is Provider => typeof p === 'string' && (ALL_PROVIDERS as string[]).includes(p)
+const providerLabel = (p: Provider) => PROVIDERS[p].label
+const hostOf = (u: string) => { try { return new URL(u).host } catch { return u } }
+// Zoho is multi-datacenter; the API base's TLD tells us which accounts server to refresh against.
+function zohoAccountsServer(apiBase: string | null): string {
+  const b = apiBase ?? ''
+  if (b.includes('zohoapis.eu')) return 'https://accounts.zoho.eu'
+  if (b.includes('zohoapis.in')) return 'https://accounts.zoho.in'
+  if (b.includes('zohoapis.com.au') || b.includes('zohoapis.com.cn')) return b.includes('.au') ? 'https://accounts.zoho.com.au' : 'https://accounts.zoho.com.cn'
+  if (b.includes('zohoapis.jp')) return 'https://accounts.zoho.jp'
+  return 'https://accounts.zoho.com'
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -87,16 +139,27 @@ async function readState(state: string): Promise<{ orgId: string; provider: Prov
 }
 
 // ---- token exchange / refresh ----
-async function exchange(provider: Provider, params: Record<string, string>) {
+interface TokenResp { access_token: string; refresh_token?: string; expires_in?: number; locationId?: string; hub_id?: number; api_domain?: string; instance_url?: string }
+async function exchange(provider: Provider, params: Record<string, string>, tokenUrlOverride?: string): Promise<TokenResp> {
   const cfg = PROVIDERS[provider]
-  const body = new URLSearchParams({ client_id: cfg.clientId(), client_secret: cfg.clientSecret(), ...params })
-  if (provider === 'gohighlevel') body.set('user_type', 'Location')
-  const res = await fetch(cfg.tokenUrl, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body })
-  if (!res.ok) throw new Error(`${providerLabel(provider)} token error: ${res.status} ${await res.text()}`)
-  return await res.json() as { access_token: string; refresh_token?: string; expires_in: number; locationId?: string; hub_id?: number }
+  const url = tokenUrlOverride ?? cfg.tokenUrl!
+  const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }
+  const bodyParams: Record<string, string> = { ...params }
+  // Pipedrive wants client creds in a Basic header; the rest take them in the body.
+  if (provider === 'pipedrive') headers.Authorization = 'Basic ' + btoa(`${cfg.clientId()}:${cfg.clientSecret()}`)
+  else { bodyParams.client_id = cfg.clientId(); bodyParams.client_secret = cfg.clientSecret() }
+  if (provider === 'gohighlevel') bodyParams.user_type = 'Location'
+  const res = await fetch(url, { method: 'POST', headers, body: new URLSearchParams(bodyParams) })
+  if (!res.ok) throw new Error(`${cfg.label} token error: ${res.status} ${await res.text()}`)
+  return await res.json() as TokenResp
 }
 
-interface Conn { org_id: string; provider: Provider; access_token: string | null; refresh_token: string | null; token_expiry: string | null; external_account_id: string | null; account_label: string | null; auto_sync_qualified: boolean; auto_sync_cold: boolean }
+interface Conn {
+  org_id: string; provider: Provider
+  access_token: string | null; refresh_token: string | null; token_expiry: string | null
+  external_account_id: string | null; account_label: string | null; api_base: string | null; webhook_url: string | null
+  auto_sync_qualified: boolean; auto_sync_cold: boolean
+}
 async function loadConn(orgId: string, provider: Provider): Promise<Conn | null> {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?org_id=eq.${orgId}&provider=eq.${provider}&select=*`, { headers: svc() })
   return r.ok ? ((await r.json())[0] ?? null) : null
@@ -105,10 +168,12 @@ async function accessTokenFor(conn: Conn): Promise<string> {
   const good = conn.access_token && conn.token_expiry && new Date(conn.token_expiry).getTime() - Date.now() > 60_000
   if (good) return conn.access_token!
   if (!conn.refresh_token) throw new Error('Not connected — please reconnect.')
-  const t = await exchange(conn.provider, { grant_type: 'refresh_token', refresh_token: conn.refresh_token })
+  const override = conn.provider === 'zoho' ? `${zohoAccountsServer(conn.api_base)}/oauth/v2/token` : undefined
+  const t = await exchange(conn.provider, { grant_type: 'refresh_token', refresh_token: conn.refresh_token }, override)
+  const expiresIn = Number(t.expires_in) || (conn.provider === 'salesforce' ? 7200 : 3600)
   await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?org_id=eq.${conn.org_id}&provider=eq.${conn.provider}`, {
     method: 'PATCH', headers: svc({ Prefer: 'return=minimal' }),
-    body: JSON.stringify({ access_token: t.access_token, token_expiry: new Date(Date.now() + t.expires_in * 1000).toISOString(), ...(t.refresh_token ? { refresh_token: t.refresh_token } : {}), updated_at: new Date().toISOString() }),
+    body: JSON.stringify({ access_token: t.access_token, token_expiry: new Date(Date.now() + expiresIn * 1000).toISOString(), ...(t.refresh_token ? { refresh_token: t.refresh_token } : {}), updated_at: new Date().toISOString() }),
   })
   return t.access_token
 }
@@ -129,28 +194,78 @@ async function loadRecords(source: string, ids: string[], orgId: string): Promis
 }
 
 async function createContact(provider: Provider, token: string, conn: Conn, rec: Rec): Promise<{ id: string } | { duplicate: true }> {
-  if (provider === 'hubspot') {
-    const props: Record<string, string> = { company: rec.name }
-    if (rec.email) props.email = rec.email
-    if (rec.phone) props.phone = rec.phone
-    if (rec.website) props.website = rec.website
-    if (rec.city) props.city = rec.city
-    const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: props }) })
-    if (res.status === 409) return { duplicate: true } // existing email — already in their CRM
-    if (!res.ok) throw new Error(`HubSpot ${res.status}: ${await res.text()}`)
-    return { id: (await res.json()).id }
+  const fallbackName = rec.name || rec.email || 'Lead'
+  switch (provider) {
+    case 'hubspot': {
+      const props: Record<string, string> = { company: rec.name }
+      if (rec.email) props.email = rec.email
+      if (rec.phone) props.phone = rec.phone
+      if (rec.website) props.website = rec.website
+      if (rec.city) props.city = rec.city
+      const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: props }) })
+      if (res.status === 409) return { duplicate: true }
+      if (!res.ok) throw new Error(`HubSpot ${res.status}: ${await res.text()}`)
+      return { id: (await res.json()).id }
+    }
+    case 'gohighlevel': {
+      const bodyG: Record<string, unknown> = { locationId: conn.external_account_id, name: rec.name, source: 'LeadIntel' }
+      if (rec.email) bodyG.email = rec.email
+      if (rec.phone) bodyG.phone = rec.phone
+      if (rec.website) bodyG.website = rec.website
+      if (rec.city) bodyG.city = rec.city
+      const res = await fetch('https://services.leadconnectorhq.com/contacts/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Version: '2021-07-28' }, body: JSON.stringify(bodyG) })
+      if (res.status === 400 && /duplicat/i.test(await res.clone().text())) return { duplicate: true }
+      if (!res.ok) throw new Error(`GoHighLevel ${res.status}: ${await res.text()}`)
+      const j = await res.json()
+      return { id: j.contact?.id ?? j.id ?? '' }
+    }
+    case 'pipedrive': {
+      const base = conn.api_base || 'https://api.pipedrive.com'
+      const bodyP: Record<string, unknown> = { name: fallbackName }
+      if (rec.email) bodyP.email = rec.email
+      if (rec.phone) bodyP.phone = rec.phone
+      const res = await fetch(`${base}/api/v1/persons`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyP) })
+      if (!res.ok) throw new Error(`Pipedrive ${res.status}: ${await res.text()}`)
+      return { id: String((await res.json()).data?.id ?? '') }
+    }
+    case 'zoho': {
+      const base = conn.api_base || 'https://www.zohoapis.com'
+      const row: Record<string, unknown> = { Last_Name: fallbackName }
+      if (rec.name) row.Account_Name = rec.name
+      if (rec.email) row.Email = rec.email
+      if (rec.phone) row.Phone = rec.phone
+      if (rec.city) row.Mailing_City = rec.city
+      if (rec.website) row.Description = `Website: ${rec.website}`
+      const res = await fetch(`${base}/crm/v2/Contacts`, { method: 'POST', headers: { Authorization: `Zoho-oauthtoken ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [row] }) })
+      if (!res.ok) throw new Error(`Zoho ${res.status}: ${await res.text()}`)
+      const rec0 = (await res.json()).data?.[0]
+      if (rec0?.code === 'DUPLICATE_DATA') return { duplicate: true }
+      if (rec0 && rec0.status !== 'success') throw new Error(`Zoho: ${rec0.code ?? 'error'}`)
+      return { id: String(rec0?.details?.id ?? '') }
+    }
+    case 'salesforce': {
+      if (!conn.api_base) throw new Error('Salesforce instance not set — reconnect.')
+      const bodyS: Record<string, unknown> = { LastName: fallbackName, Company: rec.name || 'Unknown' }
+      if (rec.email) bodyS.Email = rec.email
+      if (rec.phone) bodyS.Phone = rec.phone
+      if (rec.website) bodyS.Website = rec.website
+      if (rec.city) bodyS.City = rec.city
+      const res = await fetch(`${conn.api_base}/services/data/v59.0/sobjects/Lead`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyS) })
+      if (res.status === 400) {
+        const t = await res.text()
+        if (/DUPLICATE/i.test(t)) return { duplicate: true }
+        throw new Error(`Salesforce 400: ${t}`)
+      }
+      if (!res.ok) throw new Error(`Salesforce ${res.status}: ${await res.text()}`)
+      return { id: String((await res.json()).id ?? '') }
+    }
+    case 'webhook': {
+      if (!conn.webhook_url) throw new Error('No webhook URL set.')
+      const res = await fetch(conn.webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'LeadIntel', business_name: rec.name, email: rec.email, phone: rec.phone, website: rec.website, city: rec.city }) })
+      if (!res.ok) throw new Error(`Webhook ${res.status}`)
+      return { id: 'webhook' }
+    }
   }
-  // GoHighLevel
-  const bodyG: Record<string, unknown> = { locationId: conn.external_account_id, name: rec.name, source: 'LeadIntel' }
-  if (rec.email) bodyG.email = rec.email
-  if (rec.phone) bodyG.phone = rec.phone
-  if (rec.website) bodyG.website = rec.website
-  if (rec.city) bodyG.city = rec.city
-  const res = await fetch('https://services.leadconnectorhq.com/contacts/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Version: '2021-07-28' }, body: JSON.stringify(bodyG) })
-  if (res.status === 400 && /duplicat/i.test(await res.clone().text())) return { duplicate: true }
-  if (!res.ok) throw new Error(`GoHighLevel ${res.status}: ${await res.text()}`)
-  const j = await res.json()
-  return { id: j.contact?.id ?? j.id ?? '' }
 }
 
 // ---- shared push: dedup, map, create contacts, log crm_sync (used by manual push + the sweep) ----
@@ -163,7 +278,7 @@ async function syncIds(orgId: string, provider: Provider, source: 'lead' | 'cold
   for (const id of ids) if (already.has(id)) results.push({ id, status: 'skipped' })
   const recs = await loadRecords(source, ids.filter((i) => !already.has(i)), orgId)
   if (!recs.length) return results
-  const token = await accessTokenFor(conn)
+  const token = conn.provider === 'webhook' ? '' : await accessTokenFor(conn)
   for (const rec of recs) {
     try {
       const r = await createContact(provider, token, conn, rec)
@@ -259,18 +374,33 @@ Deno.serve(async (req: Request) => {
     if (req.method === 'GET' && url.searchParams.has('code')) {
       const st = await readState(url.searchParams.get('state') ?? '')
       if (!st) return page('Link expired or invalid. Close this window and try again.', 400)
-      const tok = await exchange(st.provider, { grant_type: 'authorization_code', code: url.searchParams.get('code')!, redirect_uri: REDIRECT_URI })
-      // Identify the connected account for display.
-      let accountId: string | null = tok.locationId ?? null, label: string | null = null
+      // Zoho returns the datacenter's accounts server to exchange the code against.
+      const tokenUrlOverride = st.provider === 'zoho'
+        ? `${(url.searchParams.get('accounts-server') ?? 'https://accounts.zoho.com').replace(/\/$/, '')}/oauth/v2/token`
+        : undefined
+      const tok = await exchange(st.provider, { grant_type: 'authorization_code', code: url.searchParams.get('code')!, redirect_uri: REDIRECT_URI }, tokenUrlOverride)
+
+      // Identify the connected account + per-tenant API base for display/API calls.
+      let accountId: string | null = null, label: string | null = null, apiBase: string | null = null
       if (st.provider === 'hubspot') {
         const info = await fetch(`https://api.hubapi.com/oauth/v1/access-tokens/${tok.access_token}`).then((r) => r.ok ? r.json() : null)
         accountId = info?.hub_id ? String(info.hub_id) : null
         label = info?.hub_domain ?? null
+      } else if (st.provider === 'gohighlevel') {
+        accountId = tok.locationId ?? null
+      } else if (st.provider === 'pipedrive') {
+        apiBase = tok.api_domain ?? null; accountId = apiBase; label = apiBase ? hostOf(apiBase) : 'Pipedrive'
+      } else if (st.provider === 'zoho') {
+        apiBase = tok.api_domain ?? null; accountId = apiBase; label = 'Zoho CRM'
+      } else if (st.provider === 'salesforce') {
+        apiBase = tok.instance_url ?? null; accountId = apiBase; label = apiBase ? hostOf(apiBase) : 'Salesforce'
       }
+      const expiresIn = Number(tok.expires_in) || (st.provider === 'salesforce' ? 7200 : 3600)
       const patch: Record<string, unknown> = {
         org_id: st.orgId, provider: st.provider, access_token: tok.access_token,
-        token_expiry: new Date(Date.now() + tok.expires_in * 1000).toISOString(),
-        external_account_id: accountId, account_label: label, connected_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        token_expiry: new Date(Date.now() + expiresIn * 1000).toISOString(),
+        external_account_id: accountId, account_label: label, api_base: apiBase,
+        connected_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }
       if (tok.refresh_token) patch.refresh_token = tok.refresh_token
       await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?on_conflict=org_id,provider`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(patch) })
@@ -288,19 +418,32 @@ Deno.serve(async (req: Request) => {
     const action = body.action
 
     if (action === 'status') {
-      const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?org_id=eq.${orgId}&select=provider,account_label,external_account_id,auto_sync_qualified,auto_sync_cold`, { headers: svc() })).json() as Array<{ provider: Provider; account_label: string | null; external_account_id: string | null; auto_sync_qualified: boolean; auto_sync_cold: boolean }>
-      const out: Record<string, unknown> = { hubspot: null, gohighlevel: null }
-      for (const r of rows) out[r.provider] = { connected: true, account: r.account_label ?? r.external_account_id, autoQualified: r.auto_sync_qualified, autoCold: r.auto_sync_cold }
-      out.configured = { hubspot: !!PROVIDERS.hubspot.clientId(), gohighlevel: !!PROVIDERS.gohighlevel.clientId() }
+      const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?org_id=eq.${orgId}&select=provider,account_label,external_account_id,webhook_url,auto_sync_qualified,auto_sync_cold`, { headers: svc() })).json() as Array<{ provider: Provider; account_label: string | null; external_account_id: string | null; webhook_url: string | null; auto_sync_qualified: boolean; auto_sync_cold: boolean }>
+      const out: Record<string, unknown> = {}
+      for (const p of ALL_PROVIDERS) out[p] = null
+      for (const r of rows) {
+        const account = r.provider === 'webhook' ? (r.webhook_url ? hostOf(r.webhook_url) : 'Webhook') : (r.account_label ?? r.external_account_id)
+        out[r.provider] = { connected: true, account, autoQualified: r.auto_sync_qualified, autoCold: r.auto_sync_cold }
+      }
+      const configured: Record<string, boolean> = {}
+      for (const p of ALL_PROVIDERS) configured[p] = PROVIDERS[p].kind === 'webhook' ? true : !!PROVIDERS[p].clientId()
+      out.configured = configured
       return json(out)
     }
 
     if (action === 'start') {
-      if (!isProvider(body.provider)) return json({ error: 'unknown provider' }, 400)
+      if (!isProvider(body.provider) || PROVIDERS[body.provider].kind !== 'oauth') return json({ error: 'unknown provider' }, 400)
       const cfg = PROVIDERS[body.provider]
-      if (!cfg.clientId()) return json({ error: `${providerLabel(body.provider)} is not configured yet.` }, 400)
-      const params = new URLSearchParams({ client_id: cfg.clientId(), redirect_uri: REDIRECT_URI, response_type: 'code', scope: cfg.scope, state: await makeState(orgId, body.provider) })
+      if (!cfg.clientId()) return json({ error: `${cfg.label} is not configured yet.` }, 400)
+      const params = new URLSearchParams({ client_id: cfg.clientId(), redirect_uri: REDIRECT_URI, response_type: 'code', scope: cfg.scope ?? '', state: await makeState(orgId, body.provider), ...(cfg.authExtras ?? {}) })
       return json({ url: `${cfg.authUrl}?${params}` })
+    }
+
+    if (action === 'connectWebhook') {
+      const wurl = String(body.url ?? '').trim()
+      if (!/^https:\/\/.+/i.test(wurl)) return json({ error: 'Enter a valid https:// URL.' }, 400)
+      await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?on_conflict=org_id,provider`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider: 'webhook', webhook_url: wurl, account_label: 'Webhook', connected_at: new Date().toISOString(), updated_at: new Date().toISOString() }) })
+      return json({ ok: true })
     }
 
     if (action === 'settings') {

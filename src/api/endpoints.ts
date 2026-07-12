@@ -172,14 +172,11 @@ export const coldLeadsApi = {
   all: (orgId?: string | null) => invokeColdLeads<{ rows: ColdLeadRow[]; total: number }>({ action: 'export', orgId }),
 }
 
-// ---- External CRM integrations (HubSpot / GoHighLevel) ----
-export type CrmProvider = 'hubspot' | 'gohighlevel'
+// ---- External CRM integrations (HubSpot / GoHighLevel / Pipedrive / Zoho / Salesforce / Webhook) ----
+export type CrmProvider = 'hubspot' | 'gohighlevel' | 'pipedrive' | 'zoho' | 'salesforce' | 'webhook'
+export const CRM_PROVIDERS: CrmProvider[] = ['hubspot', 'gohighlevel', 'pipedrive', 'zoho', 'salesforce', 'webhook']
 export interface CrmConnection { connected: boolean; account: string | null; autoQualified: boolean; autoCold: boolean }
-export interface CrmStatus {
-  hubspot: CrmConnection | null
-  gohighlevel: CrmConnection | null
-  configured: { hubspot: boolean; gohighlevel: boolean }
-}
+export type CrmStatus = { [K in CrmProvider]?: CrmConnection | null } & { configured?: Partial<Record<CrmProvider, boolean>> }
 export interface CrmPushResult { id: string; status: 'synced' | 'duplicate' | 'skipped' | 'failed'; error?: string }
 
 async function invokeCrm<T = unknown>(body: Record<string, unknown>): Promise<T> {
@@ -198,6 +195,8 @@ export const crmApi = {
   status: (orgId?: string | null) => invokeCrm<CrmStatus>({ action: 'status', orgId }),
   /** Consent URL to open in a popup (one-time connect). */
   startUrl: (provider: CrmProvider, orgId?: string | null) => invokeCrm<{ url: string }>({ action: 'start', provider, orgId }),
+  /** Generic webhook: store the target URL (no OAuth). */
+  connectWebhook: (url: string, orgId?: string | null) => invokeCrm<{ ok: boolean }>({ action: 'connectWebhook', url, orgId }),
   settings: (provider: CrmProvider, s: { autoQualified?: boolean; autoCold?: boolean }, orgId?: string | null) =>
     invokeCrm<{ ok: boolean }>({ action: 'settings', provider, ...s, orgId }),
   disconnect: (provider: CrmProvider, orgId?: string | null) => invokeCrm<{ ok: boolean }>({ action: 'disconnect', provider, orgId }),

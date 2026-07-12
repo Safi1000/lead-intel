@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Cloud, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send, Target } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
-import { activitiesApi, cadencesApi, crmApi, emailApi, manualLeadsApi, teamsApi, type CrmProvider } from '../../api/endpoints'
+import { activitiesApi, cadencesApi, crmApi, emailApi, manualLeadsApi, teamsApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { ROLE_LABELS } from '../../config/permissions'
 import { useAuth } from '../../hooks'
@@ -54,14 +54,14 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
   )
 }
 
-const CRM_LABEL: Record<CrmProvider, string> = { hubspot: 'HubSpot', gohighlevel: 'GoHighLevel' }
+const CRM_LABEL: Record<CrmProvider, string> = { hubspot: 'HubSpot', gohighlevel: 'GoHighLevel', pipedrive: 'Pipedrive', zoho: 'Zoho CRM', salesforce: 'Salesforce', webhook: 'your webhook' }
 
 /** Push one lead into whichever CRM(s) the org has connected. Managers/owners only. Hidden until a
  *  CRM is connected (nothing to send to otherwise). */
 function SendToCrmButton({ leadId }: { leadId: string }) {
   const { data: status } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(), staleTime: 60_000 })
   const connected = useMemo<CrmProvider[]>(
-    () => (status ? (['hubspot', 'gohighlevel'] as CrmProvider[]).filter((p) => status[p]?.connected) : []),
+    () => (status ? CRM_PROVIDERS.filter((p) => status[p]?.connected) : []),
     [status],
   )
   const push = useMutation({
