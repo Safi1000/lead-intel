@@ -28,6 +28,7 @@ import { AdminShell } from '../components/layout/AdminShell'
 import { RequireAuth, RequireAdmin, RequireTOS, RequireFeature, RequireRole, RequireOrgContext, RequirePermission } from './guards'
 import { RouteErrorBoundary, NotFoundPage, ForbiddenPage, MaintenancePage } from '../features/misc/ErrorPages'
 import { LegalPage } from '../features/misc/Legal'
+import { HubSpotSetupPage } from '../features/misc/Docs'
 import { LoginPage } from '../features/auth/Login'
 import { ForgotPasswordPage } from '../features/auth/ForgotPassword'
 import { ResetPasswordPage } from '../features/auth/ResetPassword'
@@ -137,6 +138,7 @@ export const router = createBrowserRouter([
   { path: '/terms', element: <LegalPage doc="terms" /> },
   { path: '/privacy', element: <LegalPage doc="privacy" /> },
   { path: '/aup', element: <LegalPage doc="aup" /> },
+  { path: '/docs/hubspot', element: <HubSpotSetupPage /> },
   { path: '/403', element: <ForbiddenPage /> },
   { path: '/maintenance', element: <MaintenancePage /> },
 
