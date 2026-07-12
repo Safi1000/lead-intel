@@ -180,8 +180,24 @@ async function syncIds(orgId: string, provider: Provider, source: 'lead' | 'cold
 }
 
 // ---- auto-sync sweep (cron): push new, un-synced records for every org that opted in ----
-const SWEEP_CANDIDATES = 1000 // newest N rows scanned per org/source
-const SWEEP_CAP = 50          // max actually pushed per org/source per run (keeps each run fast)
+// Pushing a contact is network-bound (~300ms each), so each run handles a bounded slice and, when it
+// fills that slice (backlog remains), immediately chains the next run — the same self-invoke pattern
+// pipeline-run uses. A 1,500-lead batch therefore drains in ~one continuous chain (minutes), not over
+// hours of 10-minute cron ticks; the cron itself is just the safety net that kicks the chain off.
+const SWEEP_CANDIDATES = 1000  // newest N rows scanned per org/source
+const SWEEP_CAP = 100          // max pushed per org/source per run (short, chainable invocations)
+const MAX_SWEEP_DEPTH = 60     // chain guard (~60 × 100 = up to 6k/source per chain; cron resumes rest)
+
+// Fire the next sweep in the chain (the function invokes itself). Race-then-return so the next isolate
+// is in-flight before this one exits, but we never block on the whole downstream run.
+async function chainNextSweep(depth: number): Promise<void> {
+  const fetchPromise = fetch(`${SUPABASE_URL}/functions/v1/crm`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${PIPELINE_SECRET}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'sweep', depth }),
+  }).catch((e) => { console.error('[crm-sweep chain] failed:', (e as Error).message); return null })
+  await Promise.race([fetchPromise, new Promise((r) => setTimeout(() => r('timeout'), 5000))])
+}
 
 async function candidateIds(orgId: string, source: 'lead' | 'cold'): Promise<string[]> {
   if (source === 'lead') {
@@ -201,9 +217,9 @@ async function unsyncedIds(orgId: string, provider: Provider, source: 'lead' | '
   return cand.filter((i) => !done.has(i)).slice(0, SWEEP_CAP)
 }
 
-async function runSweep(): Promise<{ orgs: number; pushed: number; failed: number }> {
+async function runSweep(): Promise<{ orgs: number; pushed: number; failed: number; more: boolean }> {
   const conns = await (await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?or=(auto_sync_qualified.eq.true,auto_sync_cold.eq.true)&select=*`, { headers: svc() })).json() as Conn[]
-  let pushed = 0, failed = 0
+  let pushed = 0, failed = 0, more = false
   for (const conn of conns) {
     try {
       const jobs: Array<'lead' | 'cold'> = []
@@ -212,6 +228,7 @@ async function runSweep(): Promise<{ orgs: number; pushed: number; failed: numbe
       for (const source of jobs) {
         const ids = await unsyncedIds(conn.org_id, conn.provider, source)
         if (!ids.length) continue
+        if (ids.length === SWEEP_CAP) more = true // filled the slice → backlog likely remains
         const results = await syncIds(conn.org_id, conn.provider, source, ids, conn)
         pushed += results.filter((r) => r.status === 'synced' || r.status === 'duplicate').length
         failed += results.filter((r) => r.status === 'failed').length
@@ -221,7 +238,7 @@ async function runSweep(): Promise<{ orgs: number; pushed: number; failed: numbe
       console.error(`[crm-sweep] ${conn.org_id}/${conn.provider}: ${(e as Error).message}`)
     }
   }
-  return { orgs: conns.length, pushed, failed }
+  return { orgs: conns.length, pushed, failed, more }
 }
 
 Deno.serve(async (req: Request) => {
@@ -231,7 +248,11 @@ Deno.serve(async (req: Request) => {
   try {
     // --- cron auto-sync sweep (POST, shared-secret auth, no user JWT) ---
     if (req.method === 'POST' && PIPELINE_SECRET && (req.headers.get('Authorization') ?? '') === `Bearer ${PIPELINE_SECRET}`) {
-      return json({ ok: true, ...(await runSweep()) })
+      const b = await req.json().catch(() => ({})) as Record<string, unknown>
+      const depth = Number(b.depth ?? 0)
+      const res = await runSweep()
+      if (res.more && depth < MAX_SWEEP_DEPTH) await chainNextSweep(depth + 1)
+      return json({ ok: true, depth, ...res })
     }
 
     // --- provider OAuth callback (GET, no JWT) ---
@@ -310,7 +331,10 @@ Deno.serve(async (req: Request) => {
     // Manual sweep trigger (superadmin/admin) — same job the cron runs.
     if (action === 'sweep') {
       if (!['superadmin', 'admin'].includes(caller.role)) return json({ error: 'forbidden' }, 403)
-      return json({ ok: true, ...(await runSweep()) })
+      const depth = Number(body.depth ?? 0)
+      const res = await runSweep()
+      if (res.more && depth < MAX_SWEEP_DEPTH) await chainNextSweep(depth + 1)
+      return json({ ok: true, ...res })
     }
 
     return json({ error: 'unknown action' }, 400)
