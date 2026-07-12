@@ -18,6 +18,8 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const STATE_SECRET = Deno.env.get('OAUTH_STATE_SECRET') ?? ''
+// Shared secret the cron scheduler passes (same one the pipeline crons use) to authorize the sweep.
+const PIPELINE_SECRET = Deno.env.get('PIPELINE_SECRET') ?? ''
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/crm`
 
 type Provider = 'hubspot' | 'gohighlevel'
@@ -151,11 +153,87 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
   return { id: j.contact?.id ?? j.id ?? '' }
 }
 
+// ---- shared push: dedup, map, create contacts, log crm_sync (used by manual push + the sweep) ----
+async function syncIds(orgId: string, provider: Provider, source: 'lead' | 'cold', ids: string[], conn: Conn): Promise<Array<{ id: string; status: string; error?: string }>> {
+  const results: Array<{ id: string; status: string; error?: string }> = []
+  if (!ids.length) return results
+  const inList = `(${ids.map((i) => `"${i.replace(/"/g, '')}"`).join(',')})`
+  // Skip anything already synced (dedup).
+  const already = new Set((await (await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?org_id=eq.${orgId}&provider=eq.${provider}&source_type=eq.${source}&source_id=in.${inList}&status=eq.synced&select=source_id`, { headers: svc() })).json() as Array<{ source_id: string }>).map((r) => r.source_id))
+  for (const id of ids) if (already.has(id)) results.push({ id, status: 'skipped' })
+  const recs = await loadRecords(source, ids.filter((i) => !already.has(i)), orgId)
+  if (!recs.length) return results
+  const token = await accessTokenFor(conn)
+  for (const rec of recs) {
+    try {
+      const r = await createContact(provider, token, conn, rec)
+      const externalId = 'duplicate' in r ? null : r.id
+      await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?on_conflict=org_id,provider,source_type,source_id`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider, source_type: source, source_id: rec.sourceId, external_id: externalId, status: 'synced', error: null, synced_at: new Date().toISOString() }) })
+      results.push({ id: rec.sourceId, status: 'duplicate' in r ? 'duplicate' : 'synced' })
+    } catch (e) {
+      const msg = (e as Error).message.slice(0, 400)
+      await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?on_conflict=org_id,provider,source_type,source_id`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider, source_type: source, source_id: rec.sourceId, external_id: null, status: 'failed', error: msg, synced_at: new Date().toISOString() }) })
+      results.push({ id: rec.sourceId, status: 'failed', error: msg })
+    }
+  }
+  return results
+}
+
+// ---- auto-sync sweep (cron): push new, un-synced records for every org that opted in ----
+const SWEEP_CANDIDATES = 1000 // newest N rows scanned per org/source
+const SWEEP_CAP = 50          // max actually pushed per org/source per run (keeps each run fast)
+
+async function candidateIds(orgId: string, source: 'lead' | 'cold'): Promise<string[]> {
+  if (source === 'lead') {
+    const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/leads?org_id=eq.${orgId}&select=id&order=created_at.desc&limit=${SWEEP_CANDIDATES}`, { headers: svc() })).json() as Array<{ id: string }>
+    return rows.map((r) => r.id)
+  }
+  // Cold pool: mirror the Cold Leads view — not yet imported, no scan error, on-target niche.
+  const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?org_id=eq.${orgId}&crm_lead_id=is.null&error=is.null&select=place_id,is_correct_niche&order=created_at.desc&limit=${SWEEP_CANDIDATES}`, { headers: svc() })).json() as Array<{ place_id: string; is_correct_niche: boolean | null }>
+  return rows.filter((r) => r.is_correct_niche !== false).map((r) => r.place_id)
+}
+
+async function unsyncedIds(orgId: string, provider: Provider, source: 'lead' | 'cold'): Promise<string[]> {
+  const cand = await candidateIds(orgId, source)
+  if (!cand.length) return []
+  const inList = `(${cand.map((i) => `"${i.replace(/"/g, '')}"`).join(',')})`
+  const done = new Set((await (await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?org_id=eq.${orgId}&provider=eq.${provider}&source_type=eq.${source}&source_id=in.${inList}&status=eq.synced&select=source_id`, { headers: svc() })).json() as Array<{ source_id: string }>).map((r) => r.source_id))
+  return cand.filter((i) => !done.has(i)).slice(0, SWEEP_CAP)
+}
+
+async function runSweep(): Promise<{ orgs: number; pushed: number; failed: number }> {
+  const conns = await (await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?or=(auto_sync_qualified.eq.true,auto_sync_cold.eq.true)&select=*`, { headers: svc() })).json() as Conn[]
+  let pushed = 0, failed = 0
+  for (const conn of conns) {
+    try {
+      const jobs: Array<'lead' | 'cold'> = []
+      if (conn.auto_sync_qualified) jobs.push('lead')
+      if (conn.auto_sync_cold) jobs.push('cold')
+      for (const source of jobs) {
+        const ids = await unsyncedIds(conn.org_id, conn.provider, source)
+        if (!ids.length) continue
+        const results = await syncIds(conn.org_id, conn.provider, source, ids, conn)
+        pushed += results.filter((r) => r.status === 'synced' || r.status === 'duplicate').length
+        failed += results.filter((r) => r.status === 'failed').length
+      }
+    } catch (e) {
+      failed++
+      console.error(`[crm-sweep] ${conn.org_id}/${conn.provider}: ${(e as Error).message}`)
+    }
+  }
+  return { orgs: conns.length, pushed, failed }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   const url = new URL(req.url)
 
   try {
+    // --- cron auto-sync sweep (POST, shared-secret auth, no user JWT) ---
+    if (req.method === 'POST' && PIPELINE_SECRET && (req.headers.get('Authorization') ?? '') === `Bearer ${PIPELINE_SECRET}`) {
+      return json({ ok: true, ...(await runSweep()) })
+    }
+
     // --- provider OAuth callback (GET, no JWT) ---
     if (req.method === 'GET' && url.searchParams.has('code')) {
       const st = await readState(url.searchParams.get('state') ?? '')
@@ -226,28 +304,13 @@ Deno.serve(async (req: Request) => {
       if (!ids.length) return json({ error: 'no ids' }, 400)
       const conn = await loadConn(orgId, body.provider)
       if (!conn) return json({ error: `${providerLabel(body.provider)} not connected.` }, 400)
+      return json({ results: await syncIds(orgId, body.provider, source, ids, conn) })
+    }
 
-      // Skip anything already synced (dedup).
-      const inList = `(${ids.map((i) => `"${i.replace(/"/g, '')}"`).join(',')})`
-      const already = new Set((await (await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?org_id=eq.${orgId}&provider=eq.${body.provider}&source_type=eq.${source}&source_id=in.${inList}&status=eq.synced&select=source_id`, { headers: svc() })).json() as Array<{ source_id: string }>).map((r) => r.source_id))
-      const recs = (await loadRecords(source, ids.filter((i) => !already.has(i)), orgId))
-      const token = await accessTokenFor(conn)
-
-      const results: Array<{ id: string; status: string; error?: string }> = []
-      for (const id of ids) if (already.has(id)) results.push({ id, status: 'skipped' })
-      for (const rec of recs) {
-        try {
-          const r = await createContact(body.provider, token, conn, rec)
-          const externalId = 'duplicate' in r ? null : r.id
-          await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?on_conflict=org_id,provider,source_type,source_id`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider: body.provider, source_type: source, source_id: rec.sourceId, external_id: externalId, status: 'synced', error: null, synced_at: new Date().toISOString() }) })
-          results.push({ id: rec.sourceId, status: 'duplicate' in r ? 'duplicate' : 'synced' })
-        } catch (e) {
-          const msg = (e as Error).message.slice(0, 400)
-          await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?on_conflict=org_id,provider,source_type,source_id`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider: body.provider, source_type: source, source_id: rec.sourceId, external_id: null, status: 'failed', error: msg, synced_at: new Date().toISOString() }) })
-          results.push({ id: rec.sourceId, status: 'failed', error: msg })
-        }
-      }
-      return json({ results })
+    // Manual sweep trigger (superadmin/admin) — same job the cron runs.
+    if (action === 'sweep') {
+      if (!['superadmin', 'admin'].includes(caller.role)) return json({ error: 'forbidden' }, 403)
+      return json({ ok: true, ...(await runSweep()) })
     }
 
     return json({ error: 'unknown action' }, 400)
