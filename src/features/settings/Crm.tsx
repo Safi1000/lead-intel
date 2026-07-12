@@ -60,7 +60,21 @@ function ProviderCard({ def, conn, configured, orgId, onChange }: {
   const connect = async () => {
     try {
       const { url } = await crmApi.startUrl(def.key, orgId)
-      window.open(url, 'crm-oauth', 'width=620,height=760')
+      const popup = window.open(url, 'crm-oauth', 'width=620,height=760')
+      // HubSpot's OAuth pages set COOP, which stops the popup from messaging back or closing itself.
+      // So poll status from here; once connected, close the popup ourselves and refresh.
+      const startedAt = Date.now()
+      const timer = window.setInterval(async () => {
+        let done = false
+        try {
+          const s = await crmApi.status(orgId)
+          if (s[def.key]?.connected) { done = true; toast.success(`${def.name} connected`); onChange() }
+        } catch { /* keep polling */ }
+        if (done || (popup && popup.closed) || Date.now() - startedAt > 180_000) {
+          window.clearInterval(timer)
+          try { popup?.close() } catch { /* ignore */ }
+        }
+      }, 2500)
     } catch (e) { toast.error(normalizeError(e).message) }
   }
   const disconnect = useMutation({

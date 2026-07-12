@@ -49,7 +49,9 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, 'Content-Type': 'application/json' } })
-const html = (b: string, s = 200) => new Response(b, { status: s, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+// Supabase's functions gateway forces text/plain + nosniff, so HTML/scripts don't render. The app
+// polls status and closes the popup itself, so the callback just returns a clean plain-text message.
+const page = (msg: string, s = 200) => new Response(msg, { status: s, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 const svc = (extra: Record<string, string> = {}) => ({ apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', ...extra })
 
 // ---- auth + signed state ----
@@ -157,7 +159,7 @@ Deno.serve(async (req: Request) => {
     // --- provider OAuth callback (GET, no JWT) ---
     if (req.method === 'GET' && url.searchParams.has('code')) {
       const st = await readState(url.searchParams.get('state') ?? '')
-      if (!st) return html('<p>Link expired or invalid. Close this window and try again.</p>', 400)
+      if (!st) return page('Link expired or invalid. Close this window and try again.', 400)
       const tok = await exchange(st.provider, { grant_type: 'authorization_code', code: url.searchParams.get('code')!, redirect_uri: REDIRECT_URI })
       // Identify the connected account for display.
       let accountId: string | null = tok.locationId ?? null, label: string | null = null
@@ -173,7 +175,7 @@ Deno.serve(async (req: Request) => {
       }
       if (tok.refresh_token) patch.refresh_token = tok.refresh_token
       await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?on_conflict=org_id,provider`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(patch) })
-      return html(`<!doctype html><meta charset="utf-8"><title>Connected</title><body style="font:16px system-ui;padding:2rem;text-align:center"><p>✅ ${providerLabel(st.provider)} connected. You can close this window.</p><script>try{window.opener&&window.opener.postMessage("crm-connected","*")}catch(e){}setTimeout(function(){window.close()},800)</script></body>`)
+      return page(`✅ ${providerLabel(st.provider)} connected. You can close this window.`)
     }
     if (req.method === 'GET') return json({ ok: true, service: 'crm' })
 
