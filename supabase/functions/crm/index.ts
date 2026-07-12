@@ -201,18 +201,89 @@ async function accessTokenFor(conn: Conn): Promise<string> {
 }
 
 // ---- field mapping + contact create ----
-interface Rec { sourceId: string; name: string; email: string; phone: string; website: string; city: string }
+// Rec carries the standard contact fields (mapped to native CRM fields) plus `data`, the FULL lead
+// field set — everything on the lead-details page — which rides along as a note/description so nothing
+// is lost, whatever the CRM.
+interface Rec { sourceId: string; name: string; email: string; phone: string; website: string; city: string; street: string; state: string; zip: string; data: Record<string, string> }
 const cityOf = (loc: string) => (loc || '').split(',')[0].trim()
+
+const ANGLE_LABELS: Record<string, string> = {
+  first_website: 'No website yet', broken_site: 'Broken / dead website', redesign: 'Website needs a rebuild',
+  lead_capture: 'No way to capture leads online', seo: 'Hard to find on Google', booking: 'No online booking',
+  reputation: 'Behind local rivals on reviews',
+}
+// Groups + order mirror the lead-details page.
+const NOTE_GROUPS: Array<{ title: string; keys: string[] }> = [
+  { title: 'Talking points', keys: ['Primary Angle', 'Site Issue Note', 'Pain Points', 'Top Competitors', 'Personalization Notes'] },
+  { title: 'Contact', keys: ['Phone', 'Email', 'Email Verified', 'Website', 'Address'] },
+  { title: 'Business', keys: ['Rating', 'Business Hours', 'Best Time to Call (PKT)'] },
+  { title: 'Sourcing & scoring', keys: ['Quality Score', 'Website Status', 'Why This Status', 'SEO Score', 'Tech Stack', 'Running Google Ads', 'Source', 'Search Query', 'Search Location'] },
+]
+function parseAddress(addr: string): { street: string; city: string; state: string; zip: string } {
+  const parts = (addr || '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (parts.length && /^(usa|united states|us)$/i.test(parts[parts.length - 1])) parts.pop()
+  const street = parts[0] ?? ''
+  const city = parts.length >= 2 ? parts[1] : ''
+  let state = '', zip = ''
+  const m = (parts[2] ?? '').match(/([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)?/)
+  if (m) { state = m[1] ?? ''; zip = m[2] ?? '' }
+  return { street, city, state, zip }
+}
+/** Every lead field, formatted like the lead-details page — the CRM-agnostic way to carry it all. */
+function buildNote(name: string, data: Record<string, string>): string {
+  const val = (k: string, v: string) => (k === 'Primary Angle' ? (ANGLE_LABELS[v.trim()] ?? v) : v)
+  const lines: string[] = [`LeadIntel — ${name || 'Lead'} — full lead details`, '']
+  const used = new Set<string>(['Business Name'])
+  for (const g of NOTE_GROUPS) {
+    const rows = g.keys.filter((k) => (data[k] ?? '').toString().trim()).map((k) => { used.add(k); return `• ${k}: ${val(k, String(data[k]).trim())}` })
+    if (rows.length) lines.push(g.title, ...rows, '')
+  }
+  const extra = Object.keys(data).filter((k) => !used.has(k) && (data[k] ?? '').toString().trim())
+  if (extra.length) lines.push('Other', ...extra.map((k) => `• ${k}: ${String(data[k]).trim()}`), '')
+  return lines.join('\n').trim()
+}
 
 async function loadRecords(source: string, ids: string[], orgId: string): Promise<Rec[]> {
   if (!ids.length) return []
   const inList = `(${ids.map((i) => `"${i.replace(/"/g, '')}"`).join(',')})`
   if (source === 'lead') {
     const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/leads?org_id=eq.${orgId}&id=in.${inList}&select=id,display_name,data`, { headers: svc() })).json() as Array<{ id: string; display_name: string; data: Record<string, string> }>
-    return rows.map((l) => ({ sourceId: l.id, name: l.data['Business Name'] || l.display_name || '', email: (l.data['Email'] || '').trim(), phone: (l.data['Phone'] || '').trim(), website: (l.data['Website'] || '').trim(), city: cityOf(l.data['Search Location'] || l.data['City'] || '') }))
+    return rows.map((l) => {
+      const d = l.data || {}
+      const a = parseAddress(d['Address'] || '')
+      return { sourceId: l.id, name: d['Business Name'] || l.display_name || '', email: (d['Email'] || '').trim(), phone: (d['Phone'] || '').trim(), website: (d['Website'] || '').trim(), street: a.street, city: a.city || cityOf(d['Search Location'] || d['City'] || ''), state: a.state, zip: a.zip, data: d }
+    })
   }
-  const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?org_id=eq.${orgId}&place_id=in.${inList}&select=place_id,name,email,phone,website,search_location`, { headers: svc() })).json() as Array<{ place_id: string; name: string | null; email: string | null; phone: string | null; website: string | null; search_location: string | null }>
-  return rows.map((r) => ({ sourceId: r.place_id, name: r.name ?? '', email: (r.email ?? '').trim(), phone: (r.phone ?? '').trim(), website: (r.website ?? '').trim(), city: cityOf(r.search_location ?? '') }))
+  const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?org_id=eq.${orgId}&place_id=in.${inList}&select=place_id,name,email,phone,website,rating,website_status,search_location,search_term,address`, { headers: svc() })).json() as Array<{ place_id: string; name: string | null; email: string | null; phone: string | null; website: string | null; rating: number | null; website_status: string | null; search_location: string | null; search_term: string | null; address: string | null }>
+  return rows.map((r) => {
+    const a = parseAddress(r.address ?? '')
+    const data: Record<string, string> = {
+      'Business Name': r.name ?? '', 'Email': r.email ?? '', 'Phone': r.phone ?? '', 'Website': r.website ?? '',
+      'Address': r.address ?? '', 'Rating': r.rating != null ? String(r.rating) : '', 'Website Status': r.website_status ?? '',
+      'Search Query': r.search_term ?? '', 'Search Location': r.search_location ?? '',
+    }
+    return { sourceId: r.place_id, name: r.name ?? '', email: (r.email ?? '').trim(), phone: (r.phone ?? '').trim(), website: (r.website ?? '').trim(), street: a.street, city: a.city || cityOf(r.search_location ?? ''), state: a.state, zip: a.zip, data }
+  })
+}
+
+// Rich-context notes: HubSpot/Pipedrive/GHL keep notes as separate objects, so we attach one after
+// creating the contact (best-effort — the contact still counts as synced if the note call fails).
+async function hubspotNote(token: string, contactId: string, body: string): Promise<void> {
+  const res = await fetch('https://api.hubapi.com/crm/v3/objects/notes', {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ properties: { hs_note_body: body.replace(/\n/g, '<br>'), hs_timestamp: new Date().toISOString() }, associations: [{ to: { id: contactId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 202 }] }] }),
+  })
+  if (!res.ok) throw new Error(`HubSpot note ${res.status}: ${await res.text()}`)
+}
+async function pipedriveNote(base: string, token: string, personId: string, body: string): Promise<void> {
+  if (!personId) return
+  const res = await fetch(`${base}/api/v1/notes`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: body.replace(/\n/g, '<br>'), person_id: Number(personId) }) })
+  if (!res.ok) throw new Error(`Pipedrive note ${res.status}: ${await res.text()}`)
+}
+async function ghlNote(token: string, contactId: string, body: string): Promise<void> {
+  if (!contactId) return
+  const res = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/notes`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Version: '2021-07-28' }, body: JSON.stringify({ body }) })
+  if (!res.ok) throw new Error(`GHL note ${res.status}: ${await res.text()}`)
 }
 
 async function createContact(provider: Provider, token: string, conn: Conn, rec: Rec): Promise<{ id: string } | { duplicate: true }> {
@@ -223,23 +294,33 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.email) props.email = rec.email
       if (rec.phone) props.phone = rec.phone
       if (rec.website) props.website = rec.website
+      if (rec.street) props.address = rec.street
       if (rec.city) props.city = rec.city
+      if (rec.state) props.state = rec.state
+      if (rec.zip) props.zip = rec.zip
       const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: props }) })
       if (res.status === 409) return { duplicate: true }
       if (!res.ok) throw new Error(`HubSpot ${res.status}: ${await res.text()}`)
-      return { id: (await res.json()).id }
+      const id = (await res.json()).id
+      await hubspotNote(token, id, buildNote(rec.name, rec.data)).catch((e) => console.error('[hubspot note]', (e as Error).message))
+      return { id }
     }
     case 'gohighlevel': {
       const bodyG: Record<string, unknown> = { locationId: conn.external_account_id, name: rec.name, source: 'LeadIntel' }
       if (rec.email) bodyG.email = rec.email
       if (rec.phone) bodyG.phone = rec.phone
       if (rec.website) bodyG.website = rec.website
+      if (rec.street) bodyG.address1 = rec.street
       if (rec.city) bodyG.city = rec.city
+      if (rec.state) bodyG.state = rec.state
+      if (rec.zip) bodyG.postalCode = rec.zip
       const res = await fetch('https://services.leadconnectorhq.com/contacts/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Version: '2021-07-28' }, body: JSON.stringify(bodyG) })
       if (res.status === 400 && /duplicat/i.test(await res.clone().text())) return { duplicate: true }
       if (!res.ok) throw new Error(`GoHighLevel ${res.status}: ${await res.text()}`)
       const j = await res.json()
-      return { id: j.contact?.id ?? j.id ?? '' }
+      const id = j.contact?.id ?? j.id ?? ''
+      await ghlNote(token, id, buildNote(rec.name, rec.data)).catch((e) => console.error('[ghl note]', (e as Error).message))
+      return { id }
     }
     case 'pipedrive': {
       const base = conn.api_base || 'https://api.pipedrive.com'
@@ -248,16 +329,22 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.phone) bodyP.phone = rec.phone
       const res = await fetch(`${base}/api/v1/persons`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyP) })
       if (!res.ok) throw new Error(`Pipedrive ${res.status}: ${await res.text()}`)
-      return { id: String((await res.json()).data?.id ?? '') }
+      const id = String((await res.json()).data?.id ?? '')
+      // Pipedrive People have no native website/city — those (and everything else) go in the note.
+      await pipedriveNote(base, token, id, buildNote(rec.name, rec.data)).catch((e) => console.error('[pipedrive note]', (e as Error).message))
+      return { id }
     }
     case 'zoho': {
       const base = conn.api_base || 'https://www.zohoapis.com'
-      const row: Record<string, unknown> = { Last_Name: fallbackName }
+      const row: Record<string, unknown> = { Last_Name: fallbackName, Description: buildNote(rec.name, rec.data) }
       if (rec.name) row.Account_Name = rec.name
       if (rec.email) row.Email = rec.email
       if (rec.phone) row.Phone = rec.phone
+      if (rec.website) row.Website = rec.website
+      if (rec.street) row.Mailing_Street = rec.street
       if (rec.city) row.Mailing_City = rec.city
-      if (rec.website) row.Description = `Website: ${rec.website}`
+      if (rec.state) row.Mailing_State = rec.state
+      if (rec.zip) row.Mailing_Zip = rec.zip
       const res = await fetch(`${base}/crm/v2/Contacts`, { method: 'POST', headers: { Authorization: `Zoho-oauthtoken ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [row] }) })
       if (!res.ok) throw new Error(`Zoho ${res.status}: ${await res.text()}`)
       const rec0 = (await res.json()).data?.[0]
@@ -267,11 +354,14 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
     }
     case 'salesforce': {
       if (!conn.api_base) throw new Error('Salesforce instance not set — reconnect.')
-      const bodyS: Record<string, unknown> = { LastName: fallbackName, Company: rec.name || 'Unknown' }
+      const bodyS: Record<string, unknown> = { LastName: fallbackName, Company: rec.name || 'Unknown', Description: buildNote(rec.name, rec.data) }
       if (rec.email) bodyS.Email = rec.email
       if (rec.phone) bodyS.Phone = rec.phone
       if (rec.website) bodyS.Website = rec.website
+      if (rec.street) bodyS.Street = rec.street
       if (rec.city) bodyS.City = rec.city
+      if (rec.state) bodyS.State = rec.state
+      if (rec.zip) bodyS.PostalCode = rec.zip
       const res = await fetch(`${conn.api_base}/services/data/v59.0/sobjects/Lead`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyS) })
       if (res.status === 400) {
         const t = await res.text()
@@ -283,7 +373,8 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
     }
     case 'webhook': {
       if (!conn.webhook_url) throw new Error('No webhook URL set.')
-      const res = await fetch(conn.webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'LeadIntel', business_name: rec.name, email: rec.email, phone: rec.phone, website: rec.website, city: rec.city }) })
+      // Everything: the mapped fields plus the complete lead field set under `fields`.
+      const res = await fetch(conn.webhook_url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'LeadIntel', business_name: rec.name, email: rec.email, phone: rec.phone, website: rec.website, address: rec.data['Address'] ?? '', city: rec.city, state: rec.state, zip: rec.zip, fields: rec.data }) })
       if (!res.ok) throw new Error(`Webhook ${res.status}`)
       return { id: 'webhook' }
     }
