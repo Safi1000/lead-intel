@@ -85,6 +85,26 @@ const PROVIDERS: Record<Provider, ProviderCfg> = {
 }
 const ALL_PROVIDERS = Object.keys(PROVIDERS) as Provider[]
 const isProvider = (p: unknown): p is Provider => typeof p === 'string' && (ALL_PROVIDERS as string[]).includes(p)
+
+// OAuth client creds: prefer the DB (consistent across every edge isolate) over env vars, whose
+// propagation can lag/flap for minutes after a `secrets set`. Falls back to env when no DB row exists.
+async function getCreds(provider: Provider): Promise<{ id: string; secret: string }> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/crm_provider_config?provider=eq.${provider}&select=client_id,client_secret`, { headers: svc() })
+    if (r.ok) { const row = (await r.json())[0]; if (row?.client_id) return { id: row.client_id, secret: row.client_secret ?? '' } }
+  } catch { /* fall through to env */ }
+  return { id: PROVIDERS[provider].clientId(), secret: PROVIDERS[provider].clientSecret() }
+}
+// Which OAuth providers have usable client creds (DB row or env). One query, used by `status`.
+async function configuredProviders(): Promise<Set<Provider>> {
+  const set = new Set<Provider>()
+  try {
+    const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/crm_provider_config?select=provider,client_id`, { headers: svc() })).json() as Array<{ provider: Provider; client_id: string }>
+    for (const r of rows) if (r.client_id && isProvider(r.provider)) set.add(r.provider)
+  } catch { /* ignore */ }
+  for (const p of ALL_PROVIDERS) if (PROVIDERS[p].kind === 'oauth' && PROVIDERS[p].clientId()) set.add(p)
+  return set
+}
 const providerLabel = (p: Provider) => PROVIDERS[p].label
 const hostOf = (u: string) => { try { return new URL(u).host } catch { return u } }
 // Zoho is multi-datacenter; the API base's TLD tells us which accounts server to refresh against.
@@ -143,11 +163,13 @@ interface TokenResp { access_token: string; refresh_token?: string; expires_in?:
 async function exchange(provider: Provider, params: Record<string, string>, tokenUrlOverride?: string): Promise<TokenResp> {
   const cfg = PROVIDERS[provider]
   const url = tokenUrlOverride ?? cfg.tokenUrl!
+  const { id, secret } = await getCreds(provider)
+  if (!id) throw new Error(`${cfg.label} is not configured on the server.`)
   const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }
   const bodyParams: Record<string, string> = { ...params }
   // Pipedrive wants client creds in a Basic header; the rest take them in the body.
-  if (provider === 'pipedrive') headers.Authorization = 'Basic ' + btoa(`${cfg.clientId()}:${cfg.clientSecret()}`)
-  else { bodyParams.client_id = cfg.clientId(); bodyParams.client_secret = cfg.clientSecret() }
+  if (provider === 'pipedrive') headers.Authorization = 'Basic ' + btoa(`${id}:${secret}`)
+  else { bodyParams.client_id = id; bodyParams.client_secret = secret }
   if (provider === 'gohighlevel') bodyParams.user_type = 'Location'
   const res = await fetch(url, { method: 'POST', headers, body: new URLSearchParams(bodyParams) })
   if (!res.ok) throw new Error(`${cfg.label} token error: ${res.status} ${await res.text()}`)
@@ -425,8 +447,9 @@ Deno.serve(async (req: Request) => {
         const account = r.provider === 'webhook' ? (r.webhook_url ? hostOf(r.webhook_url) : 'Webhook') : (r.account_label ?? r.external_account_id)
         out[r.provider] = { connected: true, account, autoQualified: r.auto_sync_qualified, autoCold: r.auto_sync_cold }
       }
+      const usable = await configuredProviders()
       const configured: Record<string, boolean> = {}
-      for (const p of ALL_PROVIDERS) configured[p] = PROVIDERS[p].kind === 'webhook' ? true : !!PROVIDERS[p].clientId()
+      for (const p of ALL_PROVIDERS) configured[p] = PROVIDERS[p].kind === 'webhook' ? true : usable.has(p)
       out.configured = configured
       return json(out)
     }
@@ -434,8 +457,9 @@ Deno.serve(async (req: Request) => {
     if (action === 'start') {
       if (!isProvider(body.provider) || PROVIDERS[body.provider].kind !== 'oauth') return json({ error: 'unknown provider' }, 400)
       const cfg = PROVIDERS[body.provider]
-      if (!cfg.clientId()) return json({ error: `${cfg.label} is not configured yet.` }, 400)
-      const params = new URLSearchParams({ client_id: cfg.clientId(), redirect_uri: REDIRECT_URI, response_type: 'code', scope: cfg.scope ?? '', state: await makeState(orgId, body.provider), ...(cfg.authExtras ?? {}) })
+      const { id } = await getCreds(body.provider)
+      if (!id) return json({ error: `${cfg.label} is not configured yet.` }, 400)
+      const params = new URLSearchParams({ client_id: id, redirect_uri: REDIRECT_URI, response_type: 'code', scope: cfg.scope ?? '', state: await makeState(orgId, body.provider), ...(cfg.authExtras ?? {}) })
       return json({ url: `${cfg.authUrl}?${params}` })
     }
 
