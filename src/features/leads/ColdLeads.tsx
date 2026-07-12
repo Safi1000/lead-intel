@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Cloud, Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
+import { Download, ExternalLink, Mail, Phone, Snowflake } from 'lucide-react'
 import { coldLeadsApi, crmApi, CRM_PROVIDERS, type ColdLeadRow, type CrmProvider } from '../../api/endpoints'
+import { SendToCrmMenu, crmResultToast } from '../leadwork/SendToCrm'
 import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -85,20 +86,12 @@ export function ColdLeadsPage() {
     [crmStatus],
   )
   const sendCrm = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (providers: CrmProvider[]) => {
       const ids = filtered.slice(0, CRM_CAP).map((r) => r.place_id)
-      const all = await Promise.all(crmConnected.map((p) => crmApi.push({ provider: p, source: 'cold', ids, orgId })))
-      return all.flatMap((r) => r.results)
+      const all = await Promise.all(providers.map((p) => crmApi.push({ provider: p, source: 'cold', ids, orgId })))
+      return { results: all.flatMap((r) => r.results), providers }
     },
-    onSuccess: (results) => {
-      const synced = results.filter((r) => r.status === 'synced').length
-      const dup = results.filter((r) => r.status === 'duplicate').length
-      const skipped = results.filter((r) => r.status === 'skipped').length
-      const failed = results.filter((r) => r.status === 'failed').length
-      const bits = [synced && `${synced} sent`, dup && `${dup} already there`, skipped && `${skipped} already sent`, failed && `${failed} failed`].filter(Boolean).join(', ')
-      if (failed) toast.error(`Sent to CRM — ${bits}`)
-      else toast.success(`Sent to CRM${bits ? ` — ${bits}` : ''}`)
-    },
+    onSuccess: ({ results, providers }) => crmResultToast(results, providers),
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
@@ -123,12 +116,15 @@ export function ColdLeadsPage() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Businesses we scanned but didn't qualify — a raw pool to filter and export.</p>
         </div>
         <div className="flex items-center gap-2">
-          {crmConnected.length > 0 && (
-            <Button variant="outline" loading={sendCrm.isPending} disabled={total === 0} onClick={() => sendCrm.mutate()}
-              title={total > CRM_CAP ? `Sends the first ${CRM_CAP} of ${total.toLocaleString()}` : `Send ${total.toLocaleString()} to your CRM`}>
-              <Cloud className="h-4 w-4" /> Send to CRM{total > CRM_CAP ? ` (${CRM_CAP})` : total > 0 ? ` (${total.toLocaleString()})` : ''}
-            </Button>
-          )}
+          <SendToCrmMenu
+            connected={crmConnected}
+            pending={sendCrm.isPending}
+            disabled={total === 0}
+            size="md"
+            onSend={(p) => sendCrm.mutate(p)}
+            label={`Send to CRM${total > CRM_CAP ? ` (${CRM_CAP})` : total > 0 ? ` (${total.toLocaleString()})` : ''}`}
+          />
+
           <Button onClick={doExport} disabled={total === 0}><Download className="h-4 w-4" /> Export CSV{total > 0 ? ` (${total.toLocaleString()})` : ''}</Button>
         </div>
       </div>

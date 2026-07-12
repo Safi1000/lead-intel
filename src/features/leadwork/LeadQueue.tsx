@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, CheckCircle2, Cloud, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
+import { SendToCrmMenu, crmResultToast } from './SendToCrm'
+import { useAuthStore } from '../../stores/authStore'
 import { normalizeError } from '../../api/client'
 import { useAuth, useDebounce } from '../../hooks'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
@@ -168,25 +170,22 @@ export function LeadQueuePage() {
     },
     onError: (e) => toast.error(normalizeError(e).message),
   })
-  // CRM: managers can push selected leads into whatever CRM the org has connected.
-  const { data: crmStatus } = useQuery({ queryKey: ['crm-status'], queryFn: () => crmApi.status(), enabled: isManager, staleTime: 60_000 })
+  // CRM: managers can push selected leads into a connected CRM (scoped to the batch's org).
+  const actingOrgId = useAuthStore((s) => s.actingOrgId)
+  const crmOrgId = batch?.org_id ?? actingOrgId ?? null
+  const { data: crmStatus } = useQuery({ queryKey: ['crm-status', crmOrgId], queryFn: () => crmApi.status(crmOrgId), enabled: isManager && !!crmOrgId, staleTime: 60_000 })
   const crmConnected = useMemo<CrmProvider[]>(
     () => (crmStatus ? CRM_PROVIDERS.filter((p) => crmStatus[p]?.connected) : []),
     [crmStatus],
   )
   const bulkCrm = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const all = await Promise.all(crmConnected.map((p) => crmApi.push({ provider: p, source: 'lead', ids })))
-      return all.flatMap((r) => r.results)
+    mutationFn: async (providers: CrmProvider[]) => {
+      const ids = [...selected]
+      const all = await Promise.all(providers.map((p) => crmApi.push({ provider: p, source: 'lead', ids, orgId: crmOrgId })))
+      return { results: all.flatMap((r) => r.results), providers }
     },
-    onSuccess: (results) => {
-      const synced = results.filter((r) => r.status === 'synced').length
-      const dup = results.filter((r) => r.status === 'duplicate').length
-      const skipped = results.filter((r) => r.status === 'skipped').length
-      const failed = results.filter((r) => r.status === 'failed').length
-      const bits = [synced && `${synced} sent`, dup && `${dup} already there`, skipped && `${skipped} already sent`, failed && `${failed} failed`].filter(Boolean).join(', ')
-      if (failed) toast.error(`Sent to CRM — ${bits}`)
-      else toast.success(`Sent to CRM${bits ? ` — ${bits}` : ''}`)
+    onSuccess: ({ results, providers }) => {
+      crmResultToast(results, providers)
       setSelected(new Set()); qc.invalidateQueries({ queryKey: ['manual-leads'] })
     },
     onError: (e) => toast.error(normalizeError(e).message),
@@ -218,7 +217,8 @@ export function LeadQueuePage() {
   }), [leads, role, user?.id, activeTab, search, hideDnc, stageFilter, setterFilter])
 
   // Manager selects leads to assign (Unassigned tab) or unassign (Assigned tab).
-  const selectable = isManager && (tab === 'assigned' || tab === 'unassigned')
+  // Managers can select on any tab — assign/unassign are tab-specific, but "Send to CRM" works anywhere.
+  const selectable = isManager
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const allShownSelected = filtered.length > 0 && filtered.every((l) => selected.has(l.id))
   const toggleAll = () => setSelected((s) => {
@@ -299,7 +299,7 @@ export function LeadQueuePage() {
         <div className="mb-3 flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-primary)] bg-[var(--color-signal)]/10 px-4 py-2.5 text-sm">
           <span className="font-medium">{selected.size} selected</span>
           <div className="flex items-center gap-2">
-            {tab === 'unassigned' ? (
+            {tab === 'unassigned' && (
               <>
                 <Select
                   value={assignSetterId}
@@ -311,12 +311,12 @@ export function LeadQueuePage() {
                 />
                 <Button size="sm" disabled={!assignSetterId} loading={bulkAssign.isPending} onClick={() => bulkAssign.mutate()}><UserPlus className="h-3.5 w-3.5" /> Assign {selected.size}</Button>
               </>
-            ) : (
+            )}
+            {tab === 'assigned' && (
               <Button size="sm" variant="danger" loading={bulkUnassign.isPending} onClick={() => bulkUnassign.mutate([...selected])}><UserMinus className="h-3.5 w-3.5" /> Unassign</Button>
             )}
-            {crmConnected.length > 0 && (
-              <Button size="sm" variant="outline" loading={bulkCrm.isPending} onClick={() => bulkCrm.mutate([...selected])}><Cloud className="h-3.5 w-3.5" /> Send to CRM</Button>
-            )}
+            <SendToCrmMenu connected={crmConnected} pending={bulkCrm.isPending} onSend={(p) => bulkCrm.mutate(p)} />
+
             <button onClick={() => setSelected(new Set())} className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)]"><X className="h-4 w-4" /></button>
           </div>
         </div>
