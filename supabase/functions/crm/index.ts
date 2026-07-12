@@ -41,7 +41,7 @@ const PROVIDERS: Record<Provider, ProviderCfg> = {
     label: 'HubSpot', kind: 'oauth',
     authUrl: 'https://app.hubspot.com/oauth/authorize',
     tokenUrl: 'https://api.hubapi.com/oauth/v1/token',
-    scope: 'oauth crm.objects.contacts.write crm.objects.contacts.read',
+    scope: 'oauth crm.objects.contacts.write crm.objects.contacts.read crm.schemas.contacts.write',
     clientId: () => Deno.env.get('HUBSPOT_CLIENT_ID') ?? '',
     clientSecret: () => Deno.env.get('HUBSPOT_CLIENT_SECRET') ?? '',
   },
@@ -180,6 +180,7 @@ interface Conn {
   org_id: string; provider: Provider
   access_token: string | null; refresh_token: string | null; token_expiry: string | null
   external_account_id: string | null; account_label: string | null; api_base: string | null; webhook_url: string | null
+  field_map: Record<string, string> | null
   auto_sync_qualified: boolean; auto_sync_cold: boolean
 }
 async function loadConn(orgId: string, provider: Provider): Promise<Conn | null> {
@@ -286,8 +287,89 @@ async function ghlNote(token: string, contactId: string, body: string): Promise<
   if (!res.ok) throw new Error(`GHL note ${res.status}: ${await res.text()}`)
 }
 
-async function createContact(provider: Provider, token: string, conn: Conn, rec: Rec): Promise<{ id: string } | { duplicate: true }> {
+// ---- structured custom fields (HubSpot properties / Pipedrive person fields) ----
+// The rich lead fields become their own filterable columns, provisioned once per connection. The note
+// still rides along as a catch-all, and if provisioning isn't permitted we simply skip these (note-only).
+const CUSTOM_FIELDS: Array<{ dataKey: string; name: string; label: string; type: 'text' | 'textarea' | 'number' }> = [
+  { dataKey: 'Rating', name: 'leadintel_rating', label: 'LeadIntel Rating', type: 'number' },
+  { dataKey: 'Quality Score', name: 'leadintel_quality_score', label: 'LeadIntel Quality Score', type: 'number' },
+  { dataKey: 'Primary Angle', name: 'leadintel_primary_angle', label: 'LeadIntel Primary Angle', type: 'text' },
+  { dataKey: 'Pain Points', name: 'leadintel_pain_points', label: 'LeadIntel Pain Points', type: 'textarea' },
+  { dataKey: 'Site Issue Note', name: 'leadintel_site_issue', label: 'LeadIntel Site Issue', type: 'textarea' },
+  { dataKey: 'Personalization Notes', name: 'leadintel_personalization', label: 'LeadIntel Personalization', type: 'textarea' },
+  { dataKey: 'Top Competitors', name: 'leadintel_competitors', label: 'LeadIntel Top Competitors', type: 'text' },
+  { dataKey: 'Business Hours', name: 'leadintel_business_hours', label: 'LeadIntel Business Hours', type: 'text' },
+  { dataKey: 'Best Time to Call (PKT)', name: 'leadintel_best_time', label: 'LeadIntel Best Time to Call', type: 'text' },
+  { dataKey: 'SEO Score', name: 'leadintel_seo_score', label: 'LeadIntel SEO Score', type: 'text' },
+  { dataKey: 'Tech Stack', name: 'leadintel_tech_stack', label: 'LeadIntel Tech Stack', type: 'text' },
+  { dataKey: 'Website Status', name: 'leadintel_website_status', label: 'LeadIntel Website Status', type: 'text' },
+  { dataKey: 'Running Google Ads', name: 'leadintel_running_ads', label: 'LeadIntel Running Ads', type: 'text' },
+  { dataKey: 'Source', name: 'leadintel_source', label: 'LeadIntel Source', type: 'text' },
+  { dataKey: 'Search Query', name: 'leadintel_search_query', label: 'LeadIntel Search Query', type: 'text' },
+  { dataKey: 'Search Location', name: 'leadintel_search_location', label: 'LeadIntel Search Location', type: 'text' },
+  { dataKey: 'Email Verified', name: 'leadintel_email_verified', label: 'LeadIntel Email Verified', type: 'text' },
+  { dataKey: 'Why This Status', name: 'leadintel_why_status', label: 'LeadIntel Why Status', type: 'text' },
+]
+const numVal = (v: string) => { const m = String(v).match(/-?\d+(?:\.\d+)?/); return m ? m[0] : '' }
+
+// Provision HubSpot contact properties (idempotent). Returns dataKey -> property name for those that
+// exist/were created; stops on 403 (missing crm.schemas scope) so we cleanly fall back to note-only.
+async function ensureHubspotFields(token: string): Promise<Record<string, string>> {
+  const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  await fetch('https://api.hubapi.com/crm/v3/properties/contacts/groups', { method: 'POST', headers: H, body: JSON.stringify({ name: 'leadintel', label: 'LeadIntel' }) }).catch(() => {})
+  const map: Record<string, string> = {}
+  for (const f of CUSTOM_FIELDS) {
+    const body = { name: f.name, label: f.label, groupName: 'leadintel', type: f.type === 'number' ? 'number' : 'string', fieldType: f.type === 'number' ? 'number' : (f.type === 'textarea' ? 'textarea' : 'text') }
+    const r = await fetch('https://api.hubapi.com/crm/v3/properties/contacts', { method: 'POST', headers: H, body: JSON.stringify(body) })
+    if (r.ok || r.status === 409) { map[f.dataKey] = f.name; continue }
+    const t = await r.text()
+    if (/already exists/i.test(t)) { map[f.dataKey] = f.name; continue }
+    console.error('[hubspot prop]', f.name, r.status, t.slice(0, 120))
+    if (r.status === 401 || r.status === 403) break
+  }
+  return map
+}
+
+// Provision Pipedrive person fields (idempotent by label). Returns dataKey -> Pipedrive field key.
+async function ensurePipedriveFields(base: string, token: string): Promise<Record<string, string>> {
+  const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const existing = await (await fetch(`${base}/api/v1/personFields?limit=500`, { headers: H })).json().catch(() => ({ data: [] }))
+  const byName = new Map<string, string>()
+  for (const pf of (existing.data ?? [])) if (pf?.name && pf?.key) byName.set(String(pf.name), String(pf.key))
+  const map: Record<string, string> = {}
+  for (const f of CUSTOM_FIELDS) {
+    if (byName.has(f.label)) { map[f.dataKey] = byName.get(f.label)!; continue }
+    const field_type = f.type === 'number' ? 'double' : (f.type === 'textarea' ? 'text' : 'varchar')
+    const r = await fetch(`${base}/api/v1/personFields`, { method: 'POST', headers: H, body: JSON.stringify({ name: f.label, field_type }) })
+    if (r.ok) { const k = (await r.json()).data?.key; if (k) map[f.dataKey] = String(k); continue }
+    console.error('[pipedrive field]', f.label, r.status, (await r.text()).slice(0, 120))
+    if (r.status === 401 || r.status === 403) break
+  }
+  return map
+}
+
+// Ensure the custom-field schema exists for this connection, caching the resulting map on the row so
+// we provision only once (reconnect nulls field_map to force a refresh after a scope change).
+async function ensureFieldMap(conn: Conn, provider: Provider, token: string): Promise<Record<string, string>> {
+  if (conn.field_map && typeof conn.field_map === 'object') return conn.field_map
+  let map: Record<string, string> = {}
+  try {
+    if (provider === 'hubspot') map = await ensureHubspotFields(token)
+    else if (provider === 'pipedrive') map = await ensurePipedriveFields(conn.api_base || 'https://api.pipedrive.com', token)
+  } catch (e) { console.error('[ensureFieldMap]', (e as Error).message) }
+  await fetch(`${SUPABASE_URL}/rest/v1/crm_connections?org_id=eq.${conn.org_id}&provider=eq.${provider}`, { method: 'PATCH', headers: svc({ Prefer: 'return=minimal' }), body: JSON.stringify({ field_map: map, updated_at: new Date().toISOString() }) })
+  conn.field_map = map
+  return map
+}
+
+async function createContact(provider: Provider, token: string, conn: Conn, rec: Rec, fieldMap: Record<string, string> = {}): Promise<{ id: string } | { duplicate: true }> {
   const fallbackName = rec.name || rec.email || 'Lead'
+  const customVal = (dataKey: string): string => {
+    const raw = (rec.data[dataKey] ?? '').toString().trim()
+    if (!raw) return ''
+    const f = CUSTOM_FIELDS.find((c) => c.dataKey === dataKey)!
+    return f.type === 'number' ? numVal(raw) : (dataKey === 'Primary Angle' ? (ANGLE_LABELS[raw] ?? raw) : raw)
+  }
   switch (provider) {
     case 'hubspot': {
       const props: Record<string, string> = { company: rec.name }
@@ -298,6 +380,7 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.city) props.city = rec.city
       if (rec.state) props.state = rec.state
       if (rec.zip) props.zip = rec.zip
+      for (const dk of Object.keys(fieldMap)) { const v = customVal(dk); if (v) props[fieldMap[dk]] = v }
       const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: props }) })
       if (res.status === 409) return { duplicate: true }
       if (!res.ok) throw new Error(`HubSpot ${res.status}: ${await res.text()}`)
@@ -327,6 +410,11 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       const bodyP: Record<string, unknown> = { name: fallbackName }
       if (rec.email) bodyP.email = rec.email
       if (rec.phone) bodyP.phone = rec.phone
+      for (const dk of Object.keys(fieldMap)) {
+        const v = customVal(dk); if (!v) continue
+        const isNum = CUSTOM_FIELDS.find((c) => c.dataKey === dk)?.type === 'number'
+        bodyP[fieldMap[dk]] = isNum ? Number(v) : v
+      }
       const res = await fetch(`${base}/api/v1/persons`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyP) })
       if (!res.ok) throw new Error(`Pipedrive ${res.status}: ${await res.text()}`)
       const id = String((await res.json()).data?.id ?? '')
@@ -392,9 +480,12 @@ async function syncIds(orgId: string, provider: Provider, source: 'lead' | 'cold
   const recs = await loadRecords(source, ids.filter((i) => !already.has(i)), orgId)
   if (!recs.length) return results
   const token = conn.provider === 'webhook' ? '' : await accessTokenFor(conn)
+  // Provision structured custom fields once (HubSpot/Pipedrive); best-effort, note-only if it fails.
+  let fieldMap: Record<string, string> = {}
+  if (provider === 'hubspot' || provider === 'pipedrive') { try { fieldMap = await ensureFieldMap(conn, provider, token) } catch { fieldMap = {} } }
   for (const rec of recs) {
     try {
-      const r = await createContact(provider, token, conn, rec)
+      const r = await createContact(provider, token, conn, rec, fieldMap)
       const externalId = 'duplicate' in r ? null : r.id
       await fetch(`${SUPABASE_URL}/rest/v1/crm_sync?on_conflict=org_id,provider,source_type,source_id`, { method: 'POST', headers: svc({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ org_id: orgId, provider, source_type: source, source_id: rec.sourceId, external_id: externalId, status: 'synced', error: null, synced_at: new Date().toISOString() }) })
       results.push({ id: rec.sourceId, status: 'duplicate' in r ? 'duplicate' : 'synced' })
@@ -512,7 +603,7 @@ Deno.serve(async (req: Request) => {
       const patch: Record<string, unknown> = {
         org_id: st.orgId, provider: st.provider, access_token: tok.access_token,
         token_expiry: new Date(Date.now() + expiresIn * 1000).toISOString(),
-        external_account_id: accountId, account_label: label, api_base: apiBase,
+        external_account_id: accountId, account_label: label, api_base: apiBase, field_map: null,
         connected_at: new Date().toISOString(), updated_at: new Date().toISOString(),
       }
       if (tok.refresh_token) patch.refresh_token = tok.refresh_token
