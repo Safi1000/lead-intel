@@ -8,7 +8,7 @@ export function CrmSetupPage() {
         <h1 className="text-[26px] font-bold tracking-tight">Connect LeadIntel to your CRM</h1>
         <p className="mt-2 text-[var(--color-text-secondary)]">
           Sync your qualified leads from LeadIntel straight into your CRM as contacts — no CSV exports, no copy-paste.
-          LeadIntel works with HubSpot, GoHighLevel, Pipedrive, Zoho CRM, Salesforce, and any tool you can reach with a webhook (Zapier, Make).
+          LeadIntel works with HubSpot, Pipedrive, Zoho CRM, Salesforce, and any tool you can reach with a webhook (Zapier, Make).
         </p>
 
         <h2 className="mt-8 text-[17px] font-semibold">Before you start</h2>

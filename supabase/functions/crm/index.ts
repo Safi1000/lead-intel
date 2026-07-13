@@ -213,11 +213,13 @@ const ANGLE_LABELS: Record<string, string> = {
   lead_capture: 'No way to capture leads online', seo: 'Hard to find on Google', booking: 'No online booking',
   reputation: 'Behind local rivals on reviews',
 }
+// TXS-internal fields that must never leave for a customer's CRM (setter-ops only).
+const TXS_ONLY_KEYS = ['Best Time to Call (PKT)']
 // Groups + order mirror the lead-details page.
 const NOTE_GROUPS: Array<{ title: string; keys: string[] }> = [
   { title: 'Talking points', keys: ['Primary Angle', 'Site Issue Note', 'Pain Points', 'Top Competitors', 'Personalization Notes'] },
   { title: 'Contact', keys: ['Phone', 'Email', 'Email Verified', 'Website', 'Address'] },
-  { title: 'Business', keys: ['Rating', 'Business Hours', 'Best Time to Call (PKT)'] },
+  { title: 'Business', keys: ['Rating', 'Business Hours'] },
   { title: 'Sourcing & scoring', keys: ['Quality Score', 'Website Status', 'Why This Status', 'SEO Score', 'Tech Stack', 'Running Google Ads', 'Source', 'Search Query', 'Search Location'] },
 ]
 function parseAddress(addr: string): { street: string; city: string; state: string; zip: string } {
@@ -251,6 +253,7 @@ async function loadRecords(source: string, ids: string[], orgId: string): Promis
     const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/leads?org_id=eq.${orgId}&id=in.${inList}&select=id,display_name,data`, { headers: svc() })).json() as Array<{ id: string; display_name: string; data: Record<string, string> }>
     return rows.map((l) => {
       const d = l.data || {}
+      for (const k of TXS_ONLY_KEYS) delete d[k] // internal-only fields never leave for a customer CRM
       const a = parseAddress(d['Address'] || '')
       return { sourceId: l.id, name: d['Business Name'] || l.display_name || '', email: (d['Email'] || '').trim(), phone: (d['Phone'] || '').trim(), website: (d['Website'] || '').trim(), street: a.street, city: a.city || cityOf(d['Search Location'] || d['City'] || ''), state: a.state, zip: a.zip, data: d }
     })
@@ -299,7 +302,6 @@ const CUSTOM_FIELDS: Array<{ dataKey: string; name: string; label: string; type:
   { dataKey: 'Personalization Notes', name: 'leadintel_personalization', label: 'LeadIntel Personalization', type: 'textarea' },
   { dataKey: 'Top Competitors', name: 'leadintel_competitors', label: 'LeadIntel Top Competitors', type: 'text' },
   { dataKey: 'Business Hours', name: 'leadintel_business_hours', label: 'LeadIntel Business Hours', type: 'text' },
-  { dataKey: 'Best Time to Call (PKT)', name: 'leadintel_best_time', label: 'LeadIntel Best Time to Call', type: 'text' },
   { dataKey: 'SEO Score', name: 'leadintel_seo_score', label: 'LeadIntel SEO Score', type: 'text' },
   { dataKey: 'Tech Stack', name: 'leadintel_tech_stack', label: 'LeadIntel Tech Stack', type: 'text' },
   { dataKey: 'Website Status', name: 'leadintel_website_status', label: 'LeadIntel Website Status', type: 'text' },

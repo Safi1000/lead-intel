@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Boxes, Building2, Cloud, Database, Link2, Unlink, Webhook, Workflow } from 'lucide-react'
+import { Boxes, Building2, Database, Link2, Unlink, Webhook, Workflow } from 'lucide-react'
 import { crmApi, type CrmProvider, type CrmConnection } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { useAuthStore } from '../../stores/authStore'
@@ -12,7 +12,6 @@ import { LoadingState, ErrorState } from '../../components/feedback'
 type ProviderDef = { key: CrmProvider; name: string; kind: 'oauth' | 'webhook'; icon: React.ReactNode; blurb: string }
 const PROVIDERS: ProviderDef[] = [
   { key: 'hubspot', name: 'HubSpot', kind: 'oauth', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Push leads into HubSpot as contacts.' },
-  { key: 'gohighlevel', name: 'GoHighLevel', kind: 'oauth', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Send leads into a GoHighLevel location.' },
   { key: 'pipedrive', name: 'Pipedrive', kind: 'oauth', icon: <Workflow className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Add leads as people in Pipedrive.' },
   { key: 'zoho', name: 'Zoho CRM', kind: 'oauth', icon: <Boxes className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Create contacts in Zoho CRM.' },
   { key: 'salesforce', name: 'Salesforce', kind: 'oauth', icon: <Building2 className="h-5 w-5 text-[var(--color-primary)]" />, blurb: 'Create leads in Salesforce.' },

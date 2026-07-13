@@ -21,7 +21,6 @@ const CONNECTORS: Connector[] = [
   { provider: 'hubspot', name: 'HubSpot', description: 'Push leads into HubSpot contacts & companies.', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
   { provider: 'salesforce', name: 'Salesforce', description: 'Sync enriched leads to Salesforce.', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
   { provider: 'pipedrive', name: 'Pipedrive', description: 'Create deals & persons in Pipedrive.', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
-  { provider: 'gohighlevel', name: 'Go High Level', description: 'Send contacts into GHL sub-accounts.', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
   { provider: 'keap', name: 'Keap', description: 'Push leads to Keap (Infusionsoft).', icon: <Database className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
   { provider: 'zoho', name: 'Zoho CRM', description: 'Sync leads to Zoho CRM modules.', icon: <Cloud className="h-5 w-5 text-[var(--color-primary)]" />, group: 'CRM' },
   { provider: 'google-sheets', name: 'Google Sheets', description: 'Append delivered leads to a sheet.', icon: <Sheet className="h-5 w-5 text-[var(--color-primary)]" />, group: 'Delivery & automation' },
