@@ -205,7 +205,7 @@ async function accessTokenFor(conn: Conn): Promise<string> {
 // Rec carries the standard contact fields (mapped to native CRM fields) plus `data`, the FULL lead
 // field set — everything on the lead-details page — which rides along as a note/description so nothing
 // is lost, whatever the CRM.
-interface Rec { sourceId: string; name: string; email: string; phone: string; website: string; city: string; street: string; state: string; zip: string; data: Record<string, string> }
+interface Rec { sourceId: string; name: string; email: string; phone: string; website: string; city: string; street: string; state: string; zip: string; country: string; data: Record<string, string> }
 const cityOf = (loc: string) => (loc || '').split(',')[0].trim()
 
 const ANGLE_LABELS: Record<string, string> = {
@@ -222,15 +222,18 @@ const NOTE_GROUPS: Array<{ title: string; keys: string[] }> = [
   { title: 'Business', keys: ['Rating', 'Business Hours'] },
   { title: 'Sourcing & scoring', keys: ['Quality Score', 'Website Status', 'Why This Status', 'SEO Score', 'Tech Stack', 'Running Google Ads', 'Source', 'Search Query', 'Search Location'] },
 ]
-function parseAddress(addr: string): { street: string; city: string; state: string; zip: string } {
+function parseAddress(addr: string): { street: string; city: string; state: string; zip: string; country: string } {
   const parts = (addr || '').split(',').map((s) => s.trim()).filter(Boolean)
-  if (parts.length && /^(usa|united states|us)$/i.test(parts[parts.length - 1])) parts.pop()
+  // Trailing segment is the country: normalise US variants, otherwise take it as-is (global sourcing).
+  let country = ''
+  if (parts.length && /^(usa|united states|us)$/i.test(parts[parts.length - 1])) { country = 'United States'; parts.pop() }
+  else if (parts.length >= 4 && !/\d/.test(parts[parts.length - 1])) { country = parts.pop() ?? '' }
   const street = parts[0] ?? ''
   const city = parts.length >= 2 ? parts[1] : ''
   let state = '', zip = ''
   const m = (parts[2] ?? '').match(/([A-Za-z]{2})\s*(\d{5}(?:-\d{4})?)?/)
   if (m) { state = m[1] ?? ''; zip = m[2] ?? '' }
-  return { street, city, state, zip }
+  return { street, city, state, zip, country }
 }
 /** Every lead field, formatted like the lead-details page — the CRM-agnostic way to carry it all. */
 function buildNote(name: string, data: Record<string, string>): string {
@@ -255,7 +258,7 @@ async function loadRecords(source: string, ids: string[], orgId: string): Promis
       const d = l.data || {}
       for (const k of TXS_ONLY_KEYS) delete d[k] // internal-only fields never leave for a customer CRM
       const a = parseAddress(d['Address'] || '')
-      return { sourceId: l.id, name: d['Business Name'] || l.display_name || '', email: (d['Email'] || '').trim(), phone: (d['Phone'] || '').trim(), website: (d['Website'] || '').trim(), street: a.street, city: a.city || cityOf(d['Search Location'] || d['City'] || ''), state: a.state, zip: a.zip, data: d }
+      return { sourceId: l.id, name: d['Business Name'] || l.display_name || '', email: (d['Email'] || '').trim(), phone: (d['Phone'] || '').trim(), website: (d['Website'] || '').trim(), street: a.street, city: a.city || cityOf(d['Search Location'] || d['City'] || ''), state: a.state, zip: a.zip, country: a.country, data: d }
     })
   }
   const rows = await (await fetch(`${SUPABASE_URL}/rest/v1/sourced_places?org_id=eq.${orgId}&place_id=in.${inList}&select=place_id,name,email,phone,website,rating,website_status,search_location,search_term,address`, { headers: svc() })).json() as Array<{ place_id: string; name: string | null; email: string | null; phone: string | null; website: string | null; rating: number | null; website_status: string | null; search_location: string | null; search_term: string | null; address: string | null }>
@@ -266,7 +269,7 @@ async function loadRecords(source: string, ids: string[], orgId: string): Promis
       'Address': r.address ?? '', 'Rating': r.rating != null ? String(r.rating) : '', 'Website Status': r.website_status ?? '',
       'Search Query': r.search_term ?? '', 'Search Location': r.search_location ?? '',
     }
-    return { sourceId: r.place_id, name: r.name ?? '', email: (r.email ?? '').trim(), phone: (r.phone ?? '').trim(), website: (r.website ?? '').trim(), street: a.street, city: a.city || cityOf(r.search_location ?? ''), state: a.state, zip: a.zip, data }
+    return { sourceId: r.place_id, name: r.name ?? '', email: (r.email ?? '').trim(), phone: (r.phone ?? '').trim(), website: (r.website ?? '').trim(), street: a.street, city: a.city || cityOf(r.search_location ?? ''), state: a.state, zip: a.zip, country: a.country, data }
   })
 }
 
@@ -382,6 +385,7 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.city) props.city = rec.city
       if (rec.state) props.state = rec.state
       if (rec.zip) props.zip = rec.zip
+      if (rec.country) props.country = rec.country
       for (const dk of Object.keys(fieldMap)) { const v = customVal(dk); if (v) props[fieldMap[dk]] = v }
       const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: props }) })
       if (res.status === 409) return { duplicate: true }
@@ -399,6 +403,7 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.city) bodyG.city = rec.city
       if (rec.state) bodyG.state = rec.state
       if (rec.zip) bodyG.postalCode = rec.zip
+      if (rec.country) bodyG.country = rec.country
       const res = await fetch('https://services.leadconnectorhq.com/contacts/', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Version: '2021-07-28' }, body: JSON.stringify(bodyG) })
       if (res.status === 400 && /duplicat/i.test(await res.clone().text())) return { duplicate: true }
       if (!res.ok) throw new Error(`GoHighLevel ${res.status}: ${await res.text()}`)
@@ -435,6 +440,7 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.city) row.Mailing_City = rec.city
       if (rec.state) row.Mailing_State = rec.state
       if (rec.zip) row.Mailing_Zip = rec.zip
+      if (rec.country) row.Mailing_Country = rec.country
       const res = await fetch(`${base}/crm/v2/Contacts`, { method: 'POST', headers: { Authorization: `Zoho-oauthtoken ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [row] }) })
       if (!res.ok) throw new Error(`Zoho ${res.status}: ${await res.text()}`)
       const rec0 = (await res.json()).data?.[0]
@@ -450,9 +456,26 @@ async function createContact(provider: Provider, token: string, conn: Conn, rec:
       if (rec.website) bodyS.Website = rec.website
       if (rec.street) bodyS.Street = rec.street
       if (rec.city) bodyS.City = rec.city
-      if (rec.state) bodyS.State = rec.state
       if (rec.zip) bodyS.PostalCode = rec.zip
-      const res = await fetch(`${conn.api_base}/services/data/v59.0/sobjects/Lead`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(bodyS) })
+      if (rec.country) bodyS.Country = rec.country
+      // State/Country picklists reject a state with no country; default only when the address didn't say.
+      if (rec.state) { bodyS.State = rec.state; if (!bodyS.Country) bodyS.Country = 'United States' }
+      const url = `${conn.api_base}/services/data/v59.0/sobjects/Lead`
+      const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      const post = (b: Record<string, unknown>) => fetch(url, { method: 'POST', headers: H, body: JSON.stringify(b) })
+      let res = await post(bodyS)
+      // Restricted state/country picklists reject codes that aren't valid values (e.g. "TX" vs "Texas").
+      // The address is also in the Description, so retry without State/Country rather than fail the Lead.
+      if (res.status === 400 && (rec.state != null)) {
+        const t = await res.text()
+        if (/DUPLICATE/i.test(t)) return { duplicate: true }
+        if (/State|Country|picklist|INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST|FIELD_INTEGRITY/i.test(t)) {
+          const { State: _s, Country: _c, ...rest } = bodyS
+          res = await post(rest)
+        } else {
+          throw new Error(`Salesforce 400: ${t}`)
+        }
+      }
       if (res.status === 400) {
         const t = await res.text()
         if (/DUPLICATE/i.test(t)) return { duplicate: true }
