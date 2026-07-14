@@ -241,6 +241,12 @@ async function buildYieldAwareSearches(searchTerms: string[], profileMetros: str
 // Wall-clock budget per invocation — below the 150s hard limit, leaving margin for the final
 // DB writes + firing the next chunk.
 const CHUNK_TIME_BUDGET_MS = 110_000
+// Sub-budget for the SEARCH phase alone. As a metro pool saturates, finding NEW places means
+// churning many low-yield combos (Google calls ~1-3s each), and the search loop is otherwise
+// unbounded — so it could blow the whole 150s in searching and get platform-killed BEFORE the
+// finalize write (a zombie: status=running, 0 everywhere, no error). Cap search here, then enrich
+// whatever we gathered and chain the next chunk. Leaves ~55s for enrichment + finalize.
+const SEARCH_TIME_BUDGET_MS = 55_000
 // Max NEW (deduped) leads to enrich per invocation. This is the CPU-bound knob: Supabase edge
 // functions have a cumulative CPU/resource limit (not just wall-clock), and each FRESH lead runs a
 // heavy website fetch + HTML regex + AI score. Cache hits are cheap, so a mostly-cached niche can
@@ -795,6 +801,12 @@ Deno.serve(async (req: Request) => {
 
     for (const search of searches) {
       if (allResults.length >= maxPlaces) break
+      // Time-box the search phase so a saturated pool (lots of low-yield combos) can't burn the whole
+      // 150s here and get killed before finalize. Chaining jobs continue searching in the next chunk.
+      if (chaining && Date.now() - chunkStart > SEARCH_TIME_BUDGET_MS) {
+        console.log(`[pipeline-run] chunk ${chunkIndex} search hit time budget after ${searchedCombos.length} combos, ${allResults.length} raw`)
+        break
+      }
       try {
         let raw = 0
         let pageToken: string | undefined
