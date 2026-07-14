@@ -2,33 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Check } from 'lucide-react'
-import { sourcingApi, verticalsApi } from '../../api/endpoints'
+import { locationsApi, sourcingApi, verticalsApi } from '../../api/endpoints'
 import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { Select, Checkbox } from '../../components/ui/controls'
 import { LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
 
-// Curated high-density metros per country — the cities the engine already sources ("we already
-// placed"). Selecting a country drops its whole list into the profile's metro pool; the engine
-// crosses these with the niche's search terms and stops once the qualified target is met.
-const COUNTRY_METROS: Record<string, string[]> = {
-  US: [
-    'New York City, NY', 'Los Angeles, CA', 'Miami, FL', 'Houston, TX', 'Dallas, TX',
-    'Chicago, IL', 'Atlanta, GA', 'Scottsdale, AZ', 'Las Vegas, NV', 'San Diego, CA',
-    'Austin, TX', 'Beverly Hills, CA', 'Nashville, TN', 'Tampa, FL', 'Orlando, FL',
-    'Charlotte, NC', 'Denver, CO', 'Seattle, WA', 'Boston, MA', 'Phoenix, AZ',
-  ],
-  CA: [
-    'Toronto, ON, Canada', 'Vancouver, BC, Canada', 'Montreal, QC, Canada', 'Calgary, AB, Canada',
-    'Edmonton, AB, Canada', 'Ottawa, ON, Canada', 'Mississauga, ON, Canada', 'Winnipeg, MB, Canada',
-    'Hamilton, ON, Canada', 'Quebec City, QC, Canada', 'Victoria, BC, Canada', 'Halifax, NS, Canada',
-    'Kitchener, ON, Canada', 'London, ON, Canada', 'Surrey, BC, Canada', 'Burnaby, BC, Canada',
-    'Markham, ON, Canada', 'Vaughan, ON, Canada', 'Oakville, ON, Canada', 'Richmond, BC, Canada',
-  ],
-}
-const COUNTRY_KEYS = ['US', 'CA'] as const
+// Countries are chosen instead of individual cities. The actual city pool lives in the
+// search_locations table ("the cities we already placed"); selecting a country drops that
+// country's whole pool into the profile's metros, which the engine crosses with the niche's
+// search terms and runs until the qualified target is met.
 const COUNTRY_LABELS: Record<string, string> = { US: 'United States', CA: 'Canada' }
+const countryName = (code: string) => COUNTRY_LABELS[code] ?? code
 
 /** Per-tenant sourcing profile — niche + target countries + safe field toggles. Drives the engine.
  * Rendered inside the unified Sourcing workspace (config → cost → run). */
@@ -36,6 +22,15 @@ export function SourcingConfig() {
   const qc = useQueryClient()
   const { data: verticals } = useQuery({ queryKey: ['verticals'], queryFn: () => verticalsApi.list() })
   const { data: profile, isLoading } = useQuery({ queryKey: ['sourcing-profile'], queryFn: () => sourcingApi.get() })
+  const { data: locations } = useQuery({ queryKey: ['sourcing-locations'], queryFn: () => locationsApi.list() })
+
+  // The live location pool grouped by country: { CA: [...469], US: [...98] }.
+  const byCountry = useMemo(() => {
+    const m: Record<string, string[]> = {}
+    for (const l of locations ?? []) (m[l.country] ??= []).push(l.location)
+    return m
+  }, [locations])
+  const countryKeys = useMemo(() => Object.keys(byCountry).sort(), [byCountry])
 
   const [verticalKey, setVerticalKey] = useState('')
   const [countries, setCountries] = useState<string[]>([])
@@ -43,22 +38,24 @@ export function SourcingConfig() {
   const [fetchEmail, setFetchEmail] = useState(true)
   const [fetchHours, setFetchHours] = useState(true)
 
-  // The metro pool is derived from the selected countries — that's what gets saved and run.
-  const metros = useMemo(() => countries.flatMap((c) => COUNTRY_METROS[c] ?? []), [countries])
+  // The metro pool is the union of the selected countries' city pools — that's what gets saved/run.
+  const metros = useMemo(() => countries.flatMap((c) => byCountry[c] ?? []), [countries, byCountry])
   const savedSnapshotRef = useRef('')
+  const inferredRef = useRef(false)
 
+  // Adopt the saved profile once BOTH it and the location pool are loaded: a country is "on" if any
+  // of its cities is in the saved metros. Snapshot the DERIVED state so we never auto-save on mount.
   useEffect(() => {
-    if (profile) {
-      setVerticalKey(profile.vertical_key ?? '')
-      // A country is "on" if any of its curated metros is already in the saved pool.
-      const inferred = COUNTRY_KEYS.filter((c) => (profile.metros ?? []).some((m) => COUNTRY_METROS[c].includes(m)))
-      setCountries(inferred)
-      setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
-      // Snapshot the DERIVED state (not the raw saved metros) so we don't auto-save on mount.
-      const derivedMetros = inferred.flatMap((c) => COUNTRY_METROS[c])
-      savedSnapshotRef.current = JSON.stringify({ v: profile.vertical_key ?? '', m: derivedMetros, a: profile.fetch_ads, e: profile.fetch_email, h: profile.fetch_hours })
-    }
-  }, [profile])
+    if (!profile || countryKeys.length === 0 || inferredRef.current) return
+    const savedMetros = profile.metros ?? []
+    const inferred = countryKeys.filter((c) => (byCountry[c] ?? []).some((m) => savedMetros.includes(m)))
+    setVerticalKey(profile.vertical_key ?? '')
+    setCountries(inferred)
+    setFetchAds(profile.fetch_ads); setFetchEmail(profile.fetch_email); setFetchHours(profile.fetch_hours)
+    const derivedMetros = inferred.flatMap((c) => byCountry[c] ?? [])
+    savedSnapshotRef.current = JSON.stringify({ v: profile.vertical_key ?? '', m: derivedMetros, a: profile.fetch_ads, e: profile.fetch_email, h: profile.fetch_hours })
+    inferredRef.current = true
+  }, [profile, byCountry, countryKeys])
 
   const save = useMutation({
     mutationFn: () => sourcingApi.save({ vertical_key: verticalKey || null, search_terms: null, metros, fetch_ads: fetchAds, fetch_email: fetchEmail, fetch_hours: fetchHours, daily_limit: profile?.daily_limit ?? 1000, active: true }),
@@ -66,10 +63,11 @@ export function SourcingConfig() {
     onError: (e) => toast.error(normalizeError(e).message),
   })
 
-  // Auto-save the config (debounced) so the single "Start run" below just runs.
+  // Auto-save the config (debounced) so the single "Start run" below just runs. Never fires before
+  // the initial profile has been adopted, so it can't clobber a saved selection on load.
   const cfgKey = JSON.stringify({ v: verticalKey, m: metros, a: fetchAds, e: fetchEmail, h: fetchHours })
   useEffect(() => {
-    if (!profile || cfgKey === savedSnapshotRef.current) return
+    if (!profile || !inferredRef.current || cfgKey === savedSnapshotRef.current) return
     const t = setTimeout(() => { save.mutate(undefined, { onSuccess: () => { savedSnapshotRef.current = cfgKey } }) }, 800)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,29 +107,33 @@ export function SourcingConfig() {
 
       <Card className="p-5">
         <Label className="mb-1 block">Target countries</Label>
-        <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">Pick where to source. LeadIntel runs across our curated high-density metros in each country and stops once your qualified target is met.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {COUNTRY_KEYS.map((c) => {
-            const sel = countries.includes(c)
-            return (
-              <button
-                key={c}
-                onClick={() => toggleCountry(c)}
-                className={cn(
-                  'flex items-center justify-between rounded-[12px] border p-4 text-left transition-colors',
-                  sel ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40',
-                )}
-              >
-                <span>
-                  <span className="block text-sm font-semibold">{COUNTRY_LABELS[c]}</span>
-                  <span className="text-[12px] text-[var(--color-text-muted)]">{COUNTRY_METROS[c].length} metros</span>
-                </span>
-                {sel && <Check className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />}
-              </button>
-            )
-          })}
-        </div>
-        {countries.length === 0 && <p className="mt-3 text-[12px] text-[var(--color-text-muted)]">Select at least one country to run.</p>}
+        <p className="mb-3 text-[12px] text-[var(--color-text-muted)]">Pick where to source. LeadIntel runs across every city we cover in each country and stops once your qualified target is met.</p>
+        {countryKeys.length === 0 ? (
+          <p className="py-4 text-[13px] text-[var(--color-text-muted)]">Loading coverage…</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {countryKeys.map((c) => {
+              const sel = countries.includes(c)
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleCountry(c)}
+                  className={cn(
+                    'flex items-center justify-between rounded-[12px] border p-4 text-left transition-colors',
+                    sel ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/40',
+                  )}
+                >
+                  <span>
+                    <span className="block text-sm font-semibold">{countryName(c)}</span>
+                    <span className="text-[12px] text-[var(--color-text-muted)]">{(byCountry[c]?.length ?? 0).toLocaleString()} cities</span>
+                  </span>
+                  {sel && <Check className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />}
+                </button>
+              )
+            })}
+          </div>
+        )}
+        {countryKeys.length > 0 && countries.length === 0 && <p className="mt-3 text-[12px] text-[var(--color-text-muted)]">Select at least one country to run.</p>}
       </Card>
 
       <div className="flex justify-end text-[12px] text-[var(--color-text-muted)]">
