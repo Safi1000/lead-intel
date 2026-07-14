@@ -242,12 +242,14 @@ async function buildYieldAwareSearches(searchTerms: string[], profileMetros: str
 // DB writes + firing the next chunk.
 const CHUNK_TIME_BUDGET_MS = 110_000
 // Max NEW (deduped) leads to enrich per invocation. This is the CPU-bound knob: Supabase edge
-// functions have a cumulative CPU-time limit (not just wall-clock), and each FRESH lead runs heavy
-// HTML regex. ~56 leads/chunk blew the limit → 546 WORKER_LIMIT kills; 15 was the proven-safe floor.
-// 20 (≈36% of the breaking load) cuts the number of cold-start/chain cycles for a modest overall
-// speedup. Concurrency doesn't add CPU (single-threaded), so this cap is the ONLY CPU-kill lever —
-// if a run ever logs 546/WORKER_LIMIT, drop back to 15. Do NOT push past ~25 on fresh-heavy runs.
-const CHUNK_CANDIDATE_CAP = 20
+// functions have a cumulative CPU/resource limit (not just wall-clock), and each FRESH lead runs a
+// heavy website fetch + HTML regex + AI score. Cache hits are cheap, so a mostly-cached niche can
+// take a big cap — but an ALL-FRESH run (e.g. a new niche/country like dental-in-Canada) is far
+// heavier per lead. Empirically on a fully-fresh dental chunk: 15 succeeds, 18 → WORKER_RESOURCE_LIMIT.
+// So 20 killed every chunk of those runs (0 progress, zombie). 12 keeps a safe margin below the
+// ~16 fresh ceiling while still amortising cold starts; chaining just runs a few more chunks.
+// Concurrency doesn't add cumulative CPU (single-threaded) — this cap is the ONLY resource-kill lever.
+const CHUNK_CANDIDATE_CAP = 12
 
 // Fire the next chunk (the edge function invokes itself). Same race-then-return pattern the Vercel
 // trigger uses, so the next isolate is in-flight before this one exits.
