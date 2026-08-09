@@ -9,6 +9,9 @@ interface Section { h?: string; p: string[] }
 interface Doc { title: string; updated: string; sections: Section[] }
 
 const UPDATED = 'July 12, 2026'
+// The Privacy Policy is versioned separately — only it changed when analytics
+// disclosure was added, and the Terms/AUP shouldn't claim a revision they didn't have.
+const PRIVACY_UPDATED = 'August 9, 2026'
 
 const COPY: Record<'terms' | 'privacy' | 'aup', Doc> = {
   terms: {
@@ -64,7 +67,7 @@ const COPY: Record<'terms' | 'privacy' | 'aup', Doc> = {
   },
   privacy: {
     title: 'Privacy Policy',
-    updated: UPDATED,
+    updated: PRIVACY_UPDATED,
     sections: [
       { p: [
         'This Privacy Policy explains how LeadIntel, operated by TechxServe ("LeadIntel", "we", "us", or "our"), collects, uses, shares, and protects information in connection with our lead-generation and sales-workflow platform (the "Service"). By using the Service, you agree to the practices described here.',
@@ -101,8 +104,10 @@ const COPY: Record<'terms' | 'privacy' | 'aup', Doc> = {
       { h: '8. International Transfers', p: [
         'We operate in the United States and may process information in the United States and other countries. Where required, we use appropriate safeguards for cross-border transfers of personal data.',
       ] },
-      { h: '9. Cookies', p: [
+      { h: '9. Cookies and Analytics', p: [
         'We use cookies and similar technologies to keep you signed in, remember preferences, and understand usage. You can control cookies through your browser settings; disabling some cookies may affect functionality.',
+        'We use Google Analytics 4, a service provided by Google, to understand how the Service is used so we can improve it. It sets cookies and collects usage data such as the pages you visit, the actions you take in the Service, your approximate location (derived from a truncated IP address), and your browser and device type. We associate this with your user account identifier and role so we can distinguish usage patterns between roles; we do not send your name, email address, or any Lead data to Google. Google processes this information as described at policies.google.com/privacy, and you can opt out across all sites using Google’s browser add-on at tools.google.com/dlpage/gaoptout.',
+        'We honor browser-level opt-out signals. If your browser sends a Global Privacy Control (GPC) or Do Not Track signal, we do not load analytics for your session at all.',
       ] },
       { h: '10. Children', p: [
         'The Service is intended for business use and is not directed to children under 16. We do not knowingly collect personal information from children.',

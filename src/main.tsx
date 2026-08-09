@@ -5,6 +5,27 @@ import './styles/globals.css'
 import { Providers } from './app/providers'
 import { router } from './app/router'
 import { startMockServer } from './mocks/browser'
+import { initAnalytics, trackPageView } from './lib/analytics'
+
+/**
+ * GA page views for a SPA. `router.subscribe` fires several times per
+ * navigation (loading → idle), so only settled navigations are reported and
+ * repeats of the same path are dropped.
+ */
+function startPageViewTracking() {
+  initAnalytics()
+  let last = ''
+  const report = (path: string) => {
+    if (path === last) return
+    last = path
+    trackPageView(path)
+  }
+  report(window.location.pathname + window.location.search)
+  router.subscribe((state) => {
+    if (state.navigation.state !== 'idle') return
+    report(state.location.pathname + state.location.search)
+  })
+}
 
 async function bootstrap() {
   if (import.meta.env.DEV) {
@@ -31,6 +52,7 @@ async function bootstrap() {
       return
     }
   }
+  startPageViewTracking()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <Providers>

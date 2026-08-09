@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { DEFAULT_FLAGS } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg } from '../lib/actingOrg'
+import { trackEvent } from '../lib/analytics'
 import { TIER2_TO_STAGE } from './types'
 import type { ActivityType, Attainment, BatchAssignment, Cadence, CadenceEnrollment, CadenceStep, Client, Deal, DispositionEvent, DispositionTier1, DispositionTier2, FloorConfig, LeadActivity, LeadBatch, LeadStage, Script, SourcingLocation, SourcingProfile, TargetRow, Team, TeamMembership, TemplateColumn, User, UserRemark, Vertical } from './types'
 import type {
@@ -570,6 +571,8 @@ export const manualLeadsApi = {
     if (error) throw new Error(error.message)
     if (body.stage !== undefined && prev.stage && prev.stage !== body.stage) {
       await logSystemActivity(id, 'Stage Change', `${prev.stage} → ${body.stage}`).catch(() => {})
+      // The stage move is the real outcome signal — 'Booked' is the one that matters most.
+      trackEvent('lead_stage_changed', { from: prev.stage, to: body.stage })
     }
     if (body.temperature !== undefined && prev.temperature !== body.temperature && body.temperature) {
       await logSystemActivity(id, 'Temperature', `Marked ${body.temperature}`).catch(() => {})
@@ -783,6 +786,7 @@ export const dispositionsApi = {
       notes: body.notes?.trim() || null, next_action_at: body.next_action_at ?? null,
     })
     if (error) throw new Error(error.message)
+    trackEvent('disposition_logged', { tier1: body.tier1, tier2: body.tier2 ?? 'none' })
     if (body.tier2) {
       const patch: Record<string, unknown> = { stage: TIER2_TO_STAGE[body.tier2], updated_at: new Date().toISOString() }
       if (body.next_action_at && (body.tier2 === 'Callback scheduled' || body.tier2 === 'Nurture / not now')) {

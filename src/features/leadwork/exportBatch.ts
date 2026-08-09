@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { ManualLead } from '../../api/types'
+import { trackEvent } from '../../lib/analytics'
 
 /**
  * Client-side batch export → Excel. Builds a clean, client-facing sheet from each lead's `data`
@@ -39,4 +40,5 @@ export function exportLeadsToXlsx(leads: ManualLead[], fileBase: string): void {
   XLSX.utils.book_append_sheet(wb, ws, 'Leads')
   const safe = fileBase.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 80) || 'batch'
   XLSX.writeFile(wb, `${safe}.xlsx`)
+  trackEvent('leads_exported', { lead_count: leads.length, format: 'xlsx' })
 }

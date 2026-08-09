@@ -15,6 +15,7 @@ import { PageHeader } from '../shared/bits'
 import { SourcingConfig } from './SourcingProfile'
 import { EmptyState, ErrorState, LoadingState } from '../../components/feedback'
 import { cn } from '../../lib/utils'
+import { trackEvent } from '../../lib/analytics'
 
 // ---------------------------------------------------------------------------
 // Niche info banner
@@ -197,6 +198,10 @@ function RunTrigger({ orgId }: { orgId: string }) {
         if (status.status !== 'running') {
           clearPoll()
           qc.invalidateQueries({ queryKey: ['pipeline-runs', orgId] })
+          trackEvent('pipeline_run_finished', {
+            result: status.status,
+            imported: status.total_imported ?? 0,
+          })
           if (status.status === 'completed') {
             toast.success(`Done! ${status.total_imported} leads imported.`)
           } else {
@@ -221,6 +226,12 @@ function RunTrigger({ orgId }: { orgId: string }) {
     onSuccess: (data) => {
       setActiveRunId(data.run_id)
       setLiveRun(null)
+      trackEvent('pipeline_run_started', {
+        target: targetN,
+        fresh: freshCount,
+        cached: cachedUsed,
+        credits: costCredits,
+      })
       toast.info('Pipeline started…')
     },
     onError: (e) => toast.error(normalizeError(e).message),

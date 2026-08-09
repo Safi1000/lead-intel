@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Client, PermissionOverrides, Role, User } from '../api/types'
 import { DEFAULT_FLAGS, type FeatureFlags } from '../config/featureFlags'
 import { clearActingOrg, loadActingOrg, saveActingOrg } from '../lib/actingOrg'
+import { setAnalyticsUser, trackEvent } from '../lib/analytics'
 
 const NO_PERMS: PermissionOverrides = { granted: [], denied: [] }
 const ALL_ORGS: Client = { id: '*', name: 'All organizations', plan: 'scale', credits_remaining: null }
@@ -47,17 +48,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   tosAcceptedAt: null,
   status: 'unknown',
   setSession: ({ accessToken, user, client, role, flags, permissions, actingOrgId, tosAcceptedAt }) =>
-    set((s) => ({
-      accessToken: accessToken ?? s.accessToken,
-      user,
-      client,
-      role,
-      flags,
-      permissions,
-      actingOrgId,
-      tosAcceptedAt,
-      status: 'authenticated',
-    })),
+    set((s) => {
+      // Analytics: ids and role only — never email or name (GA forbids PII).
+      setAnalyticsUser(user.id, { role: role ?? 'unknown', plan: client?.plan ?? 'unknown' })
+      // A restored session re-runs setSession, so only count a real sign-in.
+      if (s.status !== 'authenticated') trackEvent('login', { method: 'password', role })
+      return {
+        accessToken: accessToken ?? s.accessToken,
+        user,
+        client,
+        role,
+        flags,
+        permissions,
+        actingOrgId,
+        tosAcceptedAt,
+        status: 'authenticated',
+      }
+    }),
   setToken: (t) => set({ accessToken: t }),
   acceptTos: (at) => set({ tosAcceptedAt: at }),
   enterOrg: (id, name) => {
@@ -70,6 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   clear: () => {
     clearActingOrg()
+    setAnalyticsUser(null)
     set({
       accessToken: null,
       user: null,

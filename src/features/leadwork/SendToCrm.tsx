@@ -2,6 +2,7 @@ import { useState, type ComponentProps } from 'react'
 import { Cloud, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/primitives'
+import { trackEvent } from '../../lib/analytics'
 import type { CrmProvider, CrmPushResult } from '../../api/endpoints'
 
 export const CRM_LABEL: Record<CrmProvider, string> = {
@@ -16,6 +17,11 @@ export function crmResultToast(results: CrmPushResult[], targets: CrmProvider[])
   const dup = results.filter((r) => r.status === 'duplicate').length
   const skipped = results.filter((r) => r.status === 'skipped').length
   const failed = results.filter((r) => r.status === 'failed')
+  // Every CRM push funnels through this toast, so it's the one place to measure them.
+  trackEvent('crm_push', {
+    crm: targets.join(','),
+    synced, duplicate: dup, skipped, failed: failed.length,
+  })
   if (failed.length && !synced && !dup) { toast.error(failed[0].error ?? `Couldn’t send to ${to}`); return }
   const bits = [synced && `${synced} sent`, dup && `${dup} already there`, skipped && `${skipped} already sent`, failed.length && `${failed.length} failed`].filter(Boolean).join(', ')
   if (failed.length) toast.error(`Sent to ${to} — ${bits}`)
