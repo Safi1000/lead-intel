@@ -4,7 +4,7 @@
 -- leads this run" banner (cached leads bill at 0.9 credits; the word "cached" is
 -- never shown to the customer).
 --
--- NOT APPLIED — pending Safi's "go" (prod DB). Read-only. Called by
+-- APPLIED (verified live 2026-08-10). Read-only. Called by
 -- /api/pipeline/cache-preview via the service role (RLS bypassed), which returns
 -- { available: 0 } gracefully until this function exists.
 --

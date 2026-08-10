@@ -592,7 +592,7 @@ export const manualLeadsApi = {
    * DONE leads are locked to their setter forever (DB trigger enforces; we surface a clear error). */
   unassign: async (id: string, which: 'setter' | 'closer' | 'both'): Promise<void> => {
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (which === 'setter' || which === 'both') { patch.setter = null; patch.setter_id = null; patch.status = 'new' }
+    if (which === 'setter' || which === 'both') { patch.setter = null; patch.setter_id = null; patch.status = 'new'; patch.lifecycle_state = 'Unassigned'; patch.assigned_at = null }
     if (which === 'closer' || which === 'both') { patch.closer = null; patch.closer_id = null }
     const { data, error } = await supabase.from('leads').update(patch).eq('id', id).is('done_at', null).select('id')
     if (error) throw new Error(error.message)
@@ -604,25 +604,35 @@ export const manualLeadsApi = {
   unassignMany: async (ids: string[]): Promise<{ unassigned: number; locked: number }> => {
     if (ids.length === 0) return { unassigned: 0, locked: 0 }
     const { data, error } = await supabase.from('leads')
-      .update({ setter: null, setter_id: null, closer: null, closer_id: null, status: 'new', updated_at: new Date().toISOString() })
+      .update({ setter: null, setter_id: null, closer: null, closer_id: null, status: 'new', lifecycle_state: 'Unassigned', assigned_at: null, updated_at: new Date().toISOString() })
       .in('id', ids).is('done_at', null).select('id')
     if (error) throw new Error(error.message)
-    const doneIds = (data ?? []).map((r) => r.id as string)
-    if (doneIds.length > 0) {
+    // Rows that came back are the ones actually released; done leads were filtered out by the .is('done_at', null) guard.
+    const releasedIds = (data ?? []).map((r) => r.id as string)
+    if (releasedIds.length > 0) {
       const author = useAuthStore.getState().user?.name ?? null
       const author_id = useAuthStore.getState().user?.id ?? null
       await supabase.from('lead_activities').insert(
-        doneIds.map((lead_id) => ({ lead_id, type: 'Unassigned', note: 'Bulk unassigned by manager', author, author_id })),
+        releasedIds.map((lead_id) => ({ lead_id, type: 'Unassigned', note: 'Bulk unassigned by manager', author, author_id })),
       )
     }
-    return { unassigned: doneIds.length, locked: ids.length - doneIds.length }
+    return { unassigned: releasedIds.length, locked: ids.length - releasedIds.length }
   },
   /** Rep offboarding — move a departing rep's active (not-done) leads to another rep, or to the pool. */
   reassignFrom: async (fromId: string, toId: string | null, which: 'setter' | 'closer' = 'setter'): Promise<number> => {
     const col = which === 'setter' ? 'setter_id' : 'closer_id'
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (which === 'setter') { patch.setter_id = toId; if (!toId) { patch.status = 'new'; patch.lifecycle_state = 'Unassigned' } }
-    else patch.closer_id = toId
+    // The denormalized name column has to move with the id, or the lead keeps
+    // showing the departing rep's name (or a name with no id behind it).
+    let toName: string | null = null
+    if (toId) {
+      const { data: p } = await supabase.from('profiles').select('name').eq('id', toId).single()
+      toName = (p?.name as string) ?? null
+    }
+    if (which === 'setter') {
+      patch.setter_id = toId; patch.setter = toName
+      if (!toId) { patch.status = 'new'; patch.lifecycle_state = 'Unassigned'; patch.assigned_at = null }
+    } else { patch.closer_id = toId; patch.closer = toName }
     const { data, error } = await supabase.from('leads').update(patch).eq(col, fromId).is('done_at', null).select('id')
     if (error) throw new Error(error.message)
     return (data ?? []).length

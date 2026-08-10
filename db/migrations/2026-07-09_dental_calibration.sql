@@ -15,7 +15,7 @@
 -- Booking-platform + social-signal calibration ships in the pipeline-run code (per-vertical
 -- config in _website.ts) and deploys with the engine — not here.
 --
--- NOT APPLIED — pending Safi's "go" (prod DB). Only the dental row changes; the validated
+-- APPLIED (verified live 2026-08-10). Only the dental row changes; the validated
 -- med_spa row is left untouched (its invalid entries are harmless dead weight and TXS is live).
 -- ============================================================================
 update verticals

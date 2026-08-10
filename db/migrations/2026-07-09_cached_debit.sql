@@ -6,7 +6,7 @@
 -- The engine now stamps leads.source_meta.from_cache (true on a place_cache hit);
 -- this trigger reads it. Un-metered orgs (all today) are unaffected.
 --
--- NOT APPLIED — pending Safi's "go" (prod DB). Ships together with the pipeline-run
+-- APPLIED (verified live 2026-08-10). Ships together with the pipeline-run
 -- redeploy that writes source_meta.from_cache.
 -- ============================================================================
 create or replace function meter_lead_credit() returns trigger

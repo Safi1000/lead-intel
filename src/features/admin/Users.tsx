@@ -82,7 +82,12 @@ export function UsersPage() {
 
   const del = useMutation({
     mutationFn: (id: string) => usersApi.remove(id),
-    onSuccess: () => { toast.success('User removed'); setDeleteTarget(null); qc.invalidateQueries({ queryKey: ['users'] }) },
+    onSuccess: (res) => {
+      const released = (res as { released?: number } | undefined)?.released ?? 0
+      toast.success(released > 0 ? `User removed — ${released} lead${released === 1 ? '' : 's'} returned to the pool` : 'User removed')
+      setDeleteTarget(null)
+      qc.invalidateQueries()
+    },
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const toggleStatus = useMutation({
@@ -192,7 +197,7 @@ export function UsersPage() {
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
         title={`Remove ${deleteTarget?.name}?`}
-        message="They lose access immediately. This cannot be undone."
+        message="They lose access immediately. Their open leads go back to the pool for reassignment; leads they already finished keep their name for reporting. This cannot be undone."
         confirmLabel="Remove"
         destructive
         loading={del.isPending}
