@@ -1,9 +1,0 @@
-- generic [active] [ref=f27e1]:
-  - generic [ref=f27e2]:
-    - img "Robot" [ref=f27e4]
-    - generic [ref=f27e5]:
-      - heading "ottawamedicalspa.ca" [level=1] [ref=f27e6]
-      - paragraph [ref=f27e7]: Checking the site connection security
-      - img "CDN icon" [ref=f27e9]
-  - contentinfo [ref=f27e10]:
-    - paragraph [ref=f27e11]: This page requires cookies to be enabled in your browser settings. Please check this setting and enable cookies (if disabled)
