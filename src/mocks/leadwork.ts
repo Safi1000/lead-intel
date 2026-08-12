@@ -218,9 +218,32 @@ export const leadworkHandlers = [
     if (!l || !inScope(l.org_id)) return fail(404, 'not_found', 'Lead not found.')
     const body = (await request.json()) as { text: string; author: string; author_role: Role }
     if (!body.text?.trim()) return fail(400, 'invalid', 'Remark text is required.')
-    const remark: LeadRemark = { id: nid('rmk'), author: body.author, author_role: body.author_role, text: body.text.trim(), at: now() }
+    const remark: LeadRemark = { id: nid('rmk'), author: body.author, author_id: null, author_role: body.author_role, text: body.text.trim(), at: now(), edited_at: null }
     l.remarks.push(remark)
     l.updated_at = now()
     return HttpResponse.json(remark, { status: 201 })
+  }),
+
+  http.patch('/api/leads/manual/:id/remarks/:remarkId', async ({ params, request }) => {
+    const l = findLead(params.id as string)
+    if (!l || !inScope(l.org_id)) return fail(404, 'not_found', 'Lead not found.')
+    const remark = l.remarks.find((r) => r.id === params.remarkId)
+    if (!remark) return fail(404, 'not_found', 'Note not found.')
+    const body = (await request.json()) as { text: string }
+    if (!body.text?.trim()) return fail(400, 'invalid', 'Remark text is required.')
+    remark.text = body.text.trim()
+    remark.edited_at = now()
+    l.updated_at = now()
+    return HttpResponse.json(remark)
+  }),
+
+  http.delete('/api/leads/manual/:id/remarks/:remarkId', ({ params }) => {
+    const l = findLead(params.id as string)
+    if (!l || !inScope(l.org_id)) return fail(404, 'not_found', 'Lead not found.')
+    const i = l.remarks.findIndex((r) => r.id === params.remarkId)
+    if (i === -1) return fail(404, 'not_found', 'Note not found.')
+    l.remarks.splice(i, 1)
+    l.updated_at = now()
+    return new HttpResponse(null, { status: 204 })
   }),
 ]

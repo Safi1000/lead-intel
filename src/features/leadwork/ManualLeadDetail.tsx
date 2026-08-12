@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
-import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Phone, PhoneCall, Send, Target } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Ban, CalendarClock, Check, CheckCircle2, Copy, ExternalLink, FileText, Mail, MessageCircle, Pencil, Phone, PhoneCall, Send, Target, Trash2 } from 'lucide-react'
 import { EMAIL_OUTREACH } from '../../config/constants'
 import { activitiesApi, cadencesApi, crmApi, emailApi, manualLeadsApi, teamsApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
 import { SendToCrmMenu, crmResultToast } from './SendToCrm'
@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import { cn } from '../../lib/utils'
 import { StageSelect, FollowUpCell } from './controls'
 import { canWorkLeads, isOverdue } from './workflow'
-import { type ActivityType, type LeadStage, type ManualLead } from '../../api/types'
+import { type ActivityType, type LeadRemark, type LeadStage, type ManualLead } from '../../api/types'
 
 const digits = (s: string) => s.replace(/[^\d]/g, '')
 const looksEmail = (s: string) => /^\S+@\S+\.\S+$/.test(s.trim())
@@ -52,6 +52,85 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
       className={cn('shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]', className)}>
       {done ? <Check className="h-3.5 w-3.5 text-[var(--c-verified)]" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
+  )
+}
+
+/** One freeform note. Editable in place by its author (or a manager); shows an "edited" hint
+ *  once it has been changed so the history stays honest for whoever reads it next. */
+function NoteItem({ remark: r, leadId, canEdit, onChanged }: { remark: LeadRemark; leadId: string; canEdit: boolean; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(r.text)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const save = useMutation({
+    mutationFn: () => manualLeadsApi.editRemark(leadId, r.id, draft),
+    onSuccess: () => { setEditing(false); toast.success('Note updated'); onChanged() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+  const del = useMutation({
+    mutationFn: () => manualLeadsApi.deleteRemark(leadId, r.id),
+    onSuccess: () => { setConfirmDelete(false); toast.success('Note deleted'); onChanged() },
+    onError: (e) => toast.error(normalizeError(e).message),
+  })
+
+  const cancel = () => { setDraft(r.text); setEditing(false) }
+
+  return (
+    <li className="group rounded-[10px] bg-[var(--color-surface-2)] p-3">
+      <div className="mb-1 flex items-center gap-2 text-[12px]">
+        <span className="font-semibold text-[var(--color-text)]">{r.author}</span>
+        <span className="rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--color-text-secondary)]">{ROLE_LABELS[r.author_role]}</span>
+        <span className="text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(r.at), { addSuffix: true })}</span>
+        {r.edited_at && (
+          <span className="text-[var(--color-text-muted)]" title={`Edited ${format(new Date(r.edited_at), 'PPp')}`}>· edited</span>
+        )}
+        <div className="ml-auto flex items-center gap-0.5">
+          <CopyButton text={r.text} />
+          {canEdit && !editing && (
+            <>
+              <button type="button" title="Edit note" aria-label="Edit note" onClick={() => { setDraft(r.text); setEditing(true) }}
+                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]">
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" title="Delete note" aria-label="Delete note" onClick={() => setConfirmDelete(true)}
+                className="shrink-0 rounded p-1 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface)] hover:text-red-600 dark:hover:text-red-400">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <div>
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') cancel()
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && draft.trim() && draft.trim() !== r.text) save.mutate()
+            }}
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={cancel}>Cancel</Button>
+            <Button size="sm" loading={save.isPending} disabled={!draft.trim() || draft.trim() === r.text} onClick={() => save.mutate()}>Save</Button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{r.text}</p>
+      )}
+
+      {confirmDelete && (
+        <Dialog open onOpenChange={(o) => !o && setConfirmDelete(false)} title="Delete this note?" description="It will be removed for everyone on the team. This can't be undone.">
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button variant="danger" loading={del.isPending} onClick={() => del.mutate()}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
+          </div>
+        </Dialog>
+      )}
+    </li>
   )
 }
 
@@ -155,6 +234,9 @@ export function ManualLeadDetailPage() {
     onSuccess: () => { setRemark(''); toast.success('Remark added'); invalidate() },
     onError: (e) => toast.error(normalizeError(e).message),
   })
+  // Mirrors the RLS rule: you can change your own notes; managers/owners can change anyone's.
+  // Notes written before author_id existed can only be touched by a manager.
+  const canEditNote = (r: LeadRemark) => isInternal || (canWork && !!r.author_id && r.author_id === user?.id)
   const markDone = useMutation({
     mutationFn: (done: boolean) => manualLeadsApi.markDone(id as string, done),
     onSuccess: (_d, done) => { toast.success(done ? 'Marked as done' : 'Reopened'); invalidate(); qc.invalidateQueries({ queryKey: ['my-progress'] }); qc.invalidateQueries({ queryKey: ['setter-progress'] }) },
@@ -267,15 +349,7 @@ export function ManualLeadDetailPage() {
             ) : (
               <ul className="space-y-3">
                 {lead.remarks.map((r) => (
-                  <li key={r.id} className="group rounded-[10px] bg-[var(--color-surface-2)] p-3">
-                    <div className="mb-1 flex items-center gap-2 text-[12px]">
-                      <span className="font-semibold text-[var(--color-text)]">{r.author}</span>
-                      <span className="rounded-full bg-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--color-text-secondary)]">{ROLE_LABELS[r.author_role]}</span>
-                      <span className="text-[var(--color-text-muted)]">{formatDistanceToNow(new Date(r.at), { addSuffix: true })}</span>
-                      <CopyButton text={r.text} className="ml-auto" />
-                    </div>
-                    <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{r.text}</p>
-                  </li>
+                  <NoteItem key={r.id} remark={r} leadId={id as string} canEdit={canEditNote(r)} onChanged={invalidate} />
                 ))}
               </ul>
             )}

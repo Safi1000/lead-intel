@@ -730,9 +730,13 @@ export interface LeadActivity {
 export interface LeadRemark {
   id: string
   author: string
+  /** Who wrote it. Null on notes older than the editable-notes change — those are manager-only to edit. */
+  author_id: string | null
   author_role: Role
   text: string
   at: string
+  /** Set the first time the note is edited; drives the "edited" hint in the UI. */
+  edited_at: string | null
 }
 
 /** A manager/SA remark about a user (Users panel). Manager/SA-only at the DB level. */

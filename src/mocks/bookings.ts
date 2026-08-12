@@ -69,7 +69,7 @@ function mkLead(id: string, data: Record<string, string>, stage: ManualLead['sta
 }
 
 function note(author: string, text: string, atMsFromNow: number): LeadRemark {
-  return { id: nid('rmk'), author, author_role: 'setter', text, at: iso(atMsFromNow) }
+  return { id: nid('rmk'), author, author_id: null, author_role: 'setter', text, at: iso(atMsFromNow), edited_at: null }
 }
 
 const leadCedar = mkLead('lead_cedar', {

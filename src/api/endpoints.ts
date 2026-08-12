@@ -644,10 +644,27 @@ export const manualLeadsApi = {
     if (error) throw new Error(error.message)
   },
   addRemark: async (id: string, body: { text: string; author: string; author_role: Role }): Promise<LeadRemark> => {
-    const { data, error } = await supabase.from('lead_remarks').insert({ lead_id: id, author: body.author, author_role: body.author_role, text: body.text }).select().single()
+    const author_id = useAuthStore.getState().user?.id ?? null
+    const { data, error } = await supabase.from('lead_remarks').insert({ lead_id: id, author: body.author, author_id, author_role: body.author_role, text: body.text }).select().single()
     if (error) throw new Error(error.message)
     await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', id)
     return data as LeadRemark
+  },
+  /** Edit a note. RLS lets the author edit their own; managers/owners/SA can edit any. */
+  editRemark: async (leadId: string, remarkId: string, text: string): Promise<LeadRemark> => {
+    const { data, error } = await supabase.from('lead_remarks')
+      .update({ text: text.trim(), edited_at: new Date().toISOString() })
+      .eq('id', remarkId).select().single()
+    if (error) throw new Error(error.message)
+    if (!data) throw new Error('You can no longer edit this note.')
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId)
+    return data as LeadRemark
+  },
+  /** Delete a note. Same permission rule as editRemark. */
+  deleteRemark: async (leadId: string, remarkId: string): Promise<void> => {
+    const { error } = await supabase.from('lead_remarks').delete().eq('id', remarkId)
+    if (error) throw new Error(error.message)
+    await supabase.from('leads').update({ updated_at: new Date().toISOString() }).eq('id', leadId)
   },
   /** Feature 2 — leads whose Next Follow-Up Date is today or earlier (RLS scopes per user). */
   dueToday: async (): Promise<ManualLead[]> => {
@@ -836,7 +853,7 @@ export interface ActivityFeedItem {
   type: string // ActivityType for activities; 'Remark' for lead_remarks
   note: string | null
   author: string | null
-  author_id: string | null // null for remarks (table has no author_id)
+  author_id: string | null // null on remarks written before author_id existed
   at: string
 }
 
@@ -849,7 +866,7 @@ export const activityFeedApi = {
       .gte('at', sinceISO).order('at', { ascending: false }).limit(1000)
     if (org) aq = aq.eq('leads.org_id', org)
     let rq = supabase.from('lead_remarks')
-      .select('id,lead_id,author,author_role,text,at,leads!inner(display_name,org_id,batch_id)')
+      .select('id,lead_id,author,author_id,author_role,text,at,leads!inner(display_name,org_id,batch_id)')
       .gte('at', sinceISO).order('at', { ascending: false }).limit(1000)
     if (org) rq = rq.eq('leads.org_id', org)
     const [a, r] = await Promise.all([aq, rq])
@@ -869,7 +886,7 @@ export const activityFeedApi = {
         lead_name: ((x.leads as unknown as JoinedLead)?.display_name) ?? 'Lead',
         batch_id: ((x.leads as unknown as JoinedLead)?.batch_id) ?? null,
         type: 'Remark', note: (x.text as string) ?? null,
-        author: (x.author as string) ?? null, author_id: null, at: x.at as string,
+        author: (x.author as string) ?? null, author_id: (x.author_id as string) ?? null, at: x.at as string,
       })),
     ]
     return items.sort((x, y) => y.at.localeCompare(x.at))
