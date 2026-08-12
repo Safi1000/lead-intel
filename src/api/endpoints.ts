@@ -1001,38 +1001,42 @@ export const assignmentApi = {
   },
 }
 
-// ---- Daily goal + lead-throughput progress ----
-export interface DoneCounts { today: number; week: number; month: number }
-export interface SetterDoneStat { user_id: string; name: string; today: number; week: number; month: number }
-export interface Periods { day: string; week: string; month: string } // ISO period starts (client-local)
+// ---- Monthly goal + lead-throughput progress ----
+// Goals are monthly only — there is no daily or weekly target anywhere in the product.
+export interface SetterDoneStat { user_id: string; name: string; month: number }
+
+/** Start of the current month, in the viewer's own timezone. */
+export const monthStartISO = (): string => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+}
 
 export const progressApi = {
-  /** The org's daily lead goal (0 = unset). */
+  /** The org's monthly lead goal per setter (0 = unset). */
   getGoal: async (): Promise<number> => {
     const org = effectiveOrgId()
     if (!org) return 0
-    const { data, error } = await supabase.rpc('get_daily_lead_goal', { p_org: org })
+    const { data, error } = await supabase.rpc('get_monthly_lead_goal', { p_org: org })
     if (error) throw new Error(error.message)
     return Number(data ?? 0)
   },
   setGoal: async (goal: number): Promise<void> => {
     const org = effectiveOrgId()
     if (!org) throw new Error('No organization selected.')
-    const { error } = await supabase.rpc('set_daily_lead_goal', { p_org: org, p_goal: Math.max(0, Math.floor(goal)) })
+    const { error } = await supabase.rpc('set_monthly_lead_goal', { p_org: org, p_goal: Math.max(0, Math.floor(goal)) })
     if (error) throw new Error(error.message)
   },
-  /** The signed-in user's own done counts (a setter only ever sees their own). */
-  myCounts: async (p: Periods): Promise<DoneCounts> => {
-    const { data, error } = await supabase.rpc('my_done_counts', { p_day: p.day, p_week: p.week, p_month: p.month })
+  /** The signed-in user's own month-to-date done count (a setter only ever sees their own). */
+  myMonthCount: async (monthISO: string): Promise<number> => {
+    const { data, error } = await supabase.rpc('my_month_done', { p_month: monthISO })
     if (error) throw new Error(error.message)
-    const row = Array.isArray(data) ? data[0] : data
-    return { today: Number(row?.today ?? 0), week: Number(row?.week ?? 0), month: Number(row?.month ?? 0) }
+    return Number(data ?? 0)
   },
-  /** Per-setter done counts (manager/SA only; setters get an empty list). */
-  setterStats: async (p: Periods): Promise<SetterDoneStat[]> => {
+  /** Per-setter month-to-date done counts (manager/SA only; setters get an empty list). */
+  setterStats: async (monthISO: string): Promise<SetterDoneStat[]> => {
     const org = effectiveOrgId()
     if (!org) return []
-    const { data, error } = await supabase.rpc('setter_done_stats', { p_org: org, p_day: p.day, p_week: p.week, p_month: p.month })
+    const { data, error } = await supabase.rpc('setter_month_done_stats', { p_org: org, p_month: monthISO })
     if (error) throw new Error(error.message)
     return (data ?? []) as SetterDoneStat[]
   },

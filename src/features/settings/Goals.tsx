@@ -7,19 +7,19 @@ import { normalizeError } from '../../api/client'
 import { Button, Card, Input, Label } from '../../components/ui/primitives'
 import { LoadingState } from '../../components/feedback'
 
-/** Manager/SA set the org-wide daily lead goal (leads each setter should
- *  mark as done per day). Drives the Progress page targets. */
+/** Manager/SA set the org-wide monthly lead goal (leads each setter should mark as done
+ *  in a month). This is the only goal in the product — there is no daily or weekly target. */
 export function GoalsSettingsPage() {
   const qc = useQueryClient()
-  const { data: goal, isLoading } = useQuery({ queryKey: ['daily-goal'], queryFn: progressApi.getGoal })
+  const { data: goal, isLoading } = useQuery({ queryKey: ['monthly-goal'], queryFn: progressApi.getGoal })
   const [value, setValue] = useState('')
   useEffect(() => { if (goal != null) setValue(String(goal)) }, [goal])
 
   const save = useMutation({
     mutationFn: () => progressApi.setGoal(Number(value) || 0),
     onSuccess: () => {
-      toast.success('Daily goal saved')
-      qc.invalidateQueries({ queryKey: ['daily-goal'] })
+      toast.success('Monthly goal saved')
+      qc.invalidateQueries({ queryKey: ['monthly-goal'] })
       qc.invalidateQueries({ queryKey: ['my-progress'] })
       qc.invalidateQueries({ queryKey: ['setter-progress'] })
     },
@@ -33,14 +33,13 @@ export function GoalsSettingsPage() {
       <Card className="max-w-md p-5">
         <div className="mb-1 flex items-center gap-2">
           <Target className="h-5 w-5 text-[var(--color-primary)]" />
-          <h2 className="text-[16px] font-semibold">Daily lead goal</h2>
+          <h2 className="text-[16px] font-semibold">Monthly lead goal</h2>
         </div>
         <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
-          How many leads each setter should mark as <span className="font-medium">done</span> per day. Used to track
-          daily / weekly / monthly progress on the Progress page. Working week is Mon–Sat, so weekly target = goal × 6
-          and monthly target = goal × the working days (Mon–Sat) in the month.
+          How many leads each setter should mark as <span className="font-medium">done</span> in a calendar month.
+          Progress is counted from the 1st and shown on the Progress page.
         </p>
-        <Label htmlFor="goal">Leads per setter per day</Label>
+        <Label htmlFor="goal">Leads per setter per month</Label>
         <div className="flex items-center gap-2">
           <Input id="goal" type="number" min={0} value={value} onChange={(e) => setValue(e.target.value)} className="w-32" />
           <Button onClick={() => save.mutate()} loading={save.isPending}>Save</Button>

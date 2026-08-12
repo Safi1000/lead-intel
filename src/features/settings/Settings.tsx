@@ -15,7 +15,7 @@ interface Tab {
 }
 const TABS: Tab[] = [
   { to: '/settings/profile', label: 'Profile' },
-  // Manager/SA set the org-wide daily lead goal here.
+  // Manager/SA set the org-wide monthly lead goal here — the only goal in the product.
   { to: '/settings/goals', label: 'Goals', roles: ['superadmin', 'admin', 'manager'] },
   // Holiday calendar feeds pace targets — lives here now, not a top-level nav item.
   { to: '/settings/holidays', label: 'Holidays', roles: ['superadmin', 'manager', 'owner'] },

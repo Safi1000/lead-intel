@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowLeft, CheckCircle2, Search, Shuffle, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, progressApi, usersApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
+import { assignmentApi, crmApi, floorConfigApi, leadBatchesApi, manualLeadsApi, monthStartISO, progressApi, usersApi, CRM_PROVIDERS, type CrmProvider } from '../../api/endpoints'
 import { SendToCrmMenu, crmResultToast } from './SendToCrm'
 import { useAuthStore } from '../../stores/authStore'
 import { normalizeError } from '../../api/client'
@@ -100,17 +100,9 @@ export function LeadQueuePage() {
     onError: (e) => toast.error(normalizeError(e).message),
   })
   const isSetter = role === 'setter'
-  const { data: goal = 0 } = useQuery({ queryKey: ['daily-goal'], queryFn: progressApi.getGoal, enabled: isSetter })
-  const periods = useMemo(() => {
-    const now = new Date(); const wd = (now.getDay() + 6) % 7
-    return {
-      day: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
-      week: new Date(now.getFullYear(), now.getMonth(), now.getDate() - wd).toISOString(),
-      month: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-    }
-  }, [])
-  const { data: myCounts } = useQuery({ queryKey: ['my-counts', periods.day], queryFn: () => progressApi.myCounts(periods), enabled: isSetter })
-  const todayDone = myCounts?.today ?? 0
+  const { data: goal = 0 } = useQuery({ queryKey: ['monthly-goal'], queryFn: progressApi.getGoal, enabled: isSetter })
+  const monthStart = useMemo(() => monthStartISO(), [])
+  const { data: monthDone = 0 } = useQuery({ queryKey: ['my-counts', monthStart], queryFn: () => progressApi.myMonthCount(monthStart), enabled: isSetter })
 
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof manualLeadsApi.update>[1] }) => manualLeadsApi.update(id, body),
@@ -255,8 +247,8 @@ export function LeadQueuePage() {
 
       {isSetter && goal > 0 && (
         <div className={cn('mb-3 rounded-[10px] border px-4 py-2.5 text-[13px] font-medium',
-          todayDone >= goal ? 'border-green-200 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]')}>
-          Today: {todayDone}/{goal} leads worked {todayDone >= goal ? '· goal met 🎉' : `· ${Math.round((todayDone / goal) * 100)}% of today's target`}
+          monthDone >= goal ? 'border-green-200 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]')}>
+          This month: {monthDone}/{goal} leads worked {monthDone >= goal ? '· goal met 🎉' : `· ${Math.round((monthDone / goal) * 100)}% of the monthly target`}
         </div>
       )}
 
