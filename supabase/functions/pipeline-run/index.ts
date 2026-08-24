@@ -847,6 +847,12 @@ Deno.serve(async (req: Request) => {
       const compByLoc = new Map<string, Array<{ name: string; count: number; place_id: string }>>()
       for (const r of allResults) {
         if (r.userRatingCount == null) continue
+        // Keep the peer median + named rivals to IN-NICHE businesses. Big-box retailers (Canadian
+        // Tire, RONA, Home Depot…) surface in trade searches with hundreds of reviews; left in, they
+        // inflate the median (false reputation gaps) and get named as a rival a setter can't use
+        // ("you're losing to Canadian Tire"). excludeTypes is our cheap pre-scoring niche proxy.
+        const rType = r.primaryType ?? r.types?.[0] ?? ''
+        if (rType && profile.excludeTypes.has(rType)) continue
         const arr = byLoc.get(r._location) ?? []
         arr.push(r.userRatingCount)
         byLoc.set(r._location, arr)

@@ -46,7 +46,7 @@ const VERTICALS: Record<string, { label: string; prompt: string }> = {
   },
   hvac: {
     label: 'HVAC / Home Services',
-    prompt: 'A residential HVAC / heating-and-cooling contractor — an established local service business we could sell a website redesign or lead-gen to.',
+    prompt: 'A residential home-services trade contractor — HVAC/heating & cooling, roofing, plumbing, electrical, landscaping/lawn care, general contracting & remodeling, painting, garage doors, pest control, flooring, fencing, concrete, gutters, tree service, pressure washing, restoration, windows, decks, or handyman — an established local business that sends a crew or technician to the customer\'s home to do the work, which we could sell a website redesign, first website, SEO, or online lead-gen to. NOT a hardware/home-improvement store, supplier, distributor, manufacturer, real-estate agency, or online marketplace.',
   },
   law_firm: {
     label: 'Law Firm',

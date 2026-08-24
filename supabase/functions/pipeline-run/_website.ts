@@ -171,10 +171,44 @@ const DENTAL_TEMPLATE_VENDORS: Array<{ name: string; pattern: string }> = [
   { name: 'Dear Doctor', pattern: 'deardoctor' },
   { name: 'ProSites', pattern: 'sesamewebdesign' }, // legacy Sesame web-design templates
 ]
+// Home-services field-service-management / scheduling / online-quote platforms. A contractor on any
+// of these takes bookings or quote requests online — so it is NOT a "no online contact" weakness.
+// Without these, an HVAC/roofing/plumbing site whose "Schedule Service" button embeds ServiceTitan or
+// Housecall Pro reads as phone-only. Lowercase host/slug substrings, so they won't false-fire on prose.
+const HVAC_BOOKING: Array<{ name: string; pattern: string }> = [
+  { name: 'ServiceTitan', pattern: 'servicetitan' },
+  { name: 'Housecall Pro', pattern: 'housecallpro' },
+  { name: 'Jobber', pattern: 'getjobber' },
+  { name: 'Service Fusion', pattern: 'servicefusion' },
+  { name: 'FieldEdge', pattern: 'fieldedge' },
+  { name: 'Workiz', pattern: 'workiz' },
+  { name: 'ServiceM8', pattern: 'servicem8' },
+  { name: 'Service Autopilot', pattern: 'serviceautopilot' },
+  { name: 'Kickserv', pattern: 'kickserv' },
+  { name: 'mHelpDesk', pattern: 'mhelpdesk' },
+  { name: 'Podium', pattern: 'podium.com' },
+  { name: 'Broadly', pattern: 'broadly.com' },
+  { name: 'NiceJob', pattern: 'nicejob' },
+  { name: 'Thumbtack', pattern: 'thumbtack.com' },
+  { name: 'ServiceMonster', pattern: 'servicemonster' },
+]
+// Templated home-services website / marketing VENDORS — cookie-cutter contractor sites built by
+// trade-marketing firms. A working but generic template shared by hundreds of contractors is still a
+// redesign/brand pitch ("you look like every other HVAC company in town"). Lowercase host substrings.
+const HVAC_TEMPLATE_VENDORS: Array<{ name: string; pattern: string }> = [
+  { name: 'Scorpion', pattern: 'scorpion' },
+  { name: 'Blue Corona', pattern: 'bluecorona' },
+  { name: 'Townsquare Interactive', pattern: 'townsquareinteractive' },
+  { name: 'Hibu', pattern: 'hibu' },
+  { name: 'Footbridge Media', pattern: 'footbridgemedia' },
+  { name: 'Thryv', pattern: 'thryv' },
+  { name: 'Surefire Local', pattern: 'surefiresocial' },
+  { name: 'Web.com', pattern: 'websitepros' },
+]
 const NICHE_WEB_CONFIG: Record<string, NicheWebConfig> = {
   med_spa:  { extraBookingPlatforms: [], expectsSocial: true, templateVendors: [] },
   dental:   { extraBookingPlatforms: DENTAL_BOOKING, expectsSocial: false, templateVendors: DENTAL_TEMPLATE_VENDORS },
-  hvac:     { extraBookingPlatforms: [], expectsSocial: false, templateVendors: [] },
+  hvac:     { extraBookingPlatforms: HVAC_BOOKING, expectsSocial: false, templateVendors: HVAC_TEMPLATE_VENDORS },
   law_firm: { extraBookingPlatforms: [], expectsSocial: false, templateVendors: [] },
 }
 // No vertical (TXS / no profile) → the historic med-spa behavior. Known vertical → its config.
@@ -196,9 +230,9 @@ const CONTACT_FORM_RE = /<form[\s>]/i
 // Embedded form / scheduler platforms (contact forms + booking widgets).
 const FORM_PLATFORM_RE = /(calendly|hs-form|hsforms|hubspot|jotform|typeform|gravityforms|gform_|wpforms|wpcf7|contact-form-7|formstack|wufoo|123formbuilder|getresponse|mindbody|vagaro|squarespace-forms|tally\.so|fillout|paperform)/i
 // A link to a contact / appointment / booking page.
-const CONTACT_LINK_RE = /(?:href|action)\s*=\s*["'][^"']*(?:\/contact|contact-us|\/appointments?|\/book|\/booking|\/schedul|\/consult|get-started)[^"']*["']/i
+const CONTACT_LINK_RE = /(?:href|action)\s*=\s*["'][^"']*(?:\/contact|contact-us|\/appointments?|\/book|\/booking|\/schedul|\/consult|get-started|\/quote|-quote|\/estimate|-estimate|request-service|\/service-request)[^"']*["']/i
 // Visible-text CTAs a real page shows for booking/contact (matched against stripped text, not scripts).
-const CONTACT_KEYWORD_RE = /\b(?:book\s*(?:now|online|an?\s*appointment|a?\s*consultation)?|schedule\s*(?:an?\s*)?(?:appointment|consultation|call|visit|now|online)?|request\s*(?:an?\s*)?(?:appointment|consultation|callback)|make\s*an?\s*appointment|online\s*booking|reserve\s*(?:your|a)?\s*(?:spot|appointment|table)?|free\s*consultation|contact\s*us|get\s*started)\b/i
+const CONTACT_KEYWORD_RE = /\b(?:book\s*(?:now|online|an?\s*appointment|a?\s*consultation)?|schedule\s*(?:an?\s*)?(?:appointment|consultation|call|visit|service|now|online)?|request\s*(?:an?\s*)?(?:appointment|consultation|callback|quote|estimate|service)|make\s*an?\s*appointment|online\s*booking|reserve\s*(?:your|a)?\s*(?:spot|appointment|table)?|free\s*(?:consultation|estimate|quote|inspection)|get\s*(?:a\s*)?(?:free\s*)?(?:quote|estimate)|contact\s*us|get\s*started)\b/i
 // A real contact/booking FORM on a page (a message box or named contact fields) — NOT a newsletter
 // email-only signup. Lets us catch a contact form that lives on /contact rather than the homepage,
 // so we don't wrongly conclude "phone only" from a homepage-only scan.

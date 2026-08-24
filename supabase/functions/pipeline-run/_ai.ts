@@ -296,11 +296,17 @@ const MEDSPA_TYPE_LINE = 'types like medical_spa / skin_care_clinic / aesthetics
 
 // Per-niche replacements for those three lines. Add an entry when a vertical is calibrated; unknown
 // verticals fall back to generic label-based text.
-const NICHE_TUNING: Record<string, { nicheLine: string; notNicheLine: string; typeLine: string }> = {
+const NICHE_TUNING: Record<string, { nicheLine: string; notNicheLine: string; typeLine: string; extraGuidance?: string }> = {
   'Dental Clinic': {
     nicheLine: 'NICHE: Dental practices — general, cosmetic, family, pediatric, and orthodontic dental offices — in the United States and Canada.',
     notNicheLine: 'NOT our niche: any business that is not a dental/orthodontic practice — e.g. med spas, gyms, hair/nail salons, pharmacies, veterinary clinics, chiropractors, physical therapists. A dental or orthodontic practice IS our niche.',
     typeLine: 'types like dentist / dental_clinic strongly support true; med_spa / hair_salon / nail_salon / gym / pharmacy / veterinary_care strongly support false. Ambiguous types (doctor, medical_clinic) — judge from the name, reviews and website instead.',
+  },
+  'HVAC / Home Services': {
+    nicheLine: 'NICHE: Residential home-services trade contractors — HVAC/heating & cooling, roofing, plumbing, electrical, landscaping/lawn care, remodeling & general contracting, painting, garage doors, pest control, flooring, fencing, concrete/paving, gutters, tree service, pressure washing, water damage/restoration, and similar local trades — in the United States and Canada. A business that physically installs, repairs, or builds at the customer\'s home or property IS our niche.',
+    notNicheLine: 'NOT our niche: any business that does not physically perform a home-services trade — e.g. hardware/home-improvement stores (Home Depot, Lowe\'s, ACE), building-material suppliers/distributors/manufacturers, real-estate agencies, property managers, insurance agencies, restaurants, retail stores, med spas, salons, gyms, dental/medical offices, and online-only marketplaces (Angi, Thumbtack, HomeAdvisor). A company that sends a crew or technician to a home to do the work IS our niche.',
+    typeLine: 'types like plumber / electrician / roofing_contractor / hvac_contractor / general_contractor / painter / landscaper / house_cleaning_service / moving_company strongly support true; hardware_store / home_improvement_store / home_goods_store / real_estate_agency / insurance_agency / restaurant / dentist / hair_salon / gym strongly support false. Ambiguous types (contractor, point_of_interest, store, establishment) — judge from the name, reviews and website instead.',
+    extraGuidance: 'ON-CALL / EMERGENCY TRADES — IMPORTANT: these are NOT appointment-scheduling businesses like a spa or dentist. Customers CALL when they have an urgent problem (no heat, burst pipe, power out, leak, storm damage) and request written quotes/estimates for bigger jobs (a new roof, a furnace install, a remodel). Online appointment BOOKING / scheduling a time slot is NOT how this niche wins customers, so its absence is NOT a weakness: never list "no online booking", "no online scheduling", or "can only book by phone" as a problem, never lower website_status for it, and never pitch adding a booking calendar. A working PHONE NUMBER is exactly how customers are meant to reach these businesses, so NONE of the following are weaknesses — never list them, never lower website_status for them, never pitch fixing them: "no online booking / scheduling", "can only book by phone", "no contact form", "hard to reach without calling", "customers have to call you". Having-to-phone is normal and expected for this niche, not a problem. Real, sellable gaps you MAY use: no website at all; a broken / slow / not-mobile / outdated or cheap-template (Wix / GoDaddy / table-layout) site (emergency customers search on their phones and bounce); weak local SEO / hard to find on Google; or thin/weak Google reviews vs nearby competitors. If none of those exist it is a SKIP (low fit) — a modern, reachable site with a phone number and decent reviews has nothing for us to sell, even with no contact form. Always LEAD with the strongest real gap; never lead with anything about contact forms or phoning.',
   },
 }
 function nicheTuning(label: string): { nicheLine: string; notNicheLine: string; typeLine: string } {
@@ -321,7 +327,7 @@ function systemPrompt(niche?: { label: string; prompt: string | null }): string 
     .replace(MEDSPA_NICHE_LINE, t.nicheLine)
     .replace(MEDSPA_NOTNICHE_LINE, t.notNicheLine)
     .replace(MEDSPA_TYPE_LINE, t.typeLine)
-  const preamble = `NICHE OVERRIDE — READ FIRST: You are qualifying leads for "${niche.label}" businesses, NOT med spas. ${niche.prompt ?? ''} Apply the SAME website-quality and lead-scoring logic to "${niche.label}" businesses. is_correct_niche = true means the business genuinely IS a ${niche.label}; any other business type is the wrong niche. The worked examples below use med-spa businesses only to illustrate the SCORING pattern — the niche is "${niche.label}".`
+  const preamble = `NICHE OVERRIDE — READ FIRST: You are qualifying leads for "${niche.label}" businesses, NOT med spas. ${niche.prompt ?? ''} Apply the SAME website-quality and lead-scoring logic to "${niche.label}" businesses. is_correct_niche = true means the business genuinely IS a ${niche.label}; any other business type is the wrong niche. The worked examples below use med-spa businesses only to illustrate the SCORING pattern — the niche is "${niche.label}".${t.extraGuidance ? ` ${t.extraGuidance}` : ''}`
   return `${preamble}\n\n${body}`
 }
 
@@ -366,13 +372,19 @@ export async function scorePlace(
   // (weak-site needs the model's website_status). Only SEO/booking gaps that we could actually verify
   // count — a JS-shell / unreachable page has seoScore null and never trips a false gap.
   const ws = place.websiteSignals
+  // On-call / emergency trades (HVAC, plumbing, electrical, roofing, restoration, handyman…) convert
+  // by PHONE CALL and written quotes, NOT by scheduling an appointment into a time-slot calendar. So
+  // "no online booking" is NOT a sellable gap for them — only appointment-based niches (med spa,
+  // dental) get the booking angle. Booking DETECTION (hasBookingWidget) still counts as a positive so
+  // a contractor on ServiceTitan/Housecall Pro isn't falsely flagged "no online contact".
+  const onCallNiche = /home service|hvac|plumb|electric|roof|contractor|handyman|restoration|trade/i.test(niche?.label ?? '')
   const noWebsite = !place.website
   const brokenSite = !!ws && ws.siteBroken
   const verifiable = !!ws && ws.seoScore != null // we could actually READ the page (not a JS shell / render fallback)
   const seoGap = verifiable && (ws!.seoScore! < 60 || ws!.detectedIssues.some((i) => /Missing SEO basics/i.test(i)))
   const noOnsiteCapture = verifiable && !ws!.hasBookingWidget // no form / booking / CTA / contact link on a readable page
   const leadCaptureGap = noOnsiteCapture && !place.email       // phone-only: nothing to capture a lead online
-  const bookingGap = noOnsiteCapture && !!place.email          // has email but no scheduling/form
+  const bookingGap = !onCallNiche && noOnsiteCapture && !!place.email // has email but no scheduling/form (appointment niches only)
   const templated = !!ws?.templatedVendor                     // cookie-cutter niche-vendor template → redesign/brand pitch
   const peerMed = peerMedianReviews ?? null
   const reputationGap = place.reviewCount != null && peerMed != null && peerMed >= 25 && place.reviewCount < Math.round(0.35 * peerMed)
@@ -456,7 +468,9 @@ export async function scorePlace(
   // good-LOOKING site that nonetheless tripped a deterministic SEO/booking/build gap — leaving the
   // setter with no hook. Synthesize the opener from the concrete signals when that happens.
   const noNote = !score.site_issue_note || /^n\/?a\.?$/i.test(score.site_issue_note.trim()) || /^insufficient/i.test(score.site_issue_note.trim())
-  const who = /dental|med spa|clinic|spa|chiro|physio|vet|health/i.test(niche?.label ?? 'Med Spa') ? 'patients' : 'clients'
+  const who = /dental|med spa|clinic|spa|chiro|physio|vet|health/i.test(niche?.label ?? 'Med Spa') ? 'patients'
+    : /hvac|home service|roofing|plumb|electric|contractor|landscap|remodel/i.test(niche?.label ?? '') ? 'customers'
+    : 'clients'
   const oneWho = who.replace(/s$/, '')
   // Reputation always authored here (only we have the peer median) and led with the RANKING
   // consequence — lost patients, not vanity. Everything else only when the model returned N/A.
@@ -464,14 +478,16 @@ export async function scorePlace(
     if (angle === 'broken_site') {
       score.site_issue_note = `Your website is a parked/placeholder page right now — anyone who looks you up online finds no real site, so you're invisible to ${who} searching for you and losing them to competitors.`
     } else if (angle === 'lead_capture') {
-      score.site_issue_note = `There's no way to reach you online — no contact form, booking, or email on the site — so every prospective ${oneWho} has to phone you, and the ones who won't just go elsewhere.`
+      score.site_issue_note = onCallNiche
+        ? `There's no way to reach you online — no quote/estimate request form, email, or click-to-call on the site — so every job has to come in by phone during business hours, and the ${who} who won't call, or who need you after hours, message a competitor instead.`
+        : `There's no way to reach you online — no contact form, booking, or email on the site — so every prospective ${oneWho} has to phone you, and the ones who won't just go elsewhere.`
     } else if (angle === 'reputation') {
       // Name a concrete rival if we have one — far more visceral than an abstract median.
       const topRival = rivals && rivals.length ? rivals[0] : null
       const rivalClause = topRival
-        ? `a practice near you like ${topRival.name} has ${topRival.count}`
+        ? `a ${onCallNiche ? 'competitor' : 'practice'} near you like ${topRival.name} has ${topRival.count}`
         : `the top ${niche?.label ?? 'businesses'} near you average ~${peerMed ?? 'many more'}`
-      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while ${rivalClause} — and because review count is one of the biggest Google Maps ranking factors, you're showing up below them in local search, so the new ${who} searching right now are booking with them instead of you.`
+      score.site_issue_note = `You have ${place.reviewCount ?? 'few'} Google reviews while ${rivalClause} — and because review count is one of the biggest Google Maps ranking factors, you're showing up below them in local search, so the new ${who} searching right now are ${onCallNiche ? 'calling them' : 'booking with them'} instead of you.`
     } else if (angle === 'seo') {
       const bits: string[] = []
       if (ws?.detectedIssues.some((i) => /Missing SEO basics/i.test(i))) bits.push('missing key SEO basics')
@@ -484,7 +500,7 @@ export async function scorePlace(
       score.site_issue_note = probs.length
         ? probs.join('; ')
         : ws?.templatedVendor
-          ? `Your site is a stock ${ws.templatedVendor} template used by hundreds of other practices — it looks like everyone else's, so nothing sets you apart; a custom design would stand out and convert more ${who}.`
+          ? `Your site is a stock ${ws.templatedVendor} template used by hundreds of other ${onCallNiche ? 'businesses' : 'practices'} — it looks like everyone else's, so nothing sets you apart; a custom design would stand out and convert more ${who}.`
           : `Your website's build is dated and holding you back with prospective ${who}.`
     }
     if (score.website_status === 'good') score.status_reason = `Site looks modern but has a sellable "${angle}" gap.`
