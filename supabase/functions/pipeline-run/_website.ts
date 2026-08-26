@@ -493,6 +493,8 @@ function detectQualitySignals(html: string, loadTimeMs: number, cfg: NicheWebCon
   hasTitle: boolean
   hasMetaDescription: boolean
   hasH1: boolean
+  hasFavicon: boolean
+  hasHashRouting: boolean
   jsShell: boolean
   visibleTextExcerpt: string | null
 } {
@@ -579,6 +581,23 @@ function detectQualitySignals(html: string, loadTimeMs: number, cfg: NicheWebCon
     if (missing.length >= 2) issues.push(`Missing SEO basics (${missing.join(', ')}) — the site is hard to find on Google`)
   }
 
+  // 6b. Favicon — a declared favicon (browser-tab icon) is basic polish. Its absence leaves a blank/
+  //     default tab icon, which reads as an unfinished, less-trustworthy site (readable pages only).
+  const hasFavicon = /<link[^>]+rel=["'][^"']*icon[^"']*["']/i.test(html)
+  if (!jsShell && !hasFavicon) {
+    issues.push('No favicon set — the browser tab shows a blank/default icon instead of the business logo, so the site looks unfinished and less trustworthy (an easy, visible quick win)')
+  }
+
+  // 6c. Hash-based (#/) routing — client-side hash URLs are a real SEO problem: Google treats
+  //     everything after the # as the SAME homepage URL, so inner pages (services, about, contact)
+  //     are not indexed separately and the whole site competes on the homepage alone. Require >=2
+  //     hash-route links (a nav menu) so a single "#" placeholder/back-to-top isn't mistaken for it.
+  const hashRouteLinks = (html.match(/href\s*=\s*["']\/?#!?\/[a-z0-9]/gi) ?? []).length
+  const hasHashRouting = hashRouteLinks >= 2
+  if (!jsShell && hasHashRouting) {
+    issues.push('Uses hash-based (#/) URLs for its pages — Google treats every "#/..." page as the same homepage address, so the services, about and contact pages are never indexed on their own; the site can only rank on its homepage, which badly limits how it shows up in search')
+  }
+
   // 7. Social presence — med spa patients expect an active Instagram; no IG/FB link is a weak signal.
   //    Gated per vertical: dental/trades patients come from Google/insurance/referral, so a missing
   //    social link there is NOT a weakness and firing it would manufacture false 'weak' leads.
@@ -591,7 +610,7 @@ function detectQualitySignals(html: string, loadTimeMs: number, cfg: NicheWebCon
   return {
     hasMobileViewport, hasBookingWidget, bookingPlatform, copyrightYear, detectedIssues: issues,
     // Granular SEO flags feed the 0-100 site-health score (null-able upstream when jsShell).
-    hasTitle, hasMetaDescription, hasH1, jsShell,
+    hasTitle, hasMetaDescription, hasH1, hasFavicon, hasHashRouting, jsShell,
     // The site's own words — what a visitor actually reads. Grounds the AI's niche judgment and
     // lets pain points / hooks quote the clinic's real copy. Null for shells (nothing readable).
     visibleTextExcerpt: jsShell ? null : visibleText.slice(0, 1200),
@@ -782,7 +801,7 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
   // Quality + chain signals come from the homepage only
   const qualitySignals = homepageHtml
     ? detectQualitySignals(homepageHtml, homepageLoadMs, cfg)
-    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], hasTitle: false, hasMetaDescription: false, hasH1: false, jsShell: false, visibleTextExcerpt: null as string | null }
+    : { hasMobileViewport: false, hasBookingWidget: false, bookingPlatform: null, copyrightYear: null, detectedIssues: [], hasTitle: false, hasMetaDescription: false, hasH1: false, hasFavicon: false, hasHashRouting: false, jsShell: false, visibleTextExcerpt: null as string | null }
   const chainSignals = homepageHtml ? detectChainSignals(homepageHtml, websiteUri) : []
 
   // A contact form / booking embed on ANY fetched page (usually /contact) is a real online-contact
@@ -902,6 +921,12 @@ export async function analyzeWebsite(websiteUri: string, vertical?: string): Pro
       load +
       (qualitySignals.copyrightYear == null || qualitySignals.copyrightYear > currentYear - 3 ? 5 : 0) +
       (isFreeTier ? 0 : 5)
+    // Penalties (kept as deductions so the base weights above stay a clean 0-100 and existing scores
+    // don't shift for sites without these faults): hash routing is a serious indexing problem;
+    // a missing favicon is a small polish miss. Clamp so the score never goes negative.
+    seoScore = Math.max(0, seoScore
+      - (qualitySignals.hasHashRouting ? 15 : 0)
+      - (qualitySignals.hasFavicon ? 0 : 3))
   }
 
   // Broken/parked-site + chat-widget detection (from the raw homepage we actually fetched).
