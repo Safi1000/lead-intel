@@ -250,8 +250,9 @@ export const router = createBrowserRouter([
                     ],
                   },
                   {
-                    // Cold leads pool — the raw scanned-but-not-qualified businesses (overseers).
-                    element: <RequireRole roles={['superadmin', 'manager', 'owner']} />,
+                    // Cold leads pool — the raw scanned-but-not-qualified businesses. Permission-gated
+                    // (owner + SA via short-circuit; manager by default) so a per-user deny can hide it.
+                    element: <RequirePermission resource="coldLeads" action="view" />,
                     children: [{ path: 'cold-leads', element: L(<ColdLeadsPage />) }],
                   },
                   // Bookings (Calendly). Gated by flag, then per-role permission.

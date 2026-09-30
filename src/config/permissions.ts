@@ -7,6 +7,7 @@ export type Resource =
   | 'upload' // manual lead import
   | 'leads' // the shared lead queue
   | 'bookings' // AE meetings + setter booking (Calendly)
+  | 'coldLeads' // the raw scanned-but-not-qualified pool (Sourcing byproduct)
   | 'users' // team / user management
   | 'account' // tenant account settings
   | 'pipeline' // automated Google Maps lead sourcing
@@ -32,6 +33,9 @@ const MATRIX: Partial<Record<Resource, Partial<Record<Action, Role[]>>>> = {
   leads: { view: TENANT_ALL, edit: WORKERS },
   // Bookings: the AE (closer) + manager read the Meetings page; setters + managers book.
   bookings: { view: ['manager', 'closer'], create: ['manager', 'setter'] },
+  // Cold Leads pool — overseers by default (owner + SA get it via the can() short-circuit).
+  // A per-user deny hides it from a specific manager (e.g. import-only tenants).
+  coldLeads: { view: ['manager'] },
   // Only managers manage users and the account.
   users: { view: ['manager'], manage: ['manager'] },
   account: { view: TENANT_ALL, manage: ['manager'] },
@@ -71,6 +75,7 @@ export const PERMISSION_CATALOG: { resource: Resource; action: Action; label: st
   { resource: 'leads', action: 'edit', label: 'Work leads (remarks, status, warm/cold)' },
   { resource: 'bookings', action: 'view', label: 'View AE meetings (booked calls)' },
   { resource: 'bookings', action: 'create', label: 'Book meetings for AEs' },
+  { resource: 'coldLeads', action: 'view', label: 'View the Cold Leads pool' },
   { resource: 'users', action: 'manage', label: 'Manage users in the org' },
 ]
 
